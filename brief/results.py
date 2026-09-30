@@ -54,7 +54,7 @@ def is_group_round(rnd: str | None, level: str | None) -> bool:
     return bool(rnd) and (rnd.startswith("Group") or (level == "WTF" and rnd in ("R1", "R2", "R3")))
 
 
-def group_positions(group: list[dict], advanced: set[int], first_size: int) -> dict[int, str]:
+def group_positions(group: list[dict], advanced: set[int], first_size: int, level: str | None = None) -> dict[int, str]:
     """規章 4.2.6：小組第 k 名（未晉級）拿「淘汰賽首輪人數 × 2^(k − 每組晉級人數)」那一級的積分。
     例：年終總決賽兩組各 4 人、每組 2 人進四強 → 小組第 3 = 5/8、第 4 = 9/16。
     分組用對戰關係連通判斷；組內依勝場數排名，同勝場看直接交手。"""
@@ -91,7 +91,10 @@ def group_positions(group: list[dict], advanced: set[int], first_size: int) -> d
         adv = sum(x in advanced for x in ms)
         for k, x in enumerate(ranked, 1):
             if x not in advanced and k > adv:
-                out[x] = POSITION_OF_SIZE.get(first_size * 2 ** (k - adv), "R1024")
+                if level == "WTF" and k in (3, 4):
+                    out[x] = f"G{k}"                   # V6.0 §4.2.8：年終總決賽小組第 3、第 4 另有積分（ranking_points）
+                else:
+                    out[x] = POSITION_OF_SIZE.get(first_size * 2 ** (k - adv), "R1024")
     return out
 
 
@@ -142,7 +145,7 @@ def event_results(matches: list[dict], level: str | None = None, finished: bool 
         out[pid] = (POSITION_OF_SIZE[size], last_date)
     if group:
         last = max(m["match_date"] for m in group)
-        for pid, pos in group_positions(group, set(played), first_size).items():
+        for pid, pos in group_positions(group, set(played), first_size, level).items():
             out.setdefault(pid, (pos, last))
     return out
 
@@ -206,33 +209,69 @@ TEAM_POSITION = "TEAM"
 
 
 def _standing(con, pairing: int, event: str, before: str) -> tuple[float, int] | None:
-    """比賽前最近一週的（積分, 計入站數）：先查官方快照，沒有再查估算。"""
+    """before（含）之前最近一週的（積分, 計入站數）：先查官方快照，沒有再查估算。"""
     for table in ("ranking_snapshot", "ranking_estimate"):
-        try:
-            row = con.execute(f"""SELECT points, tournaments FROM {table} WHERE pairing_id=? AND event=? AND week_date =
-                                  (SELECT MAX(week_date) FROM {table} WHERE event=? AND week_date < ?)""",
-                              (pairing, event, event, before)).fetchone()
-        except Exception:  # noqa: BLE001 — 估算表還不存在
-            row = None
+        if not con.execute("SELECT 1 FROM sqlite_master WHERE name=?", (table,)).fetchone():
+            continue
+        week = con.execute(f"SELECT MAX(week_date) FROM {table} WHERE event=? AND week_date <= ?", (event, before)).fetchone()[0]
+        if not week:
+            continue
+        row = con.execute(f"SELECT points, tournaments FROM {table} WHERE week_date=? AND event=? AND pairing_id=?",
+                          (week, event, pairing)).fetchone()
         if row and row[0]:
             return float(row[0]), int(row[1] or 1)
-        has_week = con.execute(f"SELECT 1 FROM sqlite_master WHERE name=?", (table,)).fetchone() and \
-            con.execute(f"SELECT 1 FROM {table} WHERE event=? AND week_date < ? LIMIT 1", (event, before)).fetchone()
-        if has_week and table == "ranking_snapshot":
+        if table == "ranking_snapshot":
             return None                      # 官方快照涵蓋這段時間，查不到就是沒有排名
     return None
 
 
-def team_match_points(own: tuple[float, int] | None, opp: tuple[float, int] | None, won: bool) -> float:
-    """規章 7.2：贏 = 平均 + 對手總積分 / 100；輸 = 平均；平均 = 積分 / min(站數, 10)。
-    沒有排名：贏 = 1 + 對手 / 100（對手也沒排名 = 2）；輸 = 0。"""
-    opp_pts = opp[0] if opp else 0.0
+def _best_with_other_partner(con, player: int, pairing: int, event: str, before: str) -> float | None:
+    """5.3.3.4 §1.2：選手與其他搭檔的最高排名積分 ÷ 站數。"""
+    best = None
+    for other, in con.execute("SELECT pairing_id FROM pairing WHERE ? IN (player_a_id, player_b_id) AND pairing_id != ? "
+                              "AND player_b_id IS NOT NULL", (player, pairing)):
+        st = _standing(con, other, event, before)
+        if st and (best is None or st[0] > best[0]):
+            best = st
+    return best[0] / best[1] if best else None
+
+
+def team_basis(con, pairing: int, event: str, before: str, v6: bool) -> tuple[float, float] | None:
+    """回傳（輸球時自己拿的分數, 給對手計算用的總積分）；完全沒有排名回傳 None。
+    V6.0 §7.2.1–7.2.6、5.3.3.4：
+      一般：平均分 = 積分 / min(站數, 10)，總積分 = 排名積分
+      雙打同組 < 8 站：調整排名 = 積分 × 10 ÷ max(站數, 5)，自己拿 調整 ÷ 10
+      雙打沒有同組排名：名目排名 = 兩人與其他搭檔的最佳（積分 ÷ 站數）平均 × 10 × 80%，自己拿 名目 ÷ 10"""
+    st = _standing(con, pairing, event, before)
+    doubles = event in ("MD", "WD", "XD")
+    if st:
+        pts, n = st
+        if v6 and doubles and n < 8:
+            adjusted = pts * 10 / max(n, 5)
+            return adjusted / 10, adjusted
+        return pts / min(n, 10), pts
+    if v6 and doubles:
+        a, b = con.execute("SELECT player_a_id, player_b_id FROM pairing WHERE pairing_id=?", (pairing,)).fetchone()
+        pa = _best_with_other_partner(con, a, pairing, event, before)
+        pb = _best_with_other_partner(con, b, pairing, event, before) if b else None
+        if pa is not None and pb is not None:
+            notional = (pa + pb) / 2 * 10 * 0.8
+            return notional / 10, notional
+    return None
+
+
+def team_match_points(own: tuple[float, float] | None, opp: tuple[float, float] | None, won: bool,
+                      v6: bool = True) -> float:
+    """一場團體賽單場的積分。own / opp 為 team_basis 的結果。
+    有排名：贏 = 自己的基準 + 對手總積分 / 100；輸 = 自己的基準（§7.2.1–7.2.6）
+    沒有排名：贏 = 對手 / 100（2018 版另加 1 分；V6.0 §7.2.7 沒有），對手也沒排名 = 2；輸 = 0"""
     if own is None:
         if not won:
             return 0.0
-        return 2.0 if opp is None else 1.0 + opp_pts / 100
-    avg = own[0] / min(own[1], 10)
-    return avg + (opp_pts / 100 if won else 0.0)
+        if opp is None:
+            return 2.0
+        return opp[1] / 100 + (0.0 if v6 else 1.0)
+    return own[0] + (opp[1] / 100 if won and opp else 0.0)
 
 
 def compute_team(con, tournament_id: int | None = None) -> int:
@@ -250,8 +289,16 @@ def compute_team(con, tournament_id: int | None = None) -> int:
     for tid, start, event, s1, s2, win, mdate in rows:
         last_day[tid] = max(last_day.get(tid, ""), mdate)
         start_of[tid] = start
+    cache: dict[tuple, tuple | None] = {}
+    for tid, start, event, s1, s2, win, mdate in rows:
+        v6 = rp.version(dt.date.fromisoformat(start))[0] == "V2024W17"
+        # V6.0 §7.4：用「決賽日所在排名週的前一週」；更早的版本沒寫，一併採用
+        base = (dt.date.fromisoformat(last_day[tid]) - dt.timedelta(days=7)).isoformat()
+        for pid in (s1, s2):
+            if (pid, event, base) not in cache:
+                cache[(pid, event, base)] = team_basis(con, pid, event, base, v6)
         for me, opp, won in ((s1, s2, win == 1), (s2, s1, win == 2)):
-            v = team_match_points(_standing(con, me, event, start), _standing(con, opp, event, start), won)
+            v = team_match_points(cache[(me, event, base)], cache[(opp, event, base)], won, v6)
             key = (me, tid, event)
             best[key] = max(best.get(key, 0.0), v)
     for (pid, tid, event), v in best.items():

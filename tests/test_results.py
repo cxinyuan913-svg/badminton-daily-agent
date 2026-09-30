@@ -75,14 +75,14 @@ def test_old_round_names_and_null_rounds():
 
 
 def test_wtf_group_stage_positions():
-    """規章 4.2.6：年終總決賽兩組各 4 人、每組前 2 進四強 → 小組第 3 = 5/8（QF）、第 4 = 9/16（R16）。"""
+    """V6.0 §4.2.8：年終總決賽兩組各 4 人、每組前 2 進四強 → 小組第 3、第 4 另有積分（G3／G4）。"""
     g = lambda a, b, w=1: m("R1", a, b, winner=w)
     group_a = [g(1, 2), g(1, 3), g(1, 4), g(2, 3), g(2, 4), g(3, 4)]          # 1 三勝、2 兩勝、3 一勝、4 零勝
     group_b = [g(5, 6), g(5, 7), g(5, 8), g(6, 7), g(6, 8), g(7, 8)]
     ko = [m("SF", 1, 6), m("SF", 5, 2), m("Final", 1, 5)]
     got = results.event_results(group_a + group_b + ko, level="WTF")
     assert got[1][0] == "W" and got[5][0] == "F" and got[2][0] == "SF" and got[6][0] == "SF"
-    assert (got[3][0], got[4][0], got[7][0], got[8][0]) == ("QF", "R16", "QF", "R16")
+    assert (got[3][0], got[4][0], got[7][0], got[8][0]) == ("G3", "G4", "G3", "G4")
     assert 3 not in results.event_results(group_a + ko)                      # 不是 WTF 時 R1 不當小組賽
 
 
@@ -115,13 +115,40 @@ def test_result_date_is_tournament_last_day():
 
 
 def test_team_match_points_rules():
-    """規章 7.2：贏 = 平均 + 對手積分/100；輸 = 平均；平均 = 積分 / min(站數, 10)；沒有排名另有規則。"""
-    assert results.team_match_points((84000, 14), (50000, 10), won=True) == 8400 + 500
-    assert results.team_match_points((84000, 14), (50000, 10), won=False) == 8400
-    assert results.team_match_points((30000, 6), None, won=True) == 5000
-    assert results.team_match_points(None, (50000, 10), won=True) == 501
-    assert results.team_match_points(None, None, won=True) == 2
-    assert results.team_match_points(None, (50000, 10), won=False) == 0
+    """V6.0 §7.2：贏 = 自己的基準 + 對手總積分/100；輸 = 自己的基準；沒有排名另有規則（§7.2.7–7.2.9）。"""
+    own, opp = (8400, 84000), (5000, 50000)                                # （輸球拿的基準, 總積分）
+    assert results.team_match_points(own, opp, won=True) == 8400 + 500
+    assert results.team_match_points(own, opp, won=False) == 8400
+    assert results.team_match_points(None, opp, won=True) == 500             # V6.0 §7.2.7
+    assert results.team_match_points(None, opp, won=True, v6=False) == 501   # 2018 版另加 1 分
+    assert results.team_match_points(None, None, won=True) == 2              # §7.2.8
+    assert results.team_match_points(None, opp, won=False) == 0              # §7.2.9
+
+
+def team_db():
+    con = crawler.connect(":memory:")
+    for pid in (1, 2, 3, 4):
+        con.execute("INSERT INTO player (player_id) VALUES (?)", (pid,))
+    pairs = {10: (1, 2), 11: (1, 3), 12: (2, 4), 13: (3, 4)}
+    for pid, (a, b) in pairs.items():
+        con.execute("INSERT INTO pairing (pairing_id, player_a_id, player_b_id) VALUES (?, ?, ?)", (pid, a, b))
+    rows = [(10, 1, 60000, 12), (11, 5, 30000, 6), (12, 9, 20000, 4)]         # 13 沒有排名
+    for pid, rank, pts, n in rows:
+        con.execute("INSERT INTO ranking_snapshot (week_date, event, pairing_id, rank, points, tournaments) "
+                    "VALUES ('2026-04-21', 'MD', ?, ?, ?, ?)", (pid, rank, pts, n))
+    return con
+
+
+def test_team_basis_normal_adjusted_notional():
+    """V6.0 §7.2.1–7.2.6 與 5.3.3.4：一般、調整（同組 < 8 站）、名目（沒有同組排名）。"""
+    con = team_db()
+    assert results.team_basis(con, 10, "MD", "2026-04-26", v6=True) == (6000, 60000)       # 12 站：60000 / 10
+    assert results.team_basis(con, 11, "MD", "2026-04-26", v6=True) == (5000, 50000)       # 6 站：30000×10÷6
+    assert results.team_basis(con, 12, "MD", "2026-04-26", v6=True) == (4000, 40000)       # 4 站：20000×10÷5
+    assert results.team_basis(con, 12, "MD", "2026-04-26", v6=False) == (5000, 20000)      # 舊版不調整
+    # 13 = 選手 3（與 1 搭檔 30000/6 = 5000）＋ 選手 4（與 2 搭檔 20000/4 = 5000）→ 5000×10×80% = 40000
+    assert results.team_basis(con, 13, "MD", "2026-04-26", v6=True) == (4000, 40000)
+    assert results.team_basis(con, 13, "MD", "2026-04-26", v6=False) is None
 
 
 def test_estimator_keeps_only_best_team_result():

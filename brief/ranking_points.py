@@ -10,8 +10,9 @@
            https://fedebadchile.cl/wp-content/uploads/2019/05/3.3.3.1-World-Ranking-System-Nov2018-1.pdf
   V2024W17 BWF 新聞 2024-02-05「More Points on Offer at Top-Tier Tournaments」：
            Grade 1 冠軍 14500、WTF 14000、Super 1000 依加碼獎金 13500／12700（亞軍 10800）、Super 750 以下不變。
-           其餘名次取自交接單 002（claude.ai 整理）；**12700 級只有冠亞軍有出處，其餘待官方規章核對**。
-           官方現行規章（5.3.3.1 V6.0, 2026-04-26）放在 extranet.bwf.sport，robots.txt 禁止程式抓取，需 Raymond 手動下載。
+  V6.0     BWF Statutes 5.3.3.1 V6.0（In Force 2026-04-26），Raymond 手動下載到 docs/regulations/（不進版控）。
+           §6.3 全表（含 12700 級所有名次、Grade 1／Level 1／Level 2 延伸到 513–1024）、§6.3 註（奧運季殿軍、
+           年終總決賽小組第 3／4）、§6.5.1（洲際錦標賽比照等級）。
 
 尚未處理（見 docs/status.md）：團體賽（規章 7.x 用平均分公式計算，需要排名）、大英國協運動會、
 Super 1000 各站屬於哪一級。
@@ -21,6 +22,7 @@ from __future__ import annotations
 import datetime as dt
 
 POSITIONS = ["W", "F", "SF", "QF", "R16", "R32", "R64", "R128", "R256", "R512", "R1024"]
+WTF_GROUP = {"G3": 3, "G4": 4}      # 年終總決賽小組第 3、第 4（§4.2.8：5–6、7–8 名）
 
 PRE2018 = {
     "G1_IND": [12000, 10200, 8400, 6600, 4800, 3000, 1200, 600, 240, 120, 60],   # 世錦賽、奧運
@@ -48,13 +50,18 @@ V2018 = {
 }
 V2018_OLYMPIC_3RD, V2018_OLYMPIC_4TH = 10100, 9200
 
+# 5.3.3.1 V6.0（2026-04-26）§6.3 全表；2024 第 17 週的調整只改 Grade 1、Level 1、Level 2（BWF 2024-02-05 公告），
+# V6.0 表上這三列的數字與公告一致，所以整張表從 2024 第 17 週起適用
 V2024W17 = {
     **V2018,
-    "G1_IND": [14500, 12500, 10500, 8200, 6000, 3700, 1450, 750, 300],
-    "WTF": [14000, 12000, 10000, 7800, 5700, 3500, 1400, 720, 280],
-    "S1000": [13500, 11500, 9500, 7400, 5400, 3300, 1350, 670, 270],             # 加碼 ≥ US$500,000
-    "S1000_12700": [12700, 10800],                                              # 加碼 US$250,000–499,999；其餘名次待核對
+    "G1_IND": [14500, 12500, 10500, 8200, 6000, 3700, 1450, 750, 300, 150, 80],
+    "WTF": [14000, 12000, 10000, 7800, 5700, 3500, 1400, 720, 280, 140, 75],
+    "S1000": [13500, 11500, 9500, 7400, 5400, 3300, 1350, 670, 270, 135, 70],   # Level 2，加碼 ≥ US$500,000
+    "S1000_12700": [12700, 10800, 9000, 7000, 5100, 3150, 1270, 630, 250, 125, 65],   # 加碼 US$250,000–499,999
+    "L2_BASE": [12000, 10200, 8400, 6600, 4800, 3000, 1200, 600, 240, 120, 60],       # Level 2 無加碼（亞錦賽比照這列）
 }
+V2024W17_OLYMPIC_3RD, V2024W17_OLYMPIC_4TH = 11500, 10500     # §6.3 註 *
+WTF_GROUP_3RD, WTF_GROUP_4TH = 8900, 7800                    # §6.3 註 **、§4.2.8（年終總決賽小組第 3、第 4）
 
 VERSIONS = [  # (生效日, 名稱, 表)
     (dt.date(2018, 1, 1), "V2018", V2018),         # World Tour 自 2018 年開始；規章文件標示 2018-11-30 生效，積分表沿用
@@ -65,6 +72,9 @@ VERSIONS = [  # (生效日, 名稱, 表)
 CONTINENT_LEVEL = {
     "PRE2018": {"asia": "SS", "europe": "GPG", "oceania": "GP", "panam": "GP", "africa": "IC"},
     "V2018": {"asia": "S500", "europe": "S300", "oceania": "S100", "panam": "S100", "africa": "IC"},
+    # V6.0 §6.5.1：亞洲 = Level 2、歐洲 = Level 4、泛美 = Level 5、大洋洲與非洲 = IC。
+    # 何時從 2018 版改成這樣規章沒寫；用官方排名驗證後從 2024 第 17 週起適用（見 docs/ranking-validation.md）
+    "V2024W17": {"asia": "L2_BASE", "europe": "S500", "oceania": "IC", "panam": "S300", "africa": "IC"},
 }
 CONTINENT_WORDS = [("asia", ("asia", "asian")), ("europe", ("europe", "european")),
                    ("oceania", ("oceania",)), ("panam", ("pan am", "pan-am", "panam", "pan american")),
@@ -97,7 +107,7 @@ def effective_level(level: str | None, tournament_name: str, on: dt.date) -> str
     level = LEVEL_ALIAS.get(level, level)
     if level in ("CONT_IND", "MULTI"):
         c = continent(tournament_name)
-        rules = CONTINENT_LEVEL["PRE2018" if on < VERSIONS[0][0] else "V2018"]
+        rules = CONTINENT_LEVEL[version(on)[0]]
         return rules.get(c) if c else None      # 大英國協運動會不屬於任何洲 → None
     return level
 
@@ -106,6 +116,10 @@ def points(on: dt.date, level: str | None, position: str, tournament_name: str =
            olympic_place: int | None = None) -> int | None:
     """回傳積分。層級不計分或名次超出表格回傳 0；規則未知（例如 12700 級的非冠亞軍名次）回傳 None。
     olympic_place：奧運銅牌戰結果（3 或 4），奧運四強有不同積分。"""
+    if position in WTF_GROUP:
+        if version(on)[0] == "V2024W17":
+            return WTF_GROUP_3RD if position == "G3" else WTF_GROUP_4TH
+        position = "QF"                         # 舊版只寫「比照淘汰賽同名次」：5–8 名 = 八強那一列
     if position not in POSITIONS:
         raise ValueError(f"未知名次：{position}")
     lv = effective_level(level, tournament_name, on)
@@ -117,10 +131,11 @@ def points(on: dt.date, level: str | None, position: str, tournament_name: str =
         return 0
     if olympic_place and position == "SF" and "olympic" in tournament_name.lower():
         third, fourth = {"PRE2018": (PRE2018_OLYMPIC_3RD, PRE2018_OLYMPIC_4TH),
-                         "V2018": (V2018_OLYMPIC_3RD, V2018_OLYMPIC_4TH)}.get(name, (None, None))
+                         "V2018": (V2018_OLYMPIC_3RD, V2018_OLYMPIC_4TH),
+                         "V2024W17": (V2024W17_OLYMPIC_3RD, V2024W17_OLYMPIC_4TH)}.get(name, (None, None))
         if third:
             return third if olympic_place == 3 else fourth
     i = POSITIONS.index(position)
     if i < len(row):
         return row[i]
-    return None if lv == "S1000_12700" else 0
+    return 0
