@@ -98,7 +98,7 @@ Raymond 在 claude.ai 做調查、討論、決策與視覺化；在這裡（Clau
 - 退賽的 `scoreStatusValue` 是 `Retired`，照樣寫入
 - 選手的 `nameShort` 可能帶結尾空白，例如 `"TEO W J "`
 - 團體賽的外層 `isTeamMatch=true` 記進 `team_tie`，單場在 `matches` 欄位；單場的 `eventName` 是賽事名（例如 Uber Cup），項目要看 `matchTypeValue`
-- **排名 API 只保留最近約 60 週**（2026-09 實測最早 2025-08-12）。`rankings.py` 必須每週跑，否則歷史會永久遺失。更早比賽的「爆冷」只能用種子或頒獎台上的排名估計
+- `vue-rankingweek` 只列最近約 60 週，但**舊週次的排名表查得到**：週次清單改用 `player/ranking/publication/weeks`（`rankings --history`）。**2019-01-15 以前的排名表 API 大多固定回 500**（2017–2018 只拿到男單 97 週、男雙 14、女單 9、女雙 2、混雙 0），那段期間的排名用 `ranking_estimate`（日報標「（估算）」）。`rankings.py` 仍要每週跑
 - 年度賽程 API `vue-grouped-year-tournaments` **不要加 `category[]` 篩選**（結果不可靠）；不加參數拿全年，再用每筆的 `category` 名稱判斷
 - 賽事 ID 會提前分配（5901 以後是 2027–2028 年），找新賽事看日期，不看 ID
 - 頒獎台積分在 2022–2024 年大多是空的，不能拿來判斷層級
