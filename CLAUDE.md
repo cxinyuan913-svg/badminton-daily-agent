@@ -44,7 +44,7 @@ python -m brief.live                                  # 列出進行中賽事
 | 項目 | 決議 |
 |---|---|
 | 項目 | 五項全收：MS、WS、MD、WD、XD |
-| 賽事層級 | 成人國際賽（對應 `brief/calendar.py` 的 `CATEGORY_LEVEL`）：Grade 1（奧運、世錦賽、湯尤盃、蘇迪曼盃）、Grade 2（World Tour 全部）、Grade 3 的 International Challenge 與 International Series。**不收 Future Series**、青少年、元老賽 |
+| 賽事層級 | 成人國際賽（對應 `brief/calendar.py` 的 `CATEGORY_LEVEL`）：Grade 1（奧運、世錦賽、湯尤盃、蘇迪曼盃）、Grade 2（World Tour 全部）、Grade 3 的 International Challenge 與 International Series、洲際個人錦標賽（亞錦賽、歐錦賽等）、綜合運動會（亞運、大英國協運動會）。**不收 Future Series**、青少年、元老賽、身障賽 |
 | 賽果來源 | BWF 官網與其 JSON API，Grade 1–3 共用同一支爬蟲 |
 | 選手主鍵 | BWF 選手 ID；雙打記在「組合」上，組合連到兩位選手 |
 | LLM | 雲端 API；程式要包一層介面，之後可換模型 |

@@ -37,25 +37,30 @@ CATEGORY_LEVEL = {
     "Grand Prix": (2, "GP"),
     "International Challenge": (3, "IC"),
     "International Series": (3, "IS"),
+    "Continental Individual Championships": (3, "CONT_IND"),  # 亞錦賽、歐錦賽等（2026-09-30 決議納入）
+    "Multi-Sport Games": (None, "MULTI"),                     # 亞運、大英國協運動會個人賽（同上）
+    "Multi-Sport Games - Team Tournaments": (None, "MULTI_TEAM"),
 }
-# 待 Raymond 決定是否納入（目前不寫入資料庫，只在 CSV 標示）
-OPTIONAL = {
-    "Continental Individual Championships": (3, "CONT_IND"),  # 亞錦賽、歐錦賽等
-    "Multi-Sport Games": (None, "MULTI"),                     # 亞運、大英國協運動會
-}
+# 早期的綜合運動會被歸在其他分類（例如 2018 亞運是 "Other"），用名稱補抓
+MULTI_NAME = re.compile(r"asian games|commonwealth games", re.I)
+MULTI_FALLBACK_CATEGORIES = {"Other", "Continental Team Games"}
 EXCLUDE_NAME = re.compile(r"junior|senior|university|youth|para|\bU1\d\b|\bU2\d\b", re.I)
 G1_EVENT_NAME = re.compile(r"world championships|sudirman|thomas|uber|olympic|superseries finals", re.I)
 
 
-def classify(t: dict, include_optional=False):
+def classify(t: dict):
     cat = re.sub(r"\s+", " ", t.get("category") or "").strip()
     name = t.get("name") or ""
-    table = {**CATEGORY_LEVEL, **(OPTIONAL if include_optional else {})}
-    if cat not in table or EXCLUDE_NAME.search(name):
+    if EXCLUDE_NAME.search(name):
         return None
-    if cat == "BWF Events" and not G1_EVENT_NAME.search(name):
+    if cat in MULTI_FALLBACK_CATEGORIES and MULTI_NAME.search(name):
+        grade, level = None, ("MULTI_TEAM" if re.search(r"team", name, re.I) else "MULTI")
+    elif cat not in CATEGORY_LEVEL:
         return None
-    grade, level = table[cat]
+    elif cat == "BWF Events" and not G1_EVENT_NAME.search(name):
+        return None
+    else:
+        grade, level = CATEGORY_LEVEL[cat]
     return {
         "tournament_id": int(t["id"]),
         "code": (t.get("code") or "").upper() or None,
@@ -71,19 +76,19 @@ def classify(t: dict, include_optional=False):
     }
 
 
-def parse_year(payload: dict, include_optional=False) -> list[dict]:
+def parse_year(payload: dict) -> list[dict]:
     out = []
     for month in payload.get("results", []):
         for t in month.get("tournaments", []):
-            row = classify(t, include_optional)
+            row = classify(t)
             if row:
                 out.append(row)
     return out
 
 
-def fetch_year(client: Client, year: int, include_optional=False) -> list[dict]:
+def fetch_year(client: Client, year: int) -> list[dict]:
     r = client.get(f"{API}/vue-grouped-year-tournaments", year=year)
-    return parse_year(r.json(), include_optional) if r is not None else []
+    return parse_year(r.json()) if r is not None else []
 
 
 def main():
@@ -92,19 +97,17 @@ def main():
     ap.add_argument("--to", dest="end", type=int, default=2026)
     ap.add_argument("--db")
     ap.add_argument("--csv")
-    ap.add_argument("--include-optional", action="store_true", help="CSV 也列出洲際錦標賽與綜合運動會")
     a = ap.parse_args()
     client = Client()
     rows = []
     for y in range(a.start, a.end + 1):
-        year_rows = fetch_year(client, y, a.include_optional)
+        year_rows = fetch_year(client, y)
         rows += year_rows
         print(y, len(year_rows), "站")
     if a.db:
         con = connect(a.db)
         for r in rows:
-            if r["level"] in {v[1] for v in CATEGORY_LEVEL.values()}:
-                upsert_tournament(con, r)
+            upsert_tournament(con, r)
         con.commit()
     if a.csv:
         cols = ["tournament_id", "grade", "level", "category", "name", "start_date", "end_date",
