@@ -30,17 +30,47 @@ Grade 1、2、3 用的是同一套元件與 API。
 
 - China Open 2026（5622）7/22：每場有項目、輪次、每局比分、時長、種子、勝方、選手 ID
 - World Championships 2026（5601）8/20：40 場，選手 ID 齊全
-- North Harbour International 2026（5766）9/30：37 場，比賽進行中，狀態欄位有 F/O/C/I/N
+- North Harbour International 2026（5766，International Challenge）9/30：37 場，比賽進行中，狀態欄位有 F/O/C/I/N
 - Myanmar International Series 2019（3600）：6 天共 126 場全部可寫入，男單決賽與頒獎台一致
 
 ### 團體賽（湯尤盃 2026，id 5600）
 
 四強中國 3–0 日本：外層 `isTeamMatch=true`，比分 `3-0`；`matches` 內有 5 點，已打 3 點（F），未打 2 點（N）。單場 `matchTypeNo` 是第幾單／雙打。
 
-### 行事曆 API（不採用）
+### 年度賽程 API（找賽事與判斷層級的主要方法）
 
-`vue-tournament-categories` 列出的分類包含 16=International Challenge、17=International Series、18=Future Series，
-但 `vue-grouped-year-tournaments?year=&category[]=` 的篩選結果與分類對不上（例如 category 16 回傳俱樂部錦標賽），所以不用它找賽事。
+`https://extranet-lv.bwfbadminton.com/api/vue-grouped-year-tournaments?year=YYYY`
+
+- **不要加 `category[]` 參數**：篩選結果不可靠（category 16 會回傳俱樂部錦標賽）
+- 不加參數時回傳該年全部賽事，每筆有 `category` 名稱、GUID、起訖日期、國家、狀態（normal / cancelled / postponed / finished / unknown）
+- 與頒獎台冠軍積分交叉比對 325 站，層級 **100% 一致**
+- 實作：`brief/calendar.py`
+
+2016–2026 年賽程中的 Grade 3 站數（含取消的賽事）：
+
+| 年 | IC | IS | 合計 |
+|---|---|---|---|
+| 2016 | 27 | 41 | 68 |
+| 2017 | 24 | 44 | 68 |
+| 2018 | 22 | 37 | 59 |
+| 2019 | 29 | 38 | 67 |
+| 2020 | 22 | 32 | 54 |
+| 2021 | 24 | 28 | 52 |
+| 2022 | 35 | 28 | 63 |
+| 2023 | 36 | 34 | 70 |
+| 2024 | 34 | 30 | 64 |
+| 2025 | 34 | 32 | 66 |
+| 2026 | 41 | 34 | 75 |
+
+依分類輸出，2016–2026 追蹤範圍內共約 1,150 站：IC 327、IS 377、Super 100–1000 與 WTF 共 346、2017 年以前舊制（Superseries、Grand Prix）65、Grade 1 共 22。
+另有洲際個人錦標賽 52 站、綜合運動會 4 站，是否納入待決定。
+
+### 賽事 ID 掃描（備援）
+
+2026-09-30 在瀏覽器面板掃描 ID 2400–5940：3,317 個有賽事頁。
+- **ID 會提前分配**：5901 以後已是 2027–2028 年賽事（例如 2028 高雄大師賽 = 5940），找新賽事要看日期，不能看 ID 大小
+- 4752（巴黎奧運）、5028 的賽事頁會轉址到子網站，程式讀取失敗；年度賽程 API 可以正常取得
+- 頒獎台積分在 2022–2024 年大多是空的，所以積分只能當輔助，不能當主要判斷
 
 ## 不使用的來源
 

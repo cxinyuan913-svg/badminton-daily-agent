@@ -16,6 +16,7 @@
 | `brief/crawler.py` | 爬一站賽事的所有比賽並寫入 SQLite；重跑不會重複寫入 |
 | `brief/rankings.py` | 世界排名週快照（API 只留約 60 週，須每週執行） |
 | `brief/live.py` | 取得進行中賽事，每日排程的入口 |
+| `brief/calendar.py` | 年度賽程 → 追蹤範圍內的賽事與層級（找賽事的主要方法） |
 | `brief/scanner.py` | 掃描賽事 ID、判斷 Grade 3 層級、匯出 IC / IS 清單 |
 | `tests/` | 10 個測試，用真實 API 回應當測試資料 |
 | `tests/fixtures/` | North Harbour International 2026-09-30 的真實回應（節錄 8 場） |
