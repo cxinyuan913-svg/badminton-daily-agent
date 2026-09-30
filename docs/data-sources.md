@@ -79,6 +79,7 @@ Grade 1、2、3 用的是同一套元件與 API。
 | bwf.tournamentsoftware.com | 已改為僅限管理員登入 |
 | www.tournamentsoftware.com | robots.txt 禁止 `/tournament/`、`/sport/`、`/player/` 等路徑；BWF 賽事會轉回管理員登入頁 |
 | Google 新聞 RSS | robots.txt 擋下 |
+| 聯合新聞網 | robots.txt 明確禁止 `Claude`、`ClaudeBot`、`GPTBot`（2026-09-30），尊重其意願不抓取 |
 | 截圖 + OCR | 本質上仍是自動存取；會讀錯比分、拿不到選手 ID |
 
 ## 補充與校對
@@ -87,8 +88,16 @@ Grade 1、2、3 用的是同一套元件與 API。
 - 維基百科 `2026 BWF Continental Circuit`：只有冠軍，2026 年 95 場中約 20–25 場有資料
 - 各洲羽協（Badminton Europe、Badminton Asia）新聞稿
 
-## 新聞（P1 待辦）
+## 新聞（P1，2026-09-30 實測，`brief/news.py`）
 
-- BWF 官方新聞列表 `https://bwfworldtour.bwfbadminton.com/news/`：有標題、日期、固定網址 `news-single/YYYY/MM/DD/slug/`；RSS feed 是空的，改讀列表頁
-- 台灣媒體：網頁搜尋找得到聯合新聞網、NOWnews 等羽球報導；聯合新聞網體育 RSS 實測為空，要改讀列表頁
+| 來源 | 列表頁 | 取法 | 備註 |
+|---|---|---|---|
+| BWF 主站 | `https://bwfbadminton.com/news/` | `<a title>`；日期取自網址 `news-single/YYYY/MM/DD/` | 最即時，含亞運、青少年等 |
+| BWF World Tour | `https://bwfworldtour.bwfbadminton.com/news/` | 同上；沒有 title 屬性時用圖片 alt | 只有 World Tour 賽事，9/30 時最新一則是 9/7 |
+| 中央社體育 | `https://www.cna.com.tw/list/aspt.aspx` | 網址 ID 前 8 碼是日期 | robots.txt 標示 `ai-input=yes, ai-train=no`：可當 AI 輸入、不可訓練 |
+| NOWnews 運動 | `https://www.nownews.com/cat/sport/` | `aria-label` + `<time datetime>` | 標籤頁 `/tag/羽球` 回 403，改用分類頁 |
+
+- 台灣媒體列表混了所有運動，用關鍵字（羽球、湯尤盃、主要台灣選手名）篩選；選手名單請 Raymond 補充（`news.BADMINTON`）
+- 兩站列表各只有 20–30 則，大型綜合賽事期間幾小時就被擠掉，每日跑一次可能漏；之後視需要改為一天多次或翻頁
+- 只存標題、網址、日期；內文與向量化在 P2
 - 搜尋：改用正式搜尋 API，配額與費用待查

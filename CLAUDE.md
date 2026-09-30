@@ -67,7 +67,7 @@ Raymond 在 claude.ai 做調查、討論、決策與視覺化；在這裡（Clau
 
 ## 工作規則
 
-- **爬蟲禮貌**：每次請求至少間隔 2 秒（`REQUEST_GAP_SEC`），遵守 robots.txt。tournamentsoftware 的 robots.txt 禁止程式抓取，不要用；Google 新聞 RSS 也被擋，不要用
+- **爬蟲禮貌**：每次請求至少間隔 2 秒（`REQUEST_GAP_SEC`），遵守 robots.txt。tournamentsoftware 的 robots.txt 禁止程式抓取，不要用；Google 新聞 RSS 也被擋，不要用；聯合新聞網的 robots.txt 禁止 Claude / ClaudeBot / GPTBot，不要用
 - **事實正確優先**：草稿裡每個比分、名字、數字都要能回資料庫查證。不確定的句子標出來給 Raymond 確認，不要自動放行
 - **冪等**：爬蟲重跑只更新、不重複寫入。新增寫入邏輯要附重跑測試
 - **測試資料用真實回應**：新 API 或新欄位，先存一份真實回應到 `tests/fixtures/`，再寫解析
