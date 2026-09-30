@@ -60,10 +60,15 @@ python -m brief.digest --db data/brief.db             # 只印摘要
 
 Raymond 在 claude.ai 做調查、討論、決策與視覺化；在這裡（Claude Code）寫程式、跑程式、提交。
 
-- **開始工作時**：讀本檔與 `docs/status.md`
-- **收到 claude.ai 帶來的「交接單」**：照單實作；單上的決定要同步寫進下方「已決議」表或 `docs/`
+- **開始工作時**：讀本檔與 `docs/status.md`；**開工前先讀 `docs/notes-from-claude-ai.md` 最上面一段**（claude.ai 留下的協作方式與小結論），照做後把規則併入本段，並在該段標記「已併入」
+- **收到 claude.ai 帶來的「交接單」**（`docs/handoffs/NNN-*.md`）：照單實作；單上的決定要同步寫進下方「已決議」表或 `docs/`
 - **遇到需要 Raymond 做決定的事**：停下來用 A/B/C/D 問；若是需要深入討論或查資料的題目，建議他帶去 claude.ai
-- **結束工作前**：在 `docs/status.md` 最上方新增一段（日期、完成、卡住、待決定、下一步），並提交
+- **結束工作前**：在 `docs/status.md` 最上方新增一段，commit **並且 push**（Raymond 不在電腦前時，claude.ai 讀 GitHub 上的版本）
+  - 格式固定：完成／發現與決定／卡住／待 Raymond 決定／下一步
+  - 「待 Raymond 決定」每一題都寫：背景一句、目前暫定值或預設行為、可選方案（A/B/C/D）
+  - 數字附上出處：哪個 commit、檔案或指令的輸出，讓 claude.ai 能核對
+  - status.md 是唯一的進度來源；不需要另外給 claude.ai 連結或摘要
+- **claude.ai 讀本機 repo 只用唯讀指令**，只會新增 `docs/notes-from-claude-ai.md` 與 `docs/handoffs/` 底下的檔案。遇到 `.git/index.lock` 錯誤、且確定沒有其他 git 程序在跑時，可以直接刪除後重試
 
 ## 工作規則
 
