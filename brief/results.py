@@ -39,7 +39,7 @@ POSITION_OF_SIZE = {2: "F", 4: "SF", 8: "QF", 16: "R16", 32: "R32", 64: "R64", 1
 QUAL_PREFIX = "Qual. "
 # 舊年度資料的其他寫法（2026-09-30 回補發現）：「Semi-finals」＝四強；「3/4」是奧運銅牌戰，
 # 兩邊都已在四強落敗，名次由四強那場決定，所以銅牌戰本身不進籤表；輪次是 NULL 的場次無法判斷，略過
-ROUND_ALIAS = {"Semi-finals": "SF"}
+ROUND_ALIAS = {"Semi-finals": "SF", "Quarterfinals": "QF", "Round of 16": "R16", "Round of 32": "R32"}
 SKIP_ROUNDS = {"3/4", None, ""}
 
 
@@ -49,10 +49,59 @@ def _qual_size(rnd: str | None) -> int | None:
     return MAIN_ROUNDS.get(rnd[len(QUAL_PREFIX):])
 
 
-def event_results(matches: list[dict]) -> dict[int, tuple[str, str]]:
+def is_group_round(rnd: str | None, level: str | None) -> bool:
+    """小組賽：奧運等的「Group A」；年終總決賽的 R1–R3 是小組循環。"""
+    return bool(rnd) and (rnd.startswith("Group") or (level == "WTF" and rnd in ("R1", "R2", "R3")))
+
+
+def group_positions(group: list[dict], advanced: set[int], first_size: int) -> dict[int, str]:
+    """規章 4.2.6：小組第 k 名（未晉級）拿「淘汰賽首輪人數 × 2^(k − 每組晉級人數)」那一級的積分。
+    例：年終總決賽兩組各 4 人、每組 2 人進四強 → 小組第 3 = 5/8、第 4 = 9/16。
+    分組用對戰關係連通判斷；組內依勝場數排名，同勝場看直接交手。"""
+    parent: dict[int, int] = {}
+
+    def find(x):
+        parent.setdefault(x, x)
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for m in group:
+        parent[find(m["side1"])] = find(m["side2"])
+    members: dict[int, list[int]] = defaultdict(list)
+    for x in list(parent):
+        members[find(x)].append(x)
+    wins = defaultdict(int)
+    beat = set()
+    for m in group:
+        w, l = (m["side1"], m["side2"]) if m["winner_side"] == 1 else (m["side2"], m["side1"])
+        wins[w] += 1
+        beat.add((w, l))
+    out = {}
+    for ms in members.values():
+        from functools import cmp_to_key
+
+        def cmp(a, b):
+            if (a in advanced) != (b in advanced):          # 已晉級的一定在前，未晉級的彼此再比
+                return -1 if a in advanced else 1
+            if wins[a] != wins[b]:
+                return wins[b] - wins[a]
+            return -1 if (a, b) in beat else 1 if (b, a) in beat else 0
+        ranked = sorted(ms, key=cmp_to_key(cmp))
+        adv = sum(x in advanced for x in ms)
+        for k, x in enumerate(ranked, 1):
+            if x not in advanced and k > adv:
+                out[x] = POSITION_OF_SIZE.get(first_size * 2 ** (k - adv), "R1024")
+    return out
+
+
+def event_results(matches: list[dict], level: str | None = None, finished: bool = False) -> dict[int, tuple[str, str]]:
     """一站一項目的所有單場 → {pairing_id: (名次, 最後一場日期)}。
-    matches 每筆需有 round、side1、side2、winner_side、match_date。"""
+    matches 每筆需有 round、side1、side2、winner_side、match_date。
+    finished：整站已結束（API 偶爾缺決賽，此時四強勝方至少給亞軍）。"""
     matches = [{**m, "round": ROUND_ALIAS.get(m["round"], m["round"])} for m in matches if m["round"] not in SKIP_ROUNDS]
+    group = [m for m in matches if is_group_round(m["round"], level)]
+    matches = [m for m in matches if not is_group_round(m["round"], level)]
     main = [m for m in matches if m["round"] in MAIN_ROUNDS]
     qual = [m for m in matches if _qual_size(m["round"])]
     if not main:
@@ -73,6 +122,8 @@ def event_results(matches: list[dict]) -> dict[int, tuple[str, str]]:
             final = [m for m in ms if MAIN_ROUNDS.get(m["round"]) == 2]
             if final:
                 out[pid] = ("W", last_date)
+            elif finished and any(m["round"] == "SF" for m in ms):
+                out[pid] = ("F", last_date)           # 整站已結束但 API 沒有決賽（例：2026 亞錦賽混雙）→ 至少亞軍
             continue                                  # 資料不完整（例如只抓到部分賽程）就不給名次
         # 資格賽輸了又以 lucky loser 進正賽的人，以正賽的敗場為準
         main_losses = [m for m in losses if m["round"] in MAIN_ROUNDS]
@@ -87,6 +138,10 @@ def event_results(matches: list[dict]) -> dict[int, tuple[str, str]]:
         if len(main_played) == 1 and size < first_size:
             size = first_size                         # 4.2.1：首輪輪空、第二輪就輸 → 首輪落敗積分
         out[pid] = (POSITION_OF_SIZE[size], last_date)
+    if group:
+        last = max(m["match_date"] for m in group)
+        for pid, pos in group_positions(group, set(played), first_size).items():
+            out.setdefault(pid, (pos, last))
     return out
 
 
@@ -95,22 +150,28 @@ def compute(con, tournament_id: int | None = None) -> int:
     con.executescript(RESULT_TABLE)
     where, args = ("AND m.tournament_id = ?", (tournament_id,)) if tournament_id else ("", ())
     rows = con.execute(
-        f"""SELECT m.tournament_id, t.name, t.level, t.start_date, m.event, m.round, m.side1_id, m.side2_id,
+        f"""SELECT m.tournament_id, t.name, t.level, t.start_date, t.end_date, m.event, m.round, m.side1_id, m.side2_id,
                    m.winner_side, m.match_date
             FROM match m JOIN tournament t USING (tournament_id)
             WHERE m.team_tie_id IS NULL AND m.winner_side IN (1, 2) {where}""", args).fetchall()
     groups: dict[tuple, list[dict]] = defaultdict(list)
     meta = {}
-    for tid, name, level, start, event, rnd, s1, s2, win, mdate in rows:
+    last_day: dict[int, str] = {}
+    for tid, name, level, start, end, event, rnd, s1, s2, win, mdate in rows:
         groups[(tid, event)].append({"round": rnd, "side1": s1, "side2": s2, "winner_side": win,
                                      "match_date": mdate})
-        meta[tid] = (name, level, start)
+        meta[tid] = (name, level, start, end)
+        last_day[tid] = max(last_day.get(tid, ""), mdate)
     n = 0
     for (tid, event), ms in groups.items():
-        name, level, start = meta[tid]
+        name, level, start, end = meta[tid]
         on = dt.date.fromisoformat(start)
         version = rp.version(on)[0]
-        for pid, (pos, last) in event_results(ms).items():
+        finished = bool(end) and last_day[tid] >= end
+        # 成績日期用整站最後一天：官方在整站結束後才計入排名（早早出局的人不能提早算進去）
+        done_day = last_day[tid]
+        for pid, (pos, _) in event_results(ms, level, finished).items():
+            last = done_day
             pts = rp.points(on, level, pos, name)
             con.execute(
                 """INSERT INTO tournament_result (pairing_id, tournament_id, event, round_reached, points,

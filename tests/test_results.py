@@ -71,3 +71,43 @@ def test_old_round_names_and_null_rounds():
     assert got[1][0] == "W" and got[3][0] == "F"
     assert got[2][0] == "SF" and got[4][0] == "SF"          # 銅牌戰勝負不改變四強名次
     assert 9 not in got and 10 not in got                   # 輪次不明的場次略過
+
+
+def test_wtf_group_stage_positions():
+    """規章 4.2.6：年終總決賽兩組各 4 人、每組前 2 進四強 → 小組第 3 = 5/8（QF）、第 4 = 9/16（R16）。"""
+    g = lambda a, b, w=1: m("R1", a, b, winner=w)
+    group_a = [g(1, 2), g(1, 3), g(1, 4), g(2, 3), g(2, 4), g(3, 4)]          # 1 三勝、2 兩勝、3 一勝、4 零勝
+    group_b = [g(5, 6), g(5, 7), g(5, 8), g(6, 7), g(6, 8), g(7, 8)]
+    ko = [m("SF", 1, 6), m("SF", 5, 2), m("Final", 1, 5)]
+    got = results.event_results(group_a + group_b + ko, level="WTF")
+    assert got[1][0] == "W" and got[5][0] == "F" and got[2][0] == "SF" and got[6][0] == "SF"
+    assert (got[3][0], got[4][0], got[7][0], got[8][0]) == ("QF", "R16", "QF", "R16")
+    assert 3 not in results.event_results(group_a + ko)                      # 不是 WTF 時 R1 不當小組賽
+
+
+def test_group_tie_broken_by_head_to_head():
+    g = lambda a, b: m("Group A", a, b)
+    ms = [g(1, 2), g(2, 3), g(3, 1), g(1, 4), g(2, 4), g(3, 4), m("QF", 1, 9), m("SF", 9, 10), m("Final", 9, 11)]
+    # 1、2、3 都是 2 勝；只有 1 晉級 → 2 與 3 以直接交手（2 勝 3）排名
+    got = results.event_results(ms)
+    assert got[2][0] == "R16" and got[3][0] == "R32" and got[4][0] == "R64"
+
+
+def test_missing_final_gives_runner_up_only_when_finished():
+    ms = [m("SF", 1, 2), m("SF", 3, 4)]                                       # 決賽不在 API
+    assert 1 not in results.event_results(ms)
+    assert results.event_results(ms, finished=True)[1][0] == "F"
+
+
+def test_result_date_is_tournament_last_day():
+    con = crawler.connect(":memory:")
+    crawler.upsert_tournament(con, {"tournament_id": 1, "code": "X", "name": "T", "level": "S300",
+                                    "start_date": "2026-01-01", "end_date": "2026-01-03", "source_url": ""})
+    for pid in (1, 2, 3, 4):
+        con.execute("INSERT INTO player (player_id) VALUES (?)", (pid,))
+        con.execute("INSERT INTO pairing (pairing_id, player_a_id) VALUES (?, ?)", (pid, pid))
+    for mid, rnd, a, b, d in [(1, "SF", 1, 2, "2026-01-02"), (2, "SF", 3, 4, "2026-01-02"), (3, "Final", 1, 3, "2026-01-03")]:
+        con.execute("INSERT INTO match (match_id, tournament_id, event, round, match_date, side1_id, side2_id, winner_side) "
+                    "VALUES (?, 1, 'MS', ?, ?, ?, ?, 1)", (mid, rnd, d, a, b))
+    results.compute(con)
+    assert {r[0] for r in con.execute("SELECT result_date FROM tournament_result")} == {"2026-01-03"}   # 四強出局者也用整站最後一天
