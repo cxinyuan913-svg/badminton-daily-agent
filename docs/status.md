@@ -3,6 +3,154 @@
 Claude Code 每次工作結束前更新這份：做了什麼、卡在哪、下一步。
 Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
+## 2026-09-30 傍晚（Claude Code）— 日報中文化、重新測試每日流程
+
+依 `docs/notes-from-claude-ai.md` 2026-09-30 17:05 一段執行。出處代號同上一段：〔DB〕SQL 查詢、〔log〕指令輸出。
+
+### 完成
+- **中文化**（`brief/zh.py`，新增測試 `tests/test_zh.py`，全部 **56 個測試通過**〔`python -m pytest -q`〕）
+  - 項目、輪次（含資格賽、團體賽小組輪次）、狀態、國家（約 130 個代碼，台灣慣用名，找不到保留代碼）、層級、常見賽事通稱（約 40 個，保留年份，找不到保留英文）
+  - 選手中文名：新增人工對照表 `brief/player_zh.csv`，摘要產生前寫進 `player.name_zh`；格式「中文（英文）」。**只放了 5 位我確定的台灣選手**（周天成、王齊麟、林俊易、李哲輝、楊博軒），其餘保留英文、不音譯
+  - LLM 提示詞改為繁體中文、台灣用語；名字照摘要寫法，禁止自行翻譯
+  - 事實檢查加上中文名：「中文（英文）」要與對照表一致；對照表裡的中文名出現在輸出，也要出現在原始資料；自行翻譯的名字（對照表沒有）會被標為待確認
+  - 新聞：BWF 英文標題由 LLM 附一句中文重點（台灣媒體標題本來就是中文）；沒有 LLM 金鑰時只顯示原標題
+  - 已寫入 CLAUDE.md「已決議」表（日報語言）
+- **修正**（實跑預覽時發現）：不戰而勝（Walkover）被判成爆冷 → 不戰而勝一律不算爆冷；沒有比分時不留空白〔附測試〕
+- `brief.digest` 新增 `--include-sent`：包含已推送過的項目，重新測試格式用
+
+### 重新測試每日流程（2026-09-30 約 17:30）
+1. `python -m brief.daily --db data/brief.db`：4 站，0 錯誤〔log；DB：`crawl_run` run_id=2〕
+   | 賽事 | 這次抓的日期 | 已完成並寫入 | 未完成 |
+   |---|---|---|---|
+   | 5753 Guatemala International Challenge 2026 | 9/29–9/30 | 0 | 25 |
+   | 5766 MAXX North Harbour International 2026 | 9/30 | 37 | 0 |
+   | 5768 YONEX Dutch Open 2026 | 9/30 | 2 | 52 |
+   | 5874 亞運個人賽 | 9/28–9/29 | 15 | 0 |
+   - 「寫入」包含更新既有比賽；資料庫比賽總數 610，與第一次執行後相同〔DB：`SELECT COUNT(*) FROM match`〕，重跑沒有重複寫入
+2. `python -m brief.digest --db data/brief.db --include-sent`（不推送）：**87 行、7,542 字**，切成 **4 則**（1,917／1,969／1,992／1,660 字，都在 2,000 字以內）〔`discord.split_message`〕；內容 195 場比賽、1 則新聞，完整輸出附在下方
+3. `python -m brief.digest --db data/brief.db --include-sent --send`：**4 則都推送成功**（HTTP 2xx）〔log：「已推送：195 場、0 場團體對戰、1 則新聞」〕
+   - Discord 畫面上的中文顯示與排版，**請 Raymond 確認**（程式端看不到頻道）
+
+<details>
+<summary>完整摘要輸出（2026-09-30，不含 LLM 重點段落）</summary>
+
+```
+**羽球日報 2026-09-30**
+
+__**MAXX North Harbour International 2026**__（國際挑戰賽）　2026-09-30
+- 混雙 32 強：**Shao Hua CHIU / HUNG Hsin En**（中華台北，無排名）勝 Sirui LU / Yongze Jack LI（紐西蘭，無排名） 21-5 21-11  🇹🇼
+- 混雙 32 強：**HSIEH Mi Yen / Yu Wei LIN**（中華台北，無排名）勝 Selena Guanlin WU / Shiqi TONG（紐西蘭，無排名） 21-8 21-12  🇹🇼
+- 混雙 32 強：**LU Chen / Yun Jung CHANG**（中華台北，#222）勝 Zooni AHUJA / Eben ANIL（紐西蘭，無排名） 21-10 21-6  🇹🇼
+- 男單 64 強：**CHIANG Tzu Chieh**（中華台北，#168）勝 Shrey DHAND（澳洲，#200） 16-21 21-14 21-11  🇹🇼
+- 男單 64 強：**Edward LAU**（紐西蘭，#141）勝 LU Chia Pin（中華台北，無排名） 21-8 21-14  🇹🇼
+- 男單 64 強：**LU Chia Hung**（中華台北，#221）勝 Jack JIANG（紐西蘭，無排名） 21-9 21-12  🇹🇼
+- 男單 64 強：**HUANG Yu**（中華台北，#286）勝 Alexander COUMBE（紐西蘭，無排名） 21-6 21-12  🇹🇼
+- 男單 64 強：**Rei MIYASHITA**（日本，#205）勝 TING Yen-Chen（中華台北，#122） 16-21 21-8 21-19  🇹🇼
+- 男單 64 強：**YANG Chieh Dan**（中華台北，#374）勝 Leo CHEN（紐西蘭，無排名） 21-5 21-4  🇹🇼
+- 男單 64 強：**Dev KUMAWAT**（印度，無排名）勝 Daniel MCMILLAN（紐西蘭，#498） 21-19 21-17  ⚡爆冷
+- 其他：64 強 28 場、32 強 9 場（未列出 27 場）
+
+__**2026 荷蘭公開賽**__（國際挑戰賽）　2026-09-30
+- 其他：資格賽 32 強 2 場（未列出 2 場）
+
+__**2026 亞運**__（綜合運動會）　2026-09-25 → 2026-09-29
+- 男單 決賽：**Kunlavut VITIDSARN**（泰國，#1）勝 LOH Kean Yew（新加坡，#13） 21-12 21-16
+- 女單 決賽：**AN Se Young**（韓國，#1）勝 Akane YAMAGUCHI（日本，#3） 21-17 21-9
+- 男雙 決賽：**Leo Rolly CARNANDO / Daniel MARTHIN**（印尼，#43）勝 WANG Chang / LIANG Wei Keng（中國，#3） 19-21 21-13 21-18  ⚡爆冷
+- 女雙 決賽：**BAEK Ha Na / LEE So Hee**（韓國，#2）勝 TAN Ning / LIU Sheng Shu（中國，#1） 26-28 21-18 21-18
+- 混雙 決賽：**WEI Ya Xin / JIANG Zhen Bang**（中國，#3）勝 Nita Violina MARWAH / Amri SYAHNAWI（印尼，#17） 21-19 21-8
+- 男單 四強：**Kunlavut VITIDSARN**（泰國，#2）勝 Alwi FARHAN（印尼，#10） 21-13 21-15
+- 男單 四強：**LOH Kean Yew**（新加坡，#13）勝 YOO Tae Bin（韓國，#46） 21-19 19-21 21-12
+- 女單 四強：**Akane YAMAGUCHI**（日本，#3）勝 WANG Zhi Yi（中國，#2） 21-11 22-20
+- 女單 四強：**AN Se Young**（韓國，#1）勝 CHEN Yu Fei（中國，#4） 21-5 21-12
+- 男雙 四強：**Leo Rolly CARNANDO / Daniel MARTHIN**（印尼，#46）勝 KIM Won Ho / SEO Seung Jae（韓國，#1） 21-11 21-14  ⚡爆冷
+- 男雙 四強：**WANG Chang / LIANG Wei Keng**（中國，#3）勝 Fajar ALFIAN / Muhammad Shohibul FIKRI（印尼，#2） 21-17 13-21 21-9
+- 女雙 四強：**BAEK Ha Na / LEE So Hee**（韓國，#2）勝 Kie NAKANISHI / Rin IWANAGA（日本，#7） 21-13 21-12
+- 女雙 四強：**TAN Ning / LIU Sheng Shu**（中國，#1）勝 THINAAH Muralitharan / Pearly TAN（馬來西亞，#5） 16-21 22-20 21-12
+- 混雙 四強：**WEI Ya Xin / JIANG Zhen Bang**（中國，#3）勝 Nicole Gonzales CHAN / YE Hong Wei（中華台北，#9） 21-13 21-9  🇹🇼
+- 混雙 四強：**Nita Violina MARWAH / Amri SYAHNAWI**（印尼，#15）勝 FENG Yan Zhe / HUANG Dong Ping（中國，#1） 21-12 21-14  ⚡爆冷
+- 男單 八強：**Kunlavut VITIDSARN**（泰國，#2）勝 NG Ka Long Angus（香港，#30） 16-21 21-10 21-13
+- 男單 八強：**Alwi FARHAN**（印尼，#10）勝 周天成（CHOU Tien Chen）（中華台北，#5） 21-10 21-11  🇹🇼
+- 男單 八強：**YOO Tae Bin**（韓國，#46）勝 Kodai NARAOKA（日本，#7） 12-21 21-5 21-11  ⚡爆冷
+- 男單 八強：**LOH Kean Yew**（新加坡，#13）勝 Jonatan CHRISTIE（印尼，#1） 21-14 21-19  ⚡爆冷
+- 女單 八強：**AN Se Young**（韓國，#1）勝 Ratchanok INTANON（泰國，#5） 21-8 21-9
+- 女單 八強：**WANG Zhi Yi**（中國，#2）勝 LIN Hsiang Ti（中華台北，#19） 21-7 21-12  🇹🇼
+- 女單 八強：**CHEN Yu Fei**（中國，#4）勝 PUSARLA V. Sindhu（印度，#11） 11-21 21-18 21-10
+- 女單 八強：**Akane YAMAGUCHI**（日本，#3）勝 Unnati HOODA（印度，#24） 21-16 14-21 21-17
+- 男雙 八強：**Leo Rolly CARNANDO / Daniel MARTHIN**（印尼，#46）勝 NGUYEN Dinh Hoang / TRAN Dinh Manh（越南，#107） 21-6 21-10
+- 男雙 八強：**KIM Won Ho / SEO Seung Jae**（韓國，#1）勝 Hiroki NISHI / Kakeru KUMAGAI（日本，#20） 15-21 21-17 21-15
+- 男雙 八強：**WANG Chang / LIANG Wei Keng**（中國，#3）勝 GOH Sze Fei / Nur IZZUDDIN（馬來西亞，#6） 21-13 21-17
+- 男雙 八強：**Fajar ALFIAN / Muhammad Shohibul FIKRI**（印尼，#2）勝 KANG Min Hyuk / KI Dong Ju（韓國，#14） 21-14 20-22 21-14
+- 女雙 八強：**Kie NAKANISHI / Rin IWANAGA**（日本，#7）勝 YEUNG Nga Ting / YEUNG Pui Lam（香港，#22） 21-15 19-21 21-15
+- 女雙 八強：**BAEK Ha Na / LEE So Hee**（韓國，#2）勝 LIN Jhih Yun / HSU Yin-Hui（中華台北，#12） 22-20 21-17  🇹🇼
+- 女雙 八強：**TAN Ning / LIU Sheng Shu**（中國，#1）勝 HUNG En-Tzu / HSIEH Pei Shan（中華台北，#10） 21-15 21-15  🇹🇼
+- 女雙 八強：**THINAAH Muralitharan / Pearly TAN**（馬來西亞，#5）勝 GAYATRI GOPICHAND PULLELA / Treesa JOLLY（印度，#26） 21-18 21-9
+- 混雙 八強：**FENG Yan Zhe / HUANG Dong Ping**（中國，#1）勝 DHRUV KAPILA / Tanisha CRASTO（印度，#19） 21-14 18-21 21-18
+- 混雙 八強：**WEI Ya Xin / JIANG Zhen Bang**（中國，#3）勝 JANG Ha Jeong / KIM Jae Hyeon（韓國，#25） 21-13 21-15
+- 混雙 八強：**Nita Violina MARWAH / Amri SYAHNAWI**（印尼，#15）勝 JO Song Hyun / JEONG Na Eun（韓國，#83） 21-9 12-21 21-19
+- 混雙 八強：**Nicole Gonzales CHAN / YE Hong Wei**（中華台北，#9）勝 Jhenicha SUDJAIPRAPARAT / Ruttanapak OUPTHONG（泰國，#22） 21-18 21-14  🇹🇼
+- 男單 16 強：**周天成（CHOU Tien Chen）**（中華台北，#5）勝 Ayush SHETTY（印度，#20） 21-16 19-21 21-17  🇹🇼
+- 男單 16 強：**YOO Tae Bin**（韓國，#46）勝 SHI Yu Qi（中國，#6） 21-17 25-23  ⚡爆冷
+- 女單 16 強：**Unnati HOODA**（印度，#24）勝 Putri Kusuma WARDANI（印尼，#6） 21-19 21-13  ⚡爆冷
+- 女單 16 強：**LIN Hsiang Ti**（中華台北，#19）勝 LO Sin Yan Happy（香港，#68） 21-19 7-21 21-15  🇹🇼
+- 男雙 16 強：**Hiroki NISHI / Kakeru KUMAGAI**（日本，#20）勝 楊博軒（YANG Po-Hsuan） / 李哲輝（LEE Jhe-Huei）（中華台北，#15） 20-22 21-17 21-12  🇹🇼
+- 女雙 16 強：**LIN Jhih Yun / HSU Yin-Hui**（中華台北，#12）勝 Nargiza RAKHMETULLAYEVA / Kamila SMAGULOVA（哈薩克，無排名） 21-8 21-5  🇹🇼
+- 女雙 16 強：**GAYATRI GOPICHAND PULLELA / Treesa JOLLY**（印度，#26）勝 Yuki FUKUSHIMA / Mayu MATSUMOTO（日本，#3） 24-22 21-18  ⚡爆冷
+- 女雙 16 強：**HUNG En-Tzu / HSIEH Pei Shan**（中華台北，#10）勝 Alissa KULESHOVA / Diana NAMENOVA（哈薩克，#391） 21-10 21-5  🇹🇼
+- 混雙 16 強：**Nicole Gonzales CHAN / YE Hong Wei**（中華台北，#9）勝 Sayaka HOBARA / Yuichi SHIMOGAMI（日本，#16） 21-10 21-15  🇹🇼
+- 男單 32 強：**YOO Tae Bin**（韓國，#46）勝 林俊易（LIN Chun-Yi）（中華台北，#11） 21-10 21-12  ⚡爆冷 🇹🇼
+- 男單 32 強：**周天成（CHOU Tien Chen）**（中華台北，#5）勝 Ayman Ibn JAMAN（孟加拉，#382） 21-1 21-10  🇹🇼
+- 男單 32 強：**CHOI JIHOON**（韓國，#89）勝 LI Shi Feng（中國，#12） 18-21 21-19 21-18  ⚡爆冷
+- 女單 32 強：**PUSARLA V. Sindhu**（印度，#11）勝 CHIU Pin-Chian（中華台北，#17） 21-19 21-14  🇹🇼
+- 女單 32 強：**LIN Hsiang Ti**（中華台北，#19）勝 Pornpawee CHOCHUWONG（泰國，#8） 21-14 21-16  ⚡爆冷 🇹🇼
+- 男雙 32 強：**楊博軒（YANG Po-Hsuan） / 李哲輝（LEE Jhe-Huei）**（中華台北，#15）勝 HE Ji Ting / LIU Yi（中國，無排名） 21-15 21-19  🇹🇼
+- 男雙 32 強：**GOH Sze Fei / Nur IZZUDDIN**（馬來西亞，#6）勝 CHIU Hsiang Chieh / 王齊麟（WANG Chi-Lin）（中華台北，#16） 21-17 21-14  🇹🇼
+- 男雙 32 強：**DENG Chi Fai / CHEUNG Sai Shing**（香港，無排名）勝 PUI Chi Chon / PUI Pang Fong（澳門，#275） 21-12 21-14  ⚡爆冷
+- 男雙 32 強：**Pakkapon TEERARATSAKUL / Peeratchai SUKPHUN**（泰國，#36）勝 Chirag SHETTY / Satwiksairaj RANKIREDDY（印度，#5） 12-21 21-19 21-14  ⚡爆冷
+- 女雙 32 強：**LIN Jhih Yun / HSU Yin-Hui**（中華台北，#12）勝 Zi Yu LOW / Noraqilah MAISARAH（馬來西亞，#49） 21-10 21-13  🇹🇼
+- 女雙 32 強：**HUNG En-Tzu / HSIEH Pei Shan**（中華台北，#10）勝 Amin-Erdene ODBAYAR / TSELMEG-OD Enkhlen（蒙古，無排名） 21-4 21-5  🇹🇼
+- 女雙 32 強：**Jhenicha SUDJAIPRAPARAT / Nuntakarn AIMSAARD**（泰國，無排名）勝 Fathimath Nabaaha ABDUL RAZZAQ / Aminath Nabeeha ABDUL RAZZAQ（馬爾地夫，#145） 21-9 21-6  ⚡爆冷
+- 混雙 32 強：**CHENG Su Yin / CHEN Tang Jie**（馬來西亞，#433）勝 JUMAR Al-Amin / Urmi AKTER（孟加拉，#194） 21-14 21-9  ⚡爆冷
+- 混雙 32 強：**LAI Shevon Jemie / GOH Soon Huat**（馬來西亞，#10）勝 楊博軒（YANG Po-Hsuan） / HU Ling Fang（中華台北，#12） 21-14 21-11  🇹🇼
+- 混雙 32 強：**Nicole Gonzales CHAN / YE Hong Wei**（中華台北，#9）勝 Praful MAHARJAN / Rashila MAHARJAN（尼泊爾，無排名） 21-14 21-9  🇹🇼
+- 混雙 32 強：**Nikolaus JOAQUIN / Siti Fadia Silva RAMADHANTI**（印尼，無排名）勝 Fathimath Nabaaha ABDUL RAZZAQ / Hussein SHAHEED（馬爾地夫，#146） 21-8 21-14  ⚡爆冷
+- 男單 64 強：**林俊易（LIN Chun-Yi）**（中華台北，#11）勝 Gerelsukh JARGALSAIKHAN（蒙古，無排名） 21-10 21-9  🇹🇼
+- 男單 64 強：**Batdavaa MUNKHBAT**（蒙古，無排名）勝 Hussein SHAHEED（馬爾地夫，#462） 21-12 21-17  ⚡爆冷
+- 男單 64 強：**Kshitiz KHANAL**（尼泊爾，無排名）勝 PUI Chi Chon（澳門，#447） 21-7 21-18  ⚡爆冷
+- 女單 64 強：**CHIU Pin-Chian**（中華台北，#17）勝 Karupathevan LETSHANAA（馬來西亞，#28） 21-13 21-13  🇹🇼
+- 其他：64 強 9 場、32 強 72 場、16 強 40 場（未列出 92 場）
+
+__**新聞**__（只當資訊來源，引用要改寫並附出處）
+- 【BWF】World Juniors: Africa Beckons（2026-09-30） <https://bwfbadminton.com/news-single/2026/09/30/poised-to-make-deep-inroads/>
+```
+</details>
+
+### 發現與決定
+- 爆冷目前在 Grade 3 會出現很多雜訊，例如「無排名勝 #498」也被標成爆冷；亞運這類高層級賽事的爆冷就很有意義（例如 YOO Tae Bin #46 勝 Kodai NARAOKA #7）→ 見待決定第 1 題
+- 亞運個人賽 9/25–9/29 共 156 場，已由每日流程自動整站補抓
+- 摘要只列八強以後、爆冷與台灣選手，亞運仍有約 60 行；大型賽事期間的日報會偏長
+
+### 卡住
+- 無
+
+### 待 Raymond 決定
+1. **爆冷門檻**（上一段第 1 題，加上本次觀察）
+   - 背景：Grade 3 的排名在 200–500 名間波動很大，照目前規則會標出很多意義不大的「爆冷」
+   - 暫定：敗方有排名，且勝方無排名或名次至少是敗方兩倍、差距 ≥ 10；不戰而勝不算
+   - A. 維持暫定　B. 只在敗方是前 50 名時才算爆冷　C. 依層級分開（World Tour／Grade 1 用兩倍規則，Grade 3 只看前 100 名被擊敗）　D. 由 Raymond 另訂
+2. **選手中文名對照表**
+   - 背景：日報只對 `brief/player_zh.csv` 裡的選手寫中文名；現在只有 5 位
+   - 暫定：其餘一律保留英文
+   - A. Raymond 提供台灣選手名單（BWF 名字 → 中文），我寫進表　B. 我先列出資料庫裡所有中華台北選手的英文名與 BWF ID，Raymond 填中文　C. 擴大到中國、港澳、日韓，同樣由 Raymond 或可信來源確認　D. 維持 5 位
+3. **日報長度**
+   - 背景：亞運這種大賽，一天的日報約 60 行、4 則 Discord 訊息
+   - A. 維持　B. 大型賽事只列四強以後 + 爆冷 + 台灣選手　C. 每站最多 N 行，其餘只給場數
+4. 上一段的其他待決定（LLM 金鑰、新聞關鍵字名單、告警頻道、排程位置）仍然有效
+
+### 下一步
+1. 2026-10-01 06:00 第一次自動排程，確認 `data/logs/daily.log` 與 Discord
+2. 交接單 002：十年比賽回補 `brief/backfill.py`
+
 ## 2026-09-30 下午（Claude Code）— 交接單 001 完成、P1 程式完成並上線、002 開工
 
 出處代號：〔DB〕= 對 `data/brief.db` 的 SQL 查詢；〔log〕= 指令輸出；commit 以短 hash 標示。

@@ -9,6 +9,8 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ## 2026-09-30 17:05 — 日報改用中文，並重新測試每日流程
 
+> **已併入** CLAUDE.md「已決議」表（日報語言）；中文化與重新測試已完成，結果見 `docs/status.md`（2026-09-30，Claude Code）
+
 **Raymond 的要求**：推到 Discord 的每日摘要（日報）一律用**繁體中文（台灣用語）**。請同步寫進 CLAUDE.md 的「已決議」表。
 
 **中文化規則**（claude.ai 建議的預設，Raymond 可再調整）：
