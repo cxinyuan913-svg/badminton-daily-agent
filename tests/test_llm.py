@@ -26,7 +26,7 @@ def test_unverified_flags_numbers_and_names_not_in_source():
 
 
 def test_highlight_marks_ai_and_lists_unverified():
-    out = llm.highlight(FakeLLM("Sirui LU 爆冷擊敗世界第 12 名，連續 5 場勝利。"), SOURCE)
+    out = llm.highlight(FakeLLM("Sirui LU 擊敗世界第 12 名，連續 5 場勝利。"), SOURCE)
     assert out.startswith("**今日重點**（AI 整理，請審稿）")
     assert "⚠️待確認（原始資料查不到）：5" in out
 
@@ -97,3 +97,20 @@ def test_self_correction_output_is_rejected():
     import pytest
     with pytest.raises(ValueError, match="格式異常"):
         llm.highlight(Rambling(), REAL_SOURCE)
+
+
+def test_upset_word_only_for_rule_based_upsets():
+    """22:45 決議：「爆冷」只能用在規則判定的場次。9/29 亞運實測 LLM 把 #43 勝 #3 寫成「最大爆冷」。"""
+    src = ("- 男雙 決賽：**Leo Rolly CARNANDO / Daniel MARTHIN**（印尼，#43）勝 WANG Chang / LIANG Wei Keng（中國，#3） 19-21 21-13 21-18\n"
+           "- 男單 32 強：**CHOI JIHOON**（韓國，#89）勝 LI Shi Feng（中國，#12） 18-21 21-19 21-18  ⚡爆冷")
+    bad = "男雙由 Leo Rolly CARNANDO / Daniel MARTHIN 逆轉擊敗 WANG Chang / LIANG Wei Keng，屬於最大爆冷。"
+    assert llm.unlicensed_upsets(bad, src, {}) == [bad.rstrip("。")]
+    ok = "CHOI JIHOON 爆冷淘汰 LI Shi Feng；Leo Rolly CARNANDO / Daniel MARTHIN 三局逆轉奪冠。"
+    assert llm.unlicensed_upsets(ok, src, {}) == []                       # 「逆轉」可由比分驗證，可以用
+
+    class Says:
+        def complete(self, system, user):
+            return bad
+    import pytest
+    with pytest.raises(ValueError, match="爆冷"):
+        llm.highlight(Says(), src)

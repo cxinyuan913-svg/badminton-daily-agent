@@ -43,6 +43,7 @@ HIGHLIGHT_SYSTEM = """你是羽球日報的編輯助理，讀者是台灣的羽�
 - 只能使用摘要裡出現的事實：選手名字、國家、比分、排名、輪次一律照抄，不可推測或補充背景
 - 選手名字照摘要的寫法：摘要是「中文（英文）」就寫「中文（英文）」；摘要只有英文就只寫英文，絕對不要自行翻譯或音譯成中文
 - 優先寫：爆冷、中華台北選手、決賽與四強
+- 「爆冷」「冷門」只能用在摘要裡標了 ⚡爆冷 或 💥大爆冷 的場次；「逆轉」「三局大戰」這類能由比分看出的詞可以用
 - 摘要的比分是勝方在前；句子的主詞是敗方時，比分要倒過來寫成主詞的角度（例如「周天成以 10-21 11-21 不敵…」）
 - 摘要裡沒有的賽事、項目、比分一律不要提（例如摘要沒有團體賽，就不要寫團體賽）
 - 摘要裡沒有賽果時，只寫一句「今天沒有新的賽果。」
@@ -163,6 +164,25 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
     return missing
 
 
+UPSET_WORD = re.compile(r"爆冷|冷門")
+SENTENCE = re.compile(r"[^。；;！!？?\n]+")
+
+
+def unlicensed_upsets(text: str, source: str, zh_names: dict[str, str] | None = None) -> list[str]:
+    """2026-09-30 22:45 決議：「爆冷」只能用在 upset_level 判定的場次（原始資料該行有 ⚡爆冷／💥大爆冷）。
+    回傳用了「爆冷／冷門」、但提到的選手都不在爆冷場次裡的句子。"""
+    zh_names = _zh_table() if zh_names is None else zh_names
+    upset_lines = [l for l in source.splitlines() if "爆冷" in l]
+    bad = []
+    for sent in SENTENCE.findall(text):
+        if not UPSET_WORD.search(sent):
+            continue
+        names = [n for n in LATIN_NAME.findall(sent) if n not in IGNORE_LATIN] + [z for z in zh_names if z in sent]
+        if not any(n in line for n in names for line in upset_lines):
+            bad.append(sent.strip())
+    return bad
+
+
 def news_gist(llm: LLM, title: str) -> str:
     if hasattr(llm, "task"):
         llm.task = "news_gist"
@@ -176,6 +196,9 @@ def highlight(llm: LLM, digest_text: str) -> str:
     text = re.sub(r"^\**今日重點\**[:：]\s*", "", llm.complete(HIGHLIGHT_SYSTEM, digest_text).strip())   # 模型自己加的標題
     if "\n\n" in text or META.search(text):
         raise ValueError(f"今日重點格式異常，未採用：{text[:80]}…")
+    bad = unlicensed_upsets(text, digest_text)
+    if bad:
+        raise ValueError(f"今日重點把規則沒判定的場次寫成爆冷，未採用：{bad[0][:60]}")
     missing = unverified(text, digest_text)
     lines = [f"**今日重點**（AI 整理，請審稿）\n{text}"]
     if missing:

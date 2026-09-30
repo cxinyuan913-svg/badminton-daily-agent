@@ -367,9 +367,9 @@ def grade3_section(con, matches: list[dict]) -> tuple[list[str], int]:
                         lines.append(f"- 值得一提：{reason}的 {pname}（{zh.country(country)}）出現在 "
                                      f"{zh.tournament(name)}（{zh.level(level)}）")
                         mine = [x for x in ms if pid in {p[0] for p in x["winner"]["players"] + x["loser"]["players"]}]
-                        for x in sorted(mine, key=_sort_key):
-                            lines.append("  " + _line(x))
-                            shown.add(x["match_id"])
+                        last = max(mine, key=lambda x: (x["date"], -_sort_key(x)[0], x["match_id"]))   # 22:45：只列當天最後一場
+                        lines.append("  " + _line(last))
+                        shown.add(last["match_id"])
     return lines, len(shown)
 
 

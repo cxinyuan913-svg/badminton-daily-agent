@@ -86,3 +86,15 @@ def test_podium_line_format():
     line = grade3.podium_line("Portugal International Series 2026", "IS",
                               [m("Final", side(7, home=False), a), m("SF", side(6, home=False), b, event="WD")])
     assert line == "- IC／IS｜Portugal International Series 2026（國際系列賽）：林俊易（LIN Chun-Yi）男單亞軍、HUNG En-Tzu / HSIEH Pei Shan 女雙季軍"
+
+
+def test_notable_lists_only_last_match():
+    """22:45 決議：值得一提 = 一行理由＋該選手當天最後一場。"""
+    con, matches = ic_db()
+    pid, pairing, event = first_player(matches)
+    con.execute("INSERT INTO ranking_snapshot (week_date, event, pairing_id, rank) VALUES ('2026-08-11', ?, ?, 12)",
+                (event, pairing))
+    text = digest.build(con, D)[0]
+    i = text.index("值得一提")
+    block = text[i:].splitlines()
+    assert block[1].startswith("  - ") and not (len(block) > 2 and block[2].startswith("  - "))
