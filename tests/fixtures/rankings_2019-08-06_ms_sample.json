@@ -1,0 +1,217 @@
+{
+ "results": {
+  "current_page": 1,
+  "data": [
+   {
+    "id": 8212161,
+    "ranking_publication_id": 1497,
+    "ranking_category_id": 6,
+    "player1_id": 89785,
+    "player2_id": null,
+    "team_id": null,
+    "rank": 1,
+    "rank_previous": null,
+    "rank_change": 0,
+    "qual": null,
+    "protected_rank": null,
+    "points": "103118.0000",
+    "tournaments": 17,
+    "team_ms": null,
+    "team_ws": null,
+    "team_md": null,
+    "team_wd": null,
+    "team_xd": null,
+    "team_sc": null,
+    "team_tc": null,
+    "team_uc": null,
+    "team_total_points": null,
+    "player1_model": {
+     "id": "89785",
+     "slug": "kento-momota",
+     "name_display_bold": "<span class=\"name-1\">Kento</span> <span class=\"name-2\">MOMOTA</span>",
+     "avatar": {
+      "url_cloudinary": "https://img.bwfbadminton.com/image/upload/v1658823118/assets/players/thumbnail/89785.jpg"
+     }
+    },
+    "player2_model": null,
+    "p1_country_model": {
+     "name": "Japan",
+     "flag_name_svg": "japan.svg"
+    },
+    "p2_country_model": null,
+    "team_model": null,
+    "rankingStatistics": null
+   },
+   {
+    "id": 8212162,
+    "ranking_publication_id": 1497,
+    "ranking_category_id": 6,
+    "player1_id": 34810,
+    "player2_id": null,
+    "team_id": null,
+    "rank": 2,
+    "rank_previous": null,
+    "rank_change": 1,
+    "qual": null,
+    "protected_rank": null,
+    "points": "86698.0000",
+    "tournaments": 20,
+    "team_ms": null,
+    "team_ws": null,
+    "team_md": null,
+    "team_wd": null,
+    "team_xd": null,
+    "team_sc": null,
+    "team_tc": null,
+    "team_uc": null,
+    "team_total_points": null,
+    "player1_model": {
+     "id": "34810",
+     "slug": "tien-chen-chou",
+     "name_display_bold": "<span class=\"name-2\">CHOU</span> <span class=\"name-1\">Tien Chen</span>",
+     "avatar": {
+      "url_cloudinary": "https://img.bwfbadminton.com/image/upload/v1658715713/assets/players/thumbnail/34810.jpg"
+     }
+    },
+    "player2_model": null,
+    "p1_country_model": {
+     "name": "Chinese Taipei",
+     "flag_name_svg": "chinese-taipei.svg"
+    },
+    "p2_country_model": null,
+    "team_model": null,
+    "rankingStatistics": null
+   },
+   {
+    "id": 8212163,
+    "ranking_publication_id": 1497,
+    "ranking_category_id": 6,
+    "player1_id": 57945,
+    "player2_id": null,
+    "team_id": null,
+    "rank": 3,
+    "rank_previous": null,
+    "rank_change": -1,
+    "qual": null,
+    "protected_rank": null,
+    "points": "83301.0000",
+    "tournaments": 15,
+    "team_ms": null,
+    "team_ws": null,
+    "team_md": null,
+    "team_wd": null,
+    "team_xd": null,
+    "team_sc": null,
+    "team_tc": null,
+    "team_uc": null,
+    "team_total_points": null,
+    "player1_model": {
+     "id": "57945",
+     "slug": "yu-qi-shi",
+     "name_display_bold": "<span class=\"name-2\">SHI</span> <span class=\"name-1\">Yu Qi</span>",
+     "avatar": {
+      "url_cloudinary": "https://img.bwfbadminton.com/image/upload/v1697434141/assets/players/thumbnail/57945.jpg"
+     }
+    },
+    "player2_model": null,
+    "p1_country_model": {
+     "name": "China",
+     "flag_name_svg": "china.svg"
+    },
+    "p2_country_model": null,
+    "team_model": null,
+    "rankingStatistics": null
+   },
+   {
+    "id": 8212164,
+    "ranking_publication_id": 1497,
+    "ranking_category_id": 6,
+    "player1_id": 73442,
+    "player2_id": null,
+    "team_id": null,
+    "rank": 4,
+    "rank_previous": null,
+    "rank_change": 2,
+    "qual": null,
+    "protected_rank": null,
+    "points": "72058.0000",
+    "tournaments": 19,
+    "team_ms": null,
+    "team_ws": null,
+    "team_md": null,
+    "team_wd": null,
+    "team_xd": null,
+    "team_sc": null,
+    "team_tc": null,
+    "team_uc": null,
+    "team_total_points": null,
+    "player1_model": {
+     "id": "73442",
+     "slug": "jonatan-christie",
+     "name_display_bold": "<span class=\"name-1\">Jonatan</span> <span class=\"name-2\">CHRISTIE</span>",
+     "avatar": {
+      "url_cloudinary": "https://img.bwfbadminton.com/image/upload/v1697434451/assets/players/thumbnail/73442.jpg"
+     }
+    },
+    "player2_model": null,
+    "p1_country_model": {
+     "name": "Indonesia",
+     "flag_name_svg": "indonesia.svg"
+    },
+    "p2_country_model": null,
+    "team_model": null,
+    "rankingStatistics": null
+   },
+   {
+    "id": 8212165,
+    "ranking_publication_id": 1497,
+    "ranking_category_id": 6,
+    "player1_id": 75787,
+    "player2_id": null,
+    "team_id": null,
+    "rank": 5,
+    "rank_previous": null,
+    "rank_change": -1,
+    "qual": null,
+    "protected_rank": null,
+    "points": "70670.0000",
+    "tournaments": 17,
+    "team_ms": null,
+    "team_ws": null,
+    "team_md": null,
+    "team_wd": null,
+    "team_xd": null,
+    "team_sc": null,
+    "team_tc": null,
+    "team_uc": null,
+    "team_total_points": null,
+    "player1_model": {
+     "id": "75787",
+     "slug": "long-chen",
+     "name_display_bold": "<span class=\"name-2\">CHEN</span> <span class=\"name-1\">Long</span>",
+     "avatar": {
+      "url_cloudinary": "https://img.bwfbadminton.com/image/upload/v1627948076/assets/players/thumbnail/75787.jpg"
+     }
+    },
+    "player2_model": null,
+    "p1_country_model": {
+     "name": "China",
+     "flag_name_svg": "china.svg"
+    },
+    "p2_country_model": null,
+    "team_model": null,
+    "rankingStatistics": null
+   }
+  ],
+  "first_page_url": "https://extranet-lv.bwfbadminton.com/api/vue-rankingtable?page=1",
+  "from": 1,
+  "last_page": 20,
+  "last_page_url": "https://extranet-lv.bwfbadminton.com/api/vue-rankingtable?page=20",
+  "next_page_url": "https://extranet-lv.bwfbadminton.com/api/vue-rankingtable?page=2",
+  "path": "https://extranet-lv.bwfbadminton.com/api/vue-rankingtable",
+  "per_page": 100,
+  "prev_page_url": null,
+  "to": 100,
+  "total": 1996
+ }
+}

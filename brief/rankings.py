@@ -18,6 +18,7 @@ API 只保留最近約 60 週，所以這支程式要每週跑一次，把快照
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 
 from brief.crawler import API, Client, connect, pairing_id
 
@@ -76,7 +77,8 @@ def crawl_week(client: Client, con, week: dict, max_rank: int = 500, verbose=Tru
             rows = [r for r in res.get("data", []) if int(r["rank"]) <= max_rank]
             total += store_rows(con, week_date, event, rows)
             con.commit()
-            if not rows or page >= res.get("last_page", 0) or len(rows) < len(res.get("data", [])):
+            if (not rows or page >= res.get("last_page", 0) or len(rows) < len(res.get("data", []))
+                    or int(rows[-1]["rank"]) >= max_rank):      # 已經到 max_rank，不必再請求下一頁
                 break
             page += 1
     if verbose:
@@ -98,7 +100,11 @@ def rank_lookup(con, pairing: int, event: str, on_date: str) -> tuple[int | None
     if week:
         row = con.execute("SELECT rank FROM ranking_snapshot WHERE week_date=? AND event=? AND pairing_id=?",
                           (week, event, pairing)).fetchone()
-        return (row[0], "official") if row else (None, None)
+        if row:
+            return row[0], "official"
+        depth = con.execute("SELECT MAX(rank) FROM ranking_snapshot WHERE week_date=? AND event=?", (week, event)).fetchone()[0]
+        # 歷史週次只存前 100 名（23:10）：不在表上 = 百名外，不是沒有排名
+        return (None, "outside100") if depth is not None and depth <= HISTORY_TOP + 10 else (None, None)
     try:
         week = con.execute("SELECT MAX(week_date) FROM ranking_estimate WHERE event=? AND week_date<=?",
                            (event, on_date)).fetchone()[0]
@@ -116,14 +122,58 @@ def rank_on(con, pairing: int, event: str, on_date: str):
     return rank_lookup(con, pairing, event, on_date)[0]
 
 
+# ---------------------------------------------------------------- 官方歷史排名（2026-09-30 23:10 決議）
+HISTORY_FROM = "2017-01-01"
+HISTORY_TOP = 100
+SEED_PLAYERS = [34810]                  # 周天成：2010 年起一直在榜，週次最完整
+FREEZE = ("2020-03-17", "2021-01-26")    # 疫情凍結期，官方本來就沒有發布
+
+
+def player_weeks(client: Client, player_id: int) -> list[dict]:
+    """該選手有排名的所有週次（vue-rankingweek 只留 60 週，這個接口沒有限制）。"""
+    r = client.get(f"{API}/player/ranking/publication/weeks", rankingId=2, playerId=player_id)
+    return r.json() if r is not None else []
+
+
+def history_weeks(client: Client, con, since: str = HISTORY_FROM,
+                  extra_seeds: list[int] = ()) -> tuple[list[dict], list[tuple[str, str]]]:
+    """種子選手＋各項目現任第 1 名的週次聯集 → (週次由新到舊, 缺口清單)。缺口 = 相鄰兩週相隔 > 7 天且不在凍結期。"""
+    seeds = list(SEED_PLAYERS) + [p for p in extra_seeds if p not in SEED_PLAYERS]
+    latest = con.execute("SELECT MAX(week_date) FROM ranking_snapshot").fetchone()[0]
+    for (pid,) in con.execute("""SELECT DISTINCT p.player_a_id FROM ranking_snapshot s JOIN pairing p USING (pairing_id)
+                                 WHERE s.week_date=? AND s.rank=1""", (latest,)):
+        if pid not in seeds:
+            seeds.append(pid)
+    weeks: dict[str, dict] = {}
+    for pid in seeds:
+        for w in player_weeks(client, pid):
+            if w["date"][:10] >= since:
+                weeks.setdefault(w["date"][:10], w)
+    dates = sorted(weeks)
+    gaps = [(a, b) for a, b in zip(dates, dates[1:])
+            if (dt.date.fromisoformat(b) - dt.date.fromisoformat(a)).days > 7
+            and not (a >= FREEZE[0] and b <= FREEZE[1]) and not (a < FREEZE[0] < b)]
+    return [weeks[d] for d in reversed(dates)], gaps
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--db", default="brief.db")
     ap.add_argument("--latest", action="store_true")
     ap.add_argument("--max-rank", type=int, default=500)
+    ap.add_argument("--history", action="store_true", help=f"官方歷史排名：{HISTORY_FROM} 起，每項前 {HISTORY_TOP} 名")
     a = ap.parse_args()
     con = connect(a.db)
     client = Client()
+    if a.history:
+        weeks, gaps = history_weeks(client, con)
+        todo = weeks_missing(con, weeks)
+        print(f"歷史週次 {len(weeks)} 週（{weeks[-1]['date'][:10]} → {weeks[0]['date'][:10]}），這次要抓 {len(todo)} 週")
+        for g in gaps:
+            print("缺口：", g[0], "→", g[1])
+        for w in todo:
+            crawl_week(client, con, w, HISTORY_TOP)
+        return
     weeks = list_weeks(client)
     todo = weeks[:1] if a.latest else weeks_missing(con, weeks)
     print(f"API 保留 {len(weeks)} 週，這次要抓 {len(todo)} 週")
