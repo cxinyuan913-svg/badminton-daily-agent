@@ -77,6 +77,10 @@ def test_rank_lookup_falls_back_to_estimate_before_official_weeks():
     con.execute("INSERT INTO ranking_estimate VALUES ('2019-09-03', 'MS', ?, 7, 50000, 10, 'computed')", (pid,))
     assert rankings.rank_lookup(con, pid, "MS", "2019-09-10") == (7, "estimate")
     assert rankings.rank_lookup(con, pid, "MS", "2019-08-01") == (None, None)       # 更早沒有估算
+    other_id = int(FIX["ms"]["results"]["data"][1]["player1_id"])
+    con.execute("INSERT OR IGNORE INTO player (player_id) VALUES (?)", (other_id,))
+    other = crawler.pairing_id(con, [other_id])
+    assert rankings.rank_lookup(con, other, "MS", "2019-09-10") == (None, "outside100_est")   # 估算週有、但不在前 100
     assert rankings.rank_on(con, pid, "MS", "2019-09-10") == 7
 
 

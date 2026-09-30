@@ -136,7 +136,7 @@ def rank_lookup(con, pairing: int, event: str, on_date: str) -> tuple[int | None
         return None, None
     row = con.execute("SELECT rank FROM ranking_estimate WHERE week_date=? AND event=? AND pairing_id=?",
                       (week, event, pairing)).fetchone()
-    return (row[0], "estimate") if row else (None, None)
+    return (row[0], "estimate") if row else (None, "outside100_est")     # 估算只存前 100 名
 
 
 def rank_on(con, pairing: int, event: str, on_date: str):

@@ -138,7 +138,7 @@ def pending_ties(con, today: dt.date, include_sent: bool = False) -> list[dict]:
 
 def _rank(r, src=None):
     if not r:
-        return "百名外" if src == "outside100" else "無排名"
+        return {"outside100": "百名外", "outside100_est": "百名外（估算）"}.get(src, "無排名")
     return f"#{r}（估算）" if src == "estimate" else f"#{r}"
 
 
