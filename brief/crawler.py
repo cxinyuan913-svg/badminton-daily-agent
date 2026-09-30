@@ -123,7 +123,8 @@ def is_finished(m: dict) -> bool:
 
 
 def connect(db_path: str) -> sqlite3.Connection:
-    con = sqlite3.connect(db_path)
+    # 回補、watch（每 30 分鐘）、06:00 晨報可能同時寫同一個資料庫：等鎖最多 60 秒，不要一碰到就報錯
+    con = sqlite3.connect(db_path, timeout=60)
     con.execute("PRAGMA foreign_keys = ON")
     con.executescript(SCHEMA.read_text(encoding="utf-8"))
     _migrate(con)

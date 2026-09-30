@@ -15,17 +15,15 @@
 
 ## 目前狀態（2026-09-30）
 
-- P0 資料來源調查：**完成**，細節在 `docs/data-sources.md`
-- 資料層原型：**完成**；P1 每日收集（`brief/daily.py`）與摘要（`brief/digest.py`、`brief/discord.py`）已寫好，37 個測試通過
-  - `brief/crawler.py`：賽果（含團體賽拆單場）
-  - `brief/rankings.py`：世界排名週快照
-  - `brief/live.py`：進行中賽事清單（每日排程的入口）
-  - `brief/scanner.py`：賽事 ID 掃描與 Grade 3 層級判斷
-  - `brief/schema.sql`：資料表
-  - `brief/calendar.py`：年度賽程 → 追蹤範圍內的賽事與層級（**找賽事的主要方法**）
-- 2016–2026 賽事清單：用 `python -m brief.calendar --from 2016 --to 2026 --csv data/tournaments.csv` 產生（11 個請求）。
-  統計與驗證見 `docs/data-sources.md`
-- 下一步：P1（每日排程 + Discord 摘要），見 `docs/plan.md`
+最新進度一律看 `docs/status.md` 最上面一段；這裡只列大方向。
+
+- P0 資料來源調查：**完成**（`docs/data-sources.md`）
+- P1 每日收集＋推送：**程式完成、已上線**，開始累積關卡「連續 7 天沒有漏抓」
+  - `brief.watch`（每 30 分鐘）每站當地當天打完就發；`brief.daily`（06:00）收集＋晨報
+  - 日報中文化、爆冷規則、IC／IS 例外、明日看點、今日重點（LLM＋事實檢查）、暱稱收集
+- 交接單 002（十年回補＋排名重建）：回補進行中；排名重建與驗證完成（`docs/ranking-validation.md`，前 10 名 95%+ 誤差 ≤ 2）
+- 測試 127 個（`python -m pytest -q`），fixture 全是真實回應
+- 模組一覽見 `README.md`
 - 第一個實戰目標：HSBC BWF World Tour Finals 2026（12/9–13 杭州）的賽前分析
 
 ## 指令
