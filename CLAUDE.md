@@ -16,7 +16,7 @@
 ## 目前狀態（2026-09-30）
 
 - P0 資料來源調查：**完成**，細節在 `docs/data-sources.md`
-- 資料層原型：**完成**，21 個測試通過
+- 資料層原型：**完成**；P1 每日收集（`brief/daily.py`）與摘要（`brief/digest.py`、`brief/discord.py`）已寫好，37 個測試通過
   - `brief/crawler.py`：賽果（含團體賽拆單場）
   - `brief/rankings.py`：世界排名週快照
   - `brief/live.py`：進行中賽事清單（每日排程的入口）
@@ -39,6 +39,8 @@ python -m brief.crawler 5766 --db data/brief.db       # 抓一站
 python -m brief.calendar --from 2016 --to 2026 --db data/brief.db   # 建立賽事清單與層級
 python -m brief.rankings --db data/brief.db           # 補齊排名快照（API 只留約 60 週）
 python -m brief.live                                  # 列出進行中賽事
+python -m brief.daily --db data/brief.db --send       # 每日收集 + Discord 摘要（排程跑這支）
+python -m brief.digest --db data/brief.db             # 只印摘要
 ```
 
 ## 已決議（改動前先問 Raymond）

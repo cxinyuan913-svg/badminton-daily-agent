@@ -4,9 +4,9 @@
 
 文件：[開發計畫](docs/plan.md) · [資料來源](docs/data-sources.md) · [給 Claude Code 的說明](CLAUDE.md)
 
-## 目前進度：資料層原型
+## 目前進度：P1 每日收集與摘要
 
-2026-09-30 開發前實測後寫出的第一版。Grade 1、2、3 的賽果都從 BWF 官網同一套 API 取得。
+資料層原型完成，2016–2026 賽事清單、排名快照已建立；每日收集與 Discord 摘要已寫好，排程待設定。Grade 1、2、3 的賽果都從 BWF 官網同一套 API 取得。
 
 ## 檔案
 
@@ -17,9 +17,12 @@
 | `brief/rankings.py` | 世界排名週快照（API 只留約 60 週，須每週執行） |
 | `brief/live.py` | 取得進行中賽事，每日排程的入口 |
 | `brief/calendar.py` | 年度賽程 → 追蹤範圍內的賽事與層級（找賽事的主要方法） |
-| `brief/scanner.py` | 掃描賽事 ID、判斷 Grade 3 層級、匯出 IC / IS 清單 |
-| `tests/` | 10 個測試，用真實 API 回應當測試資料 |
-| `tests/fixtures/` | North Harbour International 2026-09-30 的真實回應（節錄 8 場） |
+| `brief/scanner.py` | 掃描賽事 ID、判斷 Grade 3 層級（備援） |
+| `brief/daily.py` | 每日收集：賽程 → 進行中賽事 → 最近兩天賽果 → 缺少的排名週次，紀錄寫入 `crawl_run` |
+| `brief/digest.py` | 每日文字摘要：八強以後全列，早期輪次只列爆冷與台灣選手 |
+| `brief/discord.py` | Discord webhook 推送（2000 字切分、429 重試） |
+| `tests/` | 37 個測試，用真實 API 回應當測試資料 |
+| `tests/fixtures/` | 賽程、進行中賽事、賽果、團體賽、排名的真實回應節錄 |
 
 ## 安裝與執行
 
@@ -29,6 +32,10 @@ pip install -e ".[dev]"
 python -m pytest -q                                  # 跑測試
 python -m brief.crawler 5766 --db data/brief.db      # 抓 North Harbour International 2026
 python -m brief.crawler 3600 --db data/brief.db      # 抓 Myanmar International Series 2019
+python -m brief.calendar --from 2016 --to 2026 --db data/brief.db   # 建立賽事清單
+python -m brief.rankings --db data/brief.db          # 補齊排名快照
+python -m brief.daily --db data/brief.db --send      # 每日收集 + 推送摘要（需在 .env 設定 webhook）
+python -m brief.digest --db data/brief.db            # 只印出摘要，不推送
 python -m brief.scanner scan --from 2400 --to 5900 --db data/brief.db
 python -m brief.scanner classify --db data/brief.db
 python -m brief.scanner export grade3.csv --db data/brief.db
@@ -53,6 +60,6 @@ python -m brief.scanner export grade3.csv --db data/brief.db
 
 ## 已知待辦
 
-- 團體賽（湯尤盃、蘇迪曼盃）的外層比賽會跳過，個別對戰在 `matches` 欄位內，之後處理。
-- 賽事的 Grade 與 level 欄位要由 `scanner.py` 或 World Tour 賽程補上。
-- 排名快照爬蟲尚未撰寫。
+- 每日排程（06:00 Asia/Taipei）的執行位置待決定
+- 新聞收集、LLM 摘要改寫
+- 只出現在排名裡的選手沒有姓名（排名 API 只給 slug）
