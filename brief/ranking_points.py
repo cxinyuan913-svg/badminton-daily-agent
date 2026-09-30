@@ -109,7 +109,7 @@ def points(on: dt.date, level: str | None, position: str, tournament_name: str =
     if position not in POSITIONS:
         raise ValueError(f"未知名次：{position}")
     lv = effective_level(level, tournament_name, on)
-    if lv is None or lv in ("G1_TEAM", "MULTI_TEAM"):
+    if lv is None or lv in ("G1_TEAM", "MULTI_TEAM", "CONT_TEAM"):
         return None if lv is None else 0
     name, table = version(on)
     row = table.get(lv)

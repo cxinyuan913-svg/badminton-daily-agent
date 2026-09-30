@@ -145,3 +145,15 @@ def test_morning_report_skip_when_empty_and_reminders():
     assert "提醒：MAXX North Harbour International 2026 當地 2026-09-29 保險發送，當時有 2 場未完成" in text
     assert "當地 2026-09-30 的賽果還沒發" in text
     assert "__賽果__" not in text and "第 1 天" not in text
+
+
+def test_future_series_never_pushed():
+    """FS 只存不推：日報、晨報、watch 都不出現。"""
+    from brief import digest
+    con = db()
+    con.execute("UPDATE tournament SET level='FS'")
+    crawler.store_day(con, 5766, done(DAY))
+    con.commit()
+    assert "MAXX North Harbour" not in digest.build(con, dt.date(2026, 10, 1))[0]
+    assert digest.morning(con, dt.date(2026, 10, 1))[0] is None
+    assert watch.targets(con, dt.date(2026, 9, 30)) == []

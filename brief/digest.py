@@ -251,7 +251,7 @@ def build(con, today: dt.date, llm=None, errors: list | None = None, include_sen
                     if errors is not None:
                         errors.append(f"llm news: {e!r}")
                     break
-    pushed = [m for m in matches if m["level"] not in grade3.GRADE3]
+    pushed = [m for m in matches if m["level"] not in grade3.GRADE3 | grade3.NO_PUSH]
     g3_lines, g3_shown = grade3_section(con, [m for m in matches if m["level"] in grade3.GRADE3])
     g3_hidden = sum(1 for m in matches if m["level"] in grade3.GRADE3) - g3_shown
     from brief import nickname

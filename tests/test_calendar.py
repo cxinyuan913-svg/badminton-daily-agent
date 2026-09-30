@@ -47,3 +47,18 @@ def test_paraguay_is_not_para_badminton():
     assert rows == {4947: "IS"}
     para = {"id": 1, "name": "Para Badminton World Championships 2024", "category": "International Series"}
     assert calendar.classify(para) is None
+
+
+def test_future_series_and_continental_team():
+    """2026-09-30 22:35 決議：Future Series 只存不推（用於排名重建）、洲際團體錦標賽納入。"""
+    fix = json.loads((Path(__file__).parent / "fixtures" / "calendar_2025_fs_cont_team.json").read_text(encoding="utf-8"))
+    raw = [t for m in fix["results"] for t in m["tournaments"]]
+    rows = {r["tournament_id"]: r["level"] for r in calendar.parse_year(fix)}
+    for t in raw:
+        cat = " ".join(t["category"].split())
+        if cat == "Future Series":
+            assert rows[t["id"]] == "FS"
+        elif cat == "Continental Team Championships":
+            assert rows[t["id"]] == "CONT_TEAM"
+        else:
+            assert t["id"] not in rows                            # 青少年團體賽不收

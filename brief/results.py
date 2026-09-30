@@ -201,7 +201,7 @@ if __name__ == "__main__":
 
 
 # ---------------------------------------------------------------- 團體賽（規章 7.x）
-TEAM_LEVELS = ("G1_TEAM", "MULTI_TEAM")
+TEAM_LEVELS = ("G1_TEAM", "MULTI_TEAM", "CONT_TEAM")
 TEAM_POSITION = "TEAM"
 
 

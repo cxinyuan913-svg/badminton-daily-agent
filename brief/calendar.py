@@ -37,6 +37,8 @@ CATEGORY_LEVEL = {
     "Grand Prix": (2, "GP"),
     "International Challenge": (3, "IC"),
     "International Series": (3, "IS"),
+    "Future Series": (3, "FS"),                              # 只存不推，用於排名重建（2026-09-30 22:35 決議）
+    "Continental Team Championships": (None, "CONT_TEAM"),   # 洲際團體錦標賽，規章 7.1 計入個人排名（同上）
     "Continental Individual Championships": (3, "CONT_IND"),  # 亞錦賽、歐錦賽等（2026-09-30 決議納入）
     "Multi-Sport Games": (None, "MULTI"),                     # 亞運、大英國協運動會個人賽（同上）
     "Multi-Sport Games - Team Tournaments": (None, "MULTI_TEAM"),

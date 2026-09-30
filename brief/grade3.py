@@ -11,6 +11,7 @@ from __future__ import annotations
 from brief import zh
 
 GRADE3 = {"IC", "IS"}
+NO_PUSH = {"FS"}          # Future Series：只存不推，用於排名重建（2026-09-30 22:35）
 HIGH_LEVELS = {"S1000", "S750", "WTF", "G1_IND", "G1_EVENT", "SSP"}    # SSP：2017 年以前的 Superseries Premier
 DEEP_ROUNDS = {"W": "奪冠", "F": "打進決賽", "SF": "打進四強", "QF": "打進八強"}
 DEEP_ORDER = ["W", "F", "SF", "QF"]
