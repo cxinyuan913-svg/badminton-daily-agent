@@ -1,0 +1,3764 @@
+[
+ {
+  "id": 1551376,
+  "code": "20",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "MAS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "93882",
+     "nameDisplay": "HUAN Kai Hern",
+     "nameType": 1,
+     "firstName": "Kai Hern",
+     "lastName": "HUAN",
+     "initials": "HK",
+     "nameShort": "HUAN K H ",
+     "nameShort2": "HUAN",
+     "slug": "kai-hern-huan",
+     "countryCode": "MAS",
+     "countryName": "Malaysia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+     "avatar": {
+      "title": "Kai Hern HUAN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "22799",
+     "nameDisplay": "Leo Tian Le XU",
+     "nameType": 0,
+     "firstName": "Leo Tian Le",
+     "lastName": "XU",
+     "initials": "LX",
+     "nameShort": "L XU",
+     "nameShort2": "XU",
+     "slug": "leo-tian-le-xu",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Leo Tian Le XU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": "3",
+  "team2seed": null,
+  "matchTime": "2026-10-01 10:00:00",
+  "matchTimeUtc": "2026-09-30 21:00:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "1",
+  "oopText": "Starting at 10:00 AM",
+  "oopTypeId": 1,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 0,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551256,
+  "code": "17",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "79943",
+     "nameDisplay": "Ricky CHENG",
+     "nameType": 0,
+     "firstName": "Ricky",
+     "lastName": "CHENG",
+     "initials": "RC",
+     "nameShort": "R CHENG",
+     "nameShort2": "CHENG",
+     "slug": "ricky-cheng",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Ricky CHENG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "62551",
+     "nameDisplay": "Dylan CHAN",
+     "nameType": 0,
+     "firstName": "Dylan",
+     "lastName": "CHAN",
+     "initials": "DC",
+     "nameShort": "D CHAN",
+     "nameShort2": "CHAN",
+     "slug": "dylan-chan",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Dylan CHAN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 10:35:00",
+  "matchTimeUtc": "2026-09-30 21:35:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "2",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551261,
+  "code": "16",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "87029",
+     "nameDisplay": "WANG Po-Wei",
+     "nameType": 1,
+     "firstName": "Po-Wei",
+     "lastName": "WANG",
+     "initials": "WP",
+     "nameShort": "WANG P W ",
+     "nameShort2": "WANG",
+     "slug": "wang-po-wei",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "WANG Po-Wei",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "83265",
+     "nameDisplay": "Ricky TANG",
+     "nameType": 0,
+     "firstName": "Ricky",
+     "lastName": "TANG",
+     "initials": "RT",
+     "nameShort": "R TANG",
+     "nameShort2": "TANG",
+     "slug": "ricky-tang",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Ricky TANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": "1",
+  "team2seed": null,
+  "matchTime": "2026-10-01 11:10:00",
+  "matchTimeUtc": "2026-09-30 22:10:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "3",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551257,
+  "code": "18",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "SGP",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/SGP.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "75575",
+     "nameDisplay": "Jia Wei Joel KOH",
+     "nameType": 0,
+     "firstName": "Jia Wei Joel",
+     "lastName": "KOH",
+     "initials": "JK",
+     "nameShort": "J KOH",
+     "nameShort2": "KOH",
+     "slug": "jia-wei-joel-koh",
+     "countryCode": "SGP",
+     "countryName": "Singapore",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/SGP.png",
+     "avatar": {
+      "title": "Jia Wei Joel KOH",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1671092898/assets/players/thumbnail/75575.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "34645",
+     "nameDisplay": "Yaozu (David) ZHOU",
+     "nameType": 0,
+     "firstName": "Yaozu (David)",
+     "lastName": "ZHOU",
+     "initials": "YZ",
+     "nameShort": "Y ZHOU",
+     "nameShort2": "ZHOU",
+     "slug": "yaozu-david-zhou",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Yaozu (David) ZHOU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": "6",
+  "team2seed": null,
+  "matchTime": "2026-10-01 11:45:00",
+  "matchTimeUtc": "2026-09-30 22:45:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "4",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551285,
+  "code": "157",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "JPN",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/JPN.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "48760",
+     "nameDisplay": "Mana SASAKI",
+     "nameType": 0,
+     "firstName": "Mana",
+     "lastName": "SASAKI",
+     "initials": "MS",
+     "nameShort": "M SASAKI",
+     "nameShort2": "SASAKI",
+     "slug": "mana-sasaki",
+     "countryCode": "JPN",
+     "countryName": "Japan",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/JPN.png",
+     "avatar": {
+      "title": "Mana SASAKI",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "19893",
+     "nameDisplay": "Amy ZHANG",
+     "nameType": 0,
+     "firstName": "Amy",
+     "lastName": "ZHANG",
+     "initials": "AZ",
+     "nameShort": "A ZHANG",
+     "nameShort2": "ZHANG",
+     "slug": "amy-zhang",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Amy ZHANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 12:20:00",
+  "matchTimeUtc": "2026-09-30 23:20:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "5",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551393,
+  "code": "214",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "89278",
+     "nameDisplay": "Shiqi TONG",
+     "nameType": 0,
+     "firstName": "Shiqi",
+     "lastName": "TONG",
+     "initials": "ST",
+     "nameShort": "S TONG",
+     "nameShort2": "TONG",
+     "slug": "shiqi-tong",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Shiqi TONG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "22799",
+     "nameDisplay": "Leo Tian Le XU",
+     "nameType": 0,
+     "firstName": "Leo Tian Le",
+     "lastName": "XU",
+     "initials": "LX",
+     "nameShort": "L XU",
+     "nameShort2": "XU",
+     "slug": "leo-tian-le-xu",
+     "countryCode": "NZL",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Leo Tian Le XU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "62332",
+     "nameDisplay": "Shao Hua CHIU",
+     "nameType": 0,
+     "firstName": "Shao Hua",
+     "lastName": "CHIU",
+     "initials": "SC",
+     "nameShort": "S CHIU",
+     "nameShort2": "CHIU",
+     "slug": "shao-hua-chiu",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Shao Hua CHIU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "73474",
+     "nameDisplay": "LIN Bing-Wei",
+     "nameType": 1,
+     "firstName": "Bing-Wei",
+     "lastName": "LIN",
+     "initials": "LB",
+     "nameShort": "LIN B W ",
+     "nameShort2": "LIN",
+     "slug": "lin-bing-wei",
+     "countryCode": "TPE",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "LIN Bing-Wei",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 12:55:00",
+  "matchTimeUtc": "2026-09-30 23:55:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "6",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MD",
+  "roundName": "R32",
+  "drawName": "MD",
+  "drawCode": "3",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 3,
+  "matchTypeValue": "Men's Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551357,
+  "code": "25",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "72315",
+     "nameDisplay": "Muhammad Rafi Zafran FERARY",
+     "nameType": 0,
+     "firstName": "Muhammad Rafi Zafran",
+     "lastName": "FERARY",
+     "initials": "MF",
+     "nameShort": "M FERARY",
+     "nameShort2": "FERARY",
+     "slug": "muhammad-rafi-zafran-ferary",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Muhammad Rafi Zafran FERARY",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "99895",
+     "nameDisplay": "Edward LAU",
+     "nameType": 0,
+     "firstName": "Edward",
+     "lastName": "LAU",
+     "initials": "EL",
+     "nameShort": "E LAU",
+     "nameShort2": "LAU",
+     "slug": "edward-lau",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Edward LAU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1784095170/assets/players/thumbnail/99895.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": "5",
+  "matchTime": "2026-10-01 13:30:00",
+  "matchTimeUtc": "2026-10-01 00:30:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "7",
+  "oopText": "Court and time TBA",
+  "oopTypeId": 5,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551399,
+  "code": "213",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "91254",
+     "nameDisplay": "LU Chia Hung",
+     "nameType": 1,
+     "firstName": "Chia Hung",
+     "lastName": "LU",
+     "initials": "LC",
+     "nameShort": "LU C H ",
+     "nameShort2": "LU",
+     "slug": "chia-hung-lu",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Chia Hung LU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1604895690/assets/players/thumbnail/91254.jpg"
+     }
+    },
+    {
+     "id": "86722",
+     "nameDisplay": "LU Chia Pin",
+     "nameType": 1,
+     "firstName": "Chia Pin",
+     "lastName": "LU",
+     "initials": "LC",
+     "nameShort": "LU C P ",
+     "nameShort2": "LU",
+     "slug": "lu-chia-pin",
+     "countryCode": "TPE",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Chia Pin LU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1604897469/assets/players/thumbnail/86722.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "25172",
+     "nameDisplay": "Roy PEPLER",
+     "nameType": 0,
+     "firstName": "Roy",
+     "lastName": "PEPLER",
+     "initials": "RP",
+     "nameShort": "R PEPLER",
+     "nameShort2": "PEPLER",
+     "slug": "roy-pepler",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Roy PEPLER",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "33518",
+     "nameDisplay": "Arvind VAIRAVAN",
+     "nameType": 0,
+     "firstName": "Arvind",
+     "lastName": "VAIRAVAN",
+     "initials": "AV",
+     "nameShort": "A VAIRAVAN",
+     "nameShort2": "VAIRAVAN",
+     "slug": "arvind-vairavan",
+     "countryCode": "NZL",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Arvind VAIRAVAN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 14:05:00",
+  "matchTimeUtc": "2026-10-01 01:05:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "8",
+  "oopText": "Court and time TBA",
+  "oopTypeId": 5,
+  "eventName": "MD",
+  "roundName": "R32",
+  "drawName": "MD",
+  "drawCode": "3",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 3,
+  "matchTypeValue": "Men's Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551352,
+  "code": "327",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": null,
+   "countryFlagUrl": null,
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "57440",
+     "nameDisplay": "Tony YU",
+     "nameType": 0,
+     "firstName": "Tony",
+     "lastName": "YU",
+     "initials": "TY",
+     "nameShort": "T YU",
+     "nameShort2": "YU",
+     "slug": "tony-yu",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Tony YU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "80519",
+     "nameDisplay": "Yee-Yuan LIM",
+     "nameType": 0,
+     "firstName": "Yee-Yuan",
+     "lastName": "LIM",
+     "initials": "YL",
+     "nameShort": "Y LIM",
+     "nameShort2": "LIM",
+     "slug": "yee-yuan-lim",
+     "countryCode": "AUS",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Yee-Yuan LIM",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "94332",
+     "nameDisplay": "Jack YU",
+     "nameType": 0,
+     "firstName": "Jack",
+     "lastName": "YU",
+     "initials": "JY",
+     "nameShort": "J YU",
+     "nameShort2": "YU",
+     "slug": "jack-yu",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Jack YU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1690179476/assets/players/thumbnail/94332.jpg"
+     }
+    },
+    {
+     "id": "71065",
+     "nameDisplay": "Angela YU",
+     "nameType": 0,
+     "firstName": "Angela",
+     "lastName": "YU",
+     "initials": "AY",
+     "nameShort": "A YU",
+     "nameShort2": "YU",
+     "slug": "angela-yu",
+     "countryCode": "AUS",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Angela YU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1719991766/assets/players/thumbnail/71065.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 15:30:00",
+  "matchTimeUtc": "2026-10-01 02:30:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "9",
+  "oopText": "Not before 3:30 PM",
+  "oopTypeId": 2,
+  "eventName": "XD",
+  "roundName": "R16",
+  "drawName": "XD",
+  "drawCode": "5",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 5,
+  "matchTypeValue": "Mixed Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551394,
+  "code": "326",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "96639",
+     "nameDisplay": "Daniel MCMILLAN",
+     "nameType": 0,
+     "firstName": "Daniel",
+     "lastName": "MCMILLAN",
+     "initials": "DM",
+     "nameShort": "D MCMILLAN",
+     "nameShort2": "MCMILLAN",
+     "slug": "daniel-mcmillan",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Daniel MCMILLAN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "97675",
+     "nameDisplay": "Camellia ZHOU",
+     "nameType": 0,
+     "firstName": "Camellia",
+     "lastName": "ZHOU",
+     "initials": "CZ",
+     "nameShort": "C ZHOU",
+     "nameShort2": "ZHOU",
+     "slug": "camellia-zhou",
+     "countryCode": "NZL",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Camellia ZHOU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "60896",
+     "nameDisplay": "LU Chen",
+     "nameType": 1,
+     "firstName": "Chen",
+     "lastName": "LU",
+     "initials": "LC",
+     "nameShort": "LU C",
+     "nameShort2": "LU",
+     "slug": "chen-lu",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Chen LU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "93541",
+     "nameDisplay": "Yun Jung CHANG",
+     "nameType": 0,
+     "firstName": "Yun Jung",
+     "lastName": "CHANG",
+     "initials": "YC",
+     "nameShort": "Y CHANG",
+     "nameShort2": "CHANG",
+     "slug": "yun-jung-chang",
+     "countryCode": "TPE",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Yun Jung CHANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": "4",
+  "team2seed": null,
+  "matchTime": "2026-10-01 16:05:00",
+  "matchTimeUtc": "2026-10-01 03:05:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "10",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "XD",
+  "roundName": "R16",
+  "drawName": "XD",
+  "drawCode": "5",
+  "courtName": "1 - Streaming",
+  "courtCode": "1",
+  "courtIndex": 0,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 5,
+  "matchTypeValue": "Mixed Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551365,
+  "code": "151",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "89361",
+     "nameDisplay": "Rebecca ZHANG",
+     "nameType": 0,
+     "firstName": "Rebecca",
+     "lastName": "ZHANG",
+     "initials": "RZ",
+     "nameShort": "R ZHANG",
+     "nameShort2": "ZHANG",
+     "slug": "rebecca-zhang",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Rebecca ZHANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "IND",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "92109",
+     "nameDisplay": "Sri Nitya NARAHARISETTI",
+     "nameType": 0,
+     "firstName": "Sri Nitya",
+     "lastName": "NARAHARISETTI",
+     "initials": "SN",
+     "nameShort": "S NARAHARISETTI",
+     "nameShort2": "NARAHARISETTI",
+     "slug": "sri-nitya-naraharisetti",
+     "countryCode": "IND",
+     "countryName": "India",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+     "avatar": {
+      "title": "Sri Nitya NARAHARISETTI",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 10:00:00",
+  "matchTimeUtc": "2026-09-30 21:00:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "1",
+  "oopText": "Starting at 10:00 AM",
+  "oopTypeId": 1,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "2 - Streaming",
+  "courtCode": "2",
+  "courtIndex": 1,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 0,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551265,
+  "code": "144",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "22435",
+     "nameDisplay": "Jana Priya KRISHNAKUMAR",
+     "nameType": 0,
+     "firstName": "Jana Priya",
+     "lastName": "KRISHNAKUMAR",
+     "initials": "JK",
+     "nameShort": "J KRISHNAKUMAR",
+     "nameShort2": "KRISHNAKUMAR",
+     "slug": "jana-priya-krishnakumar",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Jana Priya KRISHNAKUMAR",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "IND",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "89438",
+     "nameDisplay": "Aadhya SHINE",
+     "nameType": 0,
+     "firstName": "Aadhya",
+     "lastName": "SHINE",
+     "initials": "AS",
+     "nameShort": "A SHINE",
+     "nameShort2": "SHINE",
+     "slug": "aadhya-shine",
+     "countryCode": "IND",
+     "countryName": "India",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+     "avatar": {
+      "title": "Aadhya SHINE",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 10:35:00",
+  "matchTimeUtc": "2026-09-30 21:35:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "2",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "2 - Streaming",
+  "courtCode": "2",
+  "courtIndex": 1,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551318,
+  "code": "148",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "41987",
+     "nameDisplay": "Zooni AHUJA",
+     "nameType": 0,
+     "firstName": "Zooni",
+     "lastName": "AHUJA",
+     "initials": "ZA",
+     "nameShort": "Z AHUJA",
+     "nameShort2": "AHUJA",
+     "slug": "zooni-ahuja",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Zooni AHUJA",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "ENG",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/ENG.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "44698",
+     "nameDisplay": "Karen Yun Qiao FENG",
+     "nameType": 0,
+     "firstName": "Karen Yun Qiao",
+     "lastName": "FENG",
+     "initials": "KF",
+     "nameShort": "K FENG",
+     "nameShort2": "FENG",
+     "slug": "karen-yun-qiao-feng",
+     "countryCode": "ENG",
+     "countryName": "England",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/ENG.png",
+     "avatar": {
+      "title": "Karen Yun Qiao FENG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1789981055/assets/players/thumbnail/44698.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 11:10:00",
+  "matchTimeUtc": "2026-09-30 22:10:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "3",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "2 - Streaming",
+  "courtCode": "2",
+  "courtIndex": 1,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551221,
+  "code": "150",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "39221",
+     "nameDisplay": "Xinyuan LIANG",
+     "nameType": 0,
+     "firstName": "Xinyuan",
+     "lastName": "LIANG",
+     "initials": "XL",
+     "nameShort": "X LIANG",
+     "nameShort2": "LIANG",
+     "slug": "xinyuan-liang",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Xinyuan LIANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "JPN",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/JPN.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "79790",
+     "nameDisplay": "Momoka KIMURA",
+     "nameType": 0,
+     "firstName": "Momoka",
+     "lastName": "KIMURA",
+     "initials": "MK",
+     "nameShort": "M KIMURA",
+     "nameShort2": "KIMURA",
+     "slug": "momoka-kimura",
+     "countryCode": "JPN",
+     "countryName": "Japan",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/JPN.png",
+     "avatar": {
+      "title": "Momoka KIMURA",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 11:45:00",
+  "matchTimeUtc": "2026-09-30 22:45:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "4",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "2 - Streaming",
+  "courtCode": "2",
+  "courtIndex": 1,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551301,
+  "code": "155",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "44874",
+     "nameDisplay": "Mimi NGO",
+     "nameType": 0,
+     "firstName": "Mimi",
+     "lastName": "NGO",
+     "initials": "MN",
+     "nameShort": "M NGO",
+     "nameShort2": "NGO",
+     "slug": "mimi-ngo",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Mimi NGO",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "IND",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "93403",
+     "nameDisplay": "Kundu GARIMA",
+     "nameType": 0,
+     "firstName": "Kundu",
+     "lastName": "GARIMA",
+     "initials": "KG",
+     "nameShort": "K GARIMA",
+     "nameShort2": "GARIMA",
+     "slug": "kundu-garima",
+     "countryCode": "IND",
+     "countryName": "India",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+     "avatar": {
+      "title": "Kundu GARIMA",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 12:20:00",
+  "matchTimeUtc": "2026-09-30 23:20:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "5",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "2 - Streaming",
+  "courtCode": "2",
+  "courtIndex": 1,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551344,
+  "code": "276",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "50260",
+     "nameDisplay": "Priska KUSTIADI",
+     "nameType": 0,
+     "firstName": "Priska",
+     "lastName": "KUSTIADI",
+     "initials": "PK",
+     "nameShort": "P KUSTIADI",
+     "nameShort2": "KUSTIADI",
+     "slug": "priska-kustiadi",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Priska KUSTIADI",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    },
+    {
+     "id": "91988",
+     "nameDisplay": "Maureen  Clarissa WIJAYA",
+     "nameType": 0,
+     "firstName": "Maureen  Clarissa",
+     "lastName": "WIJAYA",
+     "initials": "MW",
+     "nameShort": "M WIJAYA",
+     "nameShort2": "WIJAYA",
+     "slug": "maureen-clarissa-wijaya",
+     "countryCode": "AUS",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Maureen  Clarissa WIJAYA",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "38627",
+     "nameDisplay": "Hsuan Ni CHEN",
+     "nameType": 0,
+     "firstName": "Hsuan Ni",
+     "lastName": "CHEN",
+     "initials": "HC",
+     "nameShort": "H CHEN",
+     "nameShort2": "CHEN",
+     "slug": "hsuan-ni-chen",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Hsuan Ni CHEN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    },
+    {
+     "id": "79103",
+     "nameDisplay": "Chia-Yi KUNG",
+     "nameType": 0,
+     "firstName": "Chia-Yi",
+     "lastName": "KUNG",
+     "initials": "CK",
+     "nameShort": "C KUNG",
+     "nameShort2": "KUNG",
+     "slug": "chia-yi-kung",
+     "countryCode": "TPE",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Chia-Yi KUNG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 12:55:00",
+  "matchTimeUtc": "2026-09-30 23:55:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "6",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "WD",
+  "roundName": "R32",
+  "drawName": "WD",
+  "drawCode": "4",
+  "courtName": "2 - Streaming",
+  "courtCode": "2",
+  "courtIndex": 1,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 4,
+  "matchTypeValue": "Women's Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551332,
+  "code": "26",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "60582",
+     "nameDisplay": "Ephraim STEPHEN SAM",
+     "nameType": 0,
+     "firstName": "Ephraim",
+     "lastName": "STEPHEN SAM",
+     "initials": "ES",
+     "nameShort": "E STEPHEN SAM",
+     "nameShort2": "STEPHEN SAM",
+     "slug": "ephraim-stephen-sam",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Ephraim STEPHEN SAM",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1784165076/assets/players/thumbnail/60582.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "MAS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "43810",
+     "nameDisplay": "Singh Sidhu MANNLUCKVYNNDER",
+     "nameType": 0,
+     "firstName": "Singh Sidhu",
+     "lastName": "MANNLUCKVYNNDER",
+     "initials": "SM",
+     "nameShort": "S MANNLUCKVYNNDER",
+     "nameShort2": "MANNLUCKVYNNDER",
+     "slug": "singh-sidhu-mannluckvynnder",
+     "countryCode": "MAS",
+     "countryName": "Malaysia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+     "avatar": {
+      "title": "Singh Sidhu MANNLUCKVYNNDER",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 13:30:00",
+  "matchTimeUtc": "2026-10-01 00:30:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "7",
+  "oopText": "Court and time TBA",
+  "oopTypeId": 5,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "2 - Streaming",
+  "courtCode": "2",
+  "courtIndex": 1,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551270,
+  "code": "331",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "88675",
+     "nameDisplay": "Landon Hosea KURNIAWAN",
+     "nameType": 0,
+     "firstName": "Landon Hosea",
+     "lastName": "KURNIAWAN",
+     "initials": "LK",
+     "nameShort": "L KURNIAWAN",
+     "nameShort2": "KURNIAWAN",
+     "slug": "landon-hosea-kurniawan",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Landon Hosea KURNIAWAN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "44874",
+     "nameDisplay": "Mimi NGO",
+     "nameType": 0,
+     "firstName": "Mimi",
+     "lastName": "NGO",
+     "initials": "MN",
+     "nameShort": "M NGO",
+     "nameShort2": "NGO",
+     "slug": "mimi-ngo",
+     "countryCode": "AUS",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Mimi NGO",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "82683",
+     "nameDisplay": "Dylan SOEDJASA",
+     "nameType": 0,
+     "firstName": "Dylan",
+     "lastName": "SOEDJASA",
+     "initials": "DS",
+     "nameShort": "D SOEDJASA",
+     "nameShort2": "SOEDJASA",
+     "slug": "dylan-soedjasa",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Dylan SOEDJASA",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "77993",
+     "nameDisplay": "Justine VILLEGAS",
+     "nameType": 0,
+     "firstName": "Justine",
+     "lastName": "VILLEGAS",
+     "initials": "JV",
+     "nameShort": "J VILLEGAS",
+     "nameShort2": "VILLEGAS",
+     "slug": "justine-villegas",
+     "countryCode": "NZL",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Justine VILLEGAS",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": "2",
+  "matchTime": "2026-10-01 15:30:00",
+  "matchTimeUtc": "2026-10-01 02:30:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "9",
+  "oopText": "Not before 3:30 PM",
+  "oopTypeId": 2,
+  "eventName": "XD",
+  "roundName": "R16",
+  "drawName": "XD",
+  "drawCode": "5",
+  "courtName": "2 - Streaming",
+  "courtCode": "2",
+  "courtIndex": 1,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 5,
+  "matchTypeValue": "Mixed Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551243,
+  "code": "324",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "76674",
+     "nameDisplay": "Andika RAMADIANSYAH",
+     "nameType": 0,
+     "firstName": "Andika",
+     "lastName": "RAMADIANSYAH",
+     "initials": "AR",
+     "nameShort": "A RAMADIANSYAH",
+     "nameShort2": "RAMADIANSYAH",
+     "slug": "andika-ramadiansyah",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Andika RAMADIANSYAH",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1604896301/assets/players/thumbnail/76674.jpg"
+     }
+    },
+    {
+     "id": "90442",
+     "nameDisplay": "Nozomi SHIMIZU",
+     "nameType": 0,
+     "firstName": "Nozomi",
+     "lastName": "SHIMIZU",
+     "initials": "NS",
+     "nameShort": "N SHIMIZU",
+     "nameShort2": "SHIMIZU",
+     "slug": "nozomi-shimizu",
+     "countryCode": "AUS",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Nozomi SHIMIZU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1604897721/assets/players/thumbnail/90442.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "62332",
+     "nameDisplay": "Shao Hua CHIU",
+     "nameType": 0,
+     "firstName": "Shao Hua",
+     "lastName": "CHIU",
+     "initials": "SC",
+     "nameShort": "S CHIU",
+     "nameShort2": "CHIU",
+     "slug": "shao-hua-chiu",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Shao Hua CHIU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "65057",
+     "nameDisplay": "HUNG Hsin En",
+     "nameType": 1,
+     "firstName": "Hsin En",
+     "lastName": "HUNG",
+     "initials": "HH",
+     "nameShort": "HUNG H E ",
+     "nameShort2": "HUNG",
+     "slug": "hsin-en-hung",
+     "countryCode": "TPE",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Hsin En HUNG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": "1",
+  "team2seed": null,
+  "matchTime": "2026-10-01 16:05:00",
+  "matchTimeUtc": "2026-10-01 03:05:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "10",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "XD",
+  "roundName": "R16",
+  "drawName": "XD",
+  "drawCode": "5",
+  "courtName": "2 - Streaming",
+  "courtCode": "2",
+  "courtIndex": 1,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 5,
+  "matchTypeValue": "Mixed Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551336,
+  "code": "28",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "MAS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "66257",
+     "nameDisplay": "Erfan Majeed HAJIBEIGY",
+     "nameType": 0,
+     "firstName": "Erfan Majeed",
+     "lastName": "HAJIBEIGY",
+     "initials": "EH",
+     "nameShort": "E HAJIBEIGY",
+     "nameShort2": "HAJIBEIGY",
+     "slug": "erfan-majeed-hajibeigy",
+     "countryCode": "MAS",
+     "countryName": "Malaysia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+     "avatar": {
+      "title": "Erfan Majeed HAJIBEIGY",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "91254",
+     "nameDisplay": "LU Chia Hung",
+     "nameType": 1,
+     "firstName": "Chia Hung",
+     "lastName": "LU",
+     "initials": "LC",
+     "nameShort": "LU C H ",
+     "nameShort2": "LU",
+     "slug": "chia-hung-lu",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Chia Hung LU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1604895690/assets/players/thumbnail/91254.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 10:10:00",
+  "matchTimeUtc": "2026-09-30 21:10:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "1",
+  "oopText": "Starting at 10:10 AM",
+  "oopTypeId": 1,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "Court 3",
+  "courtCode": "3",
+  "courtIndex": 2,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 0,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551282,
+  "code": "149",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "IND",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "66073",
+     "nameDisplay": "Aneri KOTAK",
+     "nameType": 0,
+     "firstName": "Aneri",
+     "lastName": "KOTAK",
+     "initials": "AK",
+     "nameShort": "A KOTAK",
+     "nameShort2": "KOTAK",
+     "slug": "aneri-kotak",
+     "countryCode": "IND",
+     "countryName": "India",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+     "avatar": {
+      "title": "Aneri KOTAK",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "43883",
+     "nameDisplay": "Justreen Erich Denise SORIANO",
+     "nameType": 0,
+     "firstName": "Justreen Erich Denise",
+     "lastName": "SORIANO",
+     "initials": "JS",
+     "nameShort": "J SORIANO",
+     "nameShort2": "SORIANO",
+     "slug": "justreen-erich-denise-soriano",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Justreen Erich Denise SORIANO",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 10:45:00",
+  "matchTimeUtc": "2026-09-30 21:45:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "2",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "Court 3",
+  "courtCode": "3",
+  "courtIndex": 2,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551337,
+  "code": "29",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "56428",
+     "nameDisplay": "Ken RICHARDSON",
+     "nameType": 0,
+     "firstName": "Ken",
+     "lastName": "RICHARDSON",
+     "initials": "KR",
+     "nameShort": "K RICHARDSON",
+     "nameShort2": "RICHARDSON",
+     "slug": "ken-richardson",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Ken RICHARDSON",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "SGP",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/SGP.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "51123",
+     "nameDisplay": "LAU Jun Hui Marcus",
+     "nameType": 1,
+     "firstName": "Jun Hui Marcus",
+     "lastName": "LAU",
+     "initials": "LJ",
+     "nameShort": "LAU J H M ",
+     "nameShort2": "LAU",
+     "slug": "jun-hui-marcus-lau",
+     "countryCode": "SGP",
+     "countryName": "Singapore",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/SGP.png",
+     "avatar": {
+      "title": "Jun Hui Marcus LAU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": "8",
+  "matchTime": "2026-10-01 11:20:00",
+  "matchTimeUtc": "2026-09-30 22:20:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "3",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "Court 3",
+  "courtCode": "3",
+  "courtIndex": 2,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551268,
+  "code": "19",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "MAS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "34897",
+     "nameDisplay": "Jun Hui ONG",
+     "nameType": 0,
+     "firstName": "Jun Hui",
+     "lastName": "ONG",
+     "initials": "JO",
+     "nameShort": "J ONG",
+     "nameShort2": "ONG",
+     "slug": "jun-hui-ong",
+     "countryCode": "MAS",
+     "countryName": "Malaysia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+     "avatar": {
+      "title": "Jun Hui ONG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "36492",
+     "nameDisplay": "YANG Chieh Dan",
+     "nameType": 1,
+     "firstName": "Chieh Dan",
+     "lastName": "YANG",
+     "initials": "YC",
+     "nameShort": "YANG C D ",
+     "nameShort2": "YANG",
+     "slug": "chieh-dan-yang",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Chieh Dan YANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 11:55:00",
+  "matchTimeUtc": "2026-09-30 22:55:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "4",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "Court 3",
+  "courtCode": "3",
+  "courtIndex": 2,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551351,
+  "code": "22",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "87598",
+     "nameDisplay": "CHIANG Tzu Chieh",
+     "nameType": 1,
+     "firstName": "Tzu Chieh",
+     "lastName": "CHIANG",
+     "initials": "CT",
+     "nameShort": "CHIANG T C ",
+     "nameShort2": "CHIANG",
+     "slug": "tzu-chieh-chiang",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Tzu Chieh CHIANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1728625697/assets/players/thumbnail/87598.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "IND",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "96764",
+     "nameDisplay": "Suveer PRADHAN",
+     "nameType": 0,
+     "firstName": "Suveer",
+     "lastName": "PRADHAN",
+     "initials": "SP",
+     "nameShort": "S PRADHAN",
+     "nameShort2": "PRADHAN",
+     "slug": "suveer-pradhan",
+     "countryCode": "IND",
+     "countryName": "India",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+     "avatar": {
+      "title": "Suveer PRADHAN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": "7",
+  "team2seed": null,
+  "matchTime": "2026-10-01 12:30:00",
+  "matchTimeUtc": "2026-09-30 23:30:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "5",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "Court 3",
+  "courtCode": "3",
+  "courtIndex": 2,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551335,
+  "code": "27",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "CAN",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/CAN.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "86452",
+     "nameDisplay": "Hing Long WONG",
+     "nameType": 0,
+     "firstName": "Hing Long",
+     "lastName": "WONG",
+     "initials": "HW",
+     "nameShort": "H WONG",
+     "nameShort2": "WONG",
+     "slug": "hing-long-wong",
+     "countryCode": "CAN",
+     "countryName": "Canada",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/CAN.png",
+     "avatar": {
+      "title": "Hing Long WONG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1790665896/assets/players/thumbnail/86452.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "JPN",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/JPN.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "94579",
+     "nameDisplay": "Rei MIYASHITA",
+     "nameType": 0,
+     "firstName": "Rei",
+     "lastName": "MIYASHITA",
+     "initials": "RM",
+     "nameShort": "R MIYASHITA",
+     "nameShort2": "MIYASHITA",
+     "slug": "rei-miyashita",
+     "countryCode": "JPN",
+     "countryName": "Japan",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/JPN.png",
+     "avatar": {
+      "title": "Rei MIYASHITA",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 13:05:00",
+  "matchTimeUtc": "2026-10-01 00:05:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "6",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "Court 3",
+  "courtCode": "3",
+  "courtIndex": 2,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551272,
+  "code": "153",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "77522",
+     "nameDisplay": "Yi Tsen HSIEH",
+     "nameType": 0,
+     "firstName": "Yi Tsen",
+     "lastName": "HSIEH",
+     "initials": "YH",
+     "nameShort": "Y HSIEH",
+     "nameShort2": "HSIEH",
+     "slug": "yi-tsen-hsieh",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Yi Tsen HSIEH",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "32004",
+     "nameDisplay": "Rina KIM",
+     "nameType": 0,
+     "firstName": "Rina",
+     "lastName": "KIM",
+     "initials": "RK",
+     "nameShort": "R KIM",
+     "nameShort2": "KIM",
+     "slug": "rina-kim",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Rina KIM",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 13:40:00",
+  "matchTimeUtc": "2026-10-01 00:40:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "7",
+  "oopText": "Court and time TBA",
+  "oopTypeId": 5,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "Court 3",
+  "courtCode": "3",
+  "courtIndex": 2,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551311,
+  "code": "325",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "39304",
+     "nameDisplay": "Tyler DREAVER",
+     "nameType": 0,
+     "firstName": "Tyler",
+     "lastName": "DREAVER",
+     "initials": "TD",
+     "nameShort": "T DREAVER",
+     "nameShort2": "DREAVER",
+     "slug": "tyler-dreaver",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Tyler DREAVER",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "19893",
+     "nameDisplay": "Amy ZHANG",
+     "nameType": 0,
+     "firstName": "Amy",
+     "lastName": "ZHANG",
+     "initials": "AZ",
+     "nameShort": "A ZHANG",
+     "nameShort2": "ZHANG",
+     "slug": "amy-zhang",
+     "countryCode": "NZL",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Amy ZHANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "81297",
+     "nameDisplay": "Rio AGUSTINO",
+     "nameType": 0,
+     "firstName": "Rio",
+     "lastName": "AGUSTINO",
+     "initials": "RA",
+     "nameShort": "R AGUSTINO",
+     "nameShort2": "AGUSTINO",
+     "slug": "rio-agustino",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Rio AGUSTINO",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "50260",
+     "nameDisplay": "Priska KUSTIADI",
+     "nameType": 0,
+     "firstName": "Priska",
+     "lastName": "KUSTIADI",
+     "initials": "PK",
+     "nameShort": "P KUSTIADI",
+     "nameShort2": "KUSTIADI",
+     "slug": "priska-kustiadi",
+     "countryCode": "AUS",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Priska KUSTIADI",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 15:30:00",
+  "matchTimeUtc": "2026-10-01 02:30:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "9",
+  "oopText": "Not before 3:30 PM",
+  "oopTypeId": 2,
+  "eventName": "XD",
+  "roundName": "R16",
+  "drawName": "XD",
+  "drawCode": "5",
+  "courtName": "Court 3",
+  "courtCode": "3",
+  "courtIndex": 2,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 5,
+  "matchTypeValue": "Mixed Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551266,
+  "code": "330",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "29235",
+     "nameDisplay": "Jordan WANG",
+     "nameType": 0,
+     "firstName": "Jordan",
+     "lastName": "WANG",
+     "initials": "JW",
+     "nameShort": "J WANG",
+     "nameShort2": "WANG",
+     "slug": "jordan-wang",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Jordan WANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "98556",
+     "nameDisplay": "Jazmine LAM",
+     "nameType": 0,
+     "firstName": "Jazmine",
+     "lastName": "LAM",
+     "initials": "JL",
+     "nameShort": "J LAM",
+     "nameShort2": "LAM",
+     "slug": "jazmine-lam",
+     "countryCode": "AUS",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Jazmine LAM",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "73474",
+     "nameDisplay": "LIN Bing-Wei",
+     "nameType": 1,
+     "firstName": "Bing-Wei",
+     "lastName": "LIN",
+     "initials": "LB",
+     "nameShort": "LIN B W ",
+     "nameShort2": "LIN",
+     "slug": "lin-bing-wei",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "LIN Bing-Wei",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "92553",
+     "nameDisplay": "LIAO Jui-Chi",
+     "nameType": 1,
+     "firstName": "Jui-Chi",
+     "lastName": "LIAO",
+     "initials": "LJ",
+     "nameShort": "LIAO J C ",
+     "nameShort2": "LIAO",
+     "slug": "liao-jui-chi",
+     "countryCode": "TPE",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Jui-Chi LIAO",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1786329944/assets/players/thumbnail/92553.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 16:05:00",
+  "matchTimeUtc": "2026-10-01 03:05:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "10",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "XD",
+  "roundName": "R16",
+  "drawName": "XD",
+  "drawCode": "5",
+  "courtName": "Court 3",
+  "courtCode": "3",
+  "courtIndex": 2,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 5,
+  "matchTypeValue": "Mixed Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551298,
+  "code": "146",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "20945",
+     "nameDisplay": "Sirui LU",
+     "nameType": 0,
+     "firstName": "Sirui",
+     "lastName": "LU",
+     "initials": "SL",
+     "nameShort": "S LU",
+     "nameShort2": "LU",
+     "slug": "sirui-lu",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Sirui LU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "65706",
+     "nameDisplay": "Jui-Yi HSU",
+     "nameType": 0,
+     "firstName": "Jui-Yi",
+     "lastName": "HSU",
+     "initials": "JH",
+     "nameShort": "J HSU",
+     "nameShort2": "HSU",
+     "slug": "jui-yi-hsu",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Jui-Yi HSU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 10:10:00",
+  "matchTimeUtc": "2026-09-30 21:10:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "1",
+  "oopText": "Starting at 10:10 AM",
+  "oopTypeId": 1,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "Court 4",
+  "courtCode": "4",
+  "courtIndex": 3,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 0,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551267,
+  "code": "21",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "PHI",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/PHI.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "96232",
+     "nameDisplay": "Ros Leenard PEDROSA",
+     "nameType": 0,
+     "firstName": "Ros Leenard",
+     "lastName": "PEDROSA",
+     "initials": "RP",
+     "nameShort": "R PEDROSA",
+     "nameShort2": "PEDROSA",
+     "slug": "ros-leenard-pedrosa",
+     "countryCode": "PHI",
+     "countryName": "Philippines",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/PHI.png",
+     "avatar": {
+      "title": "Ros Leenard PEDROSA",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "98462",
+     "nameDisplay": "HUANG Yu",
+     "nameType": 1,
+     "firstName": "Yu",
+     "lastName": "HUANG",
+     "initials": "HY",
+     "nameShort": "HUANG Y",
+     "nameShort2": "HUANG",
+     "slug": "yu-huang",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Yu HUANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 10:45:00",
+  "matchTimeUtc": "2026-09-30 21:45:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "2",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "Court 4",
+  "courtCode": "4",
+  "courtIndex": 3,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551395,
+  "code": "152",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "CAN",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/CAN.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "26710",
+     "nameDisplay": "Farzaneh GHOLAMREZAEI NOOGH",
+     "nameType": 0,
+     "firstName": "Farzaneh",
+     "lastName": "GHOLAMREZAEI NOOGH",
+     "initials": "FG",
+     "nameShort": "F GHOLAMREZAEI NOOGH",
+     "nameShort2": "GHOLAMREZAEI NOOGH",
+     "slug": "farzaneh-gholamrezaei-noogh",
+     "countryCode": "CAN",
+     "countryName": "Canada",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/CAN.png",
+     "avatar": {
+      "title": "Farzaneh GHOLAMREZAEI NOOGH",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "81899",
+     "nameDisplay": "Victoria GUO",
+     "nameType": 0,
+     "firstName": "Victoria",
+     "lastName": "GUO",
+     "initials": "VG",
+     "nameShort": "V GUO",
+     "nameShort2": "GUO",
+     "slug": "victoria-guo",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Victoria GUO",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 11:20:00",
+  "matchTimeUtc": "2026-09-30 22:20:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "3",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "WS",
+  "roundName": "R32",
+  "drawName": "WS",
+  "drawCode": "2",
+  "courtName": "Court 4",
+  "courtCode": "4",
+  "courtIndex": 3,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 2,
+  "matchTypeValue": "Women's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551353,
+  "code": "23",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "SGP",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/SGP.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "56463",
+     "nameDisplay": "Remus NG",
+     "nameType": 0,
+     "firstName": "Remus",
+     "lastName": "NG",
+     "initials": "RN",
+     "nameShort": "R NG",
+     "nameShort2": "NG",
+     "slug": "remus-ng",
+     "countryCode": "SGP",
+     "countryName": "Singapore",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/SGP.png",
+     "avatar": {
+      "title": "Remus NG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "MAS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "87935",
+     "nameDisplay": "CHEE Hong Wei",
+     "nameType": 1,
+     "firstName": "Hong Wei",
+     "lastName": "CHEE",
+     "initials": "CH",
+     "nameShort": "CHEE H W ",
+     "nameShort2": "CHEE",
+     "slug": "hong-wei-chee",
+     "countryCode": "MAS",
+     "countryName": "Malaysia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+     "avatar": {
+      "title": "Hong Wei CHEE",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 11:55:00",
+  "matchTimeUtc": "2026-09-30 22:55:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "4",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "Court 4",
+  "courtCode": "4",
+  "courtIndex": 3,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551317,
+  "code": "31",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "MAS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "48628",
+     "nameDisplay": "IRSYAD NAQIUDDIN Mokhsin",
+     "nameType": 1,
+     "firstName": "Mokhsin",
+     "lastName": "IRSYAD NAQIUDDIN",
+     "initials": "IM",
+     "nameShort": "IRSYAD NAQIUDDIN M",
+     "nameShort2": "IRSYAD NAQIUDDIN",
+     "slug": "mokhsin-irsyad-naqiuddin",
+     "countryCode": "MAS",
+     "countryName": "Malaysia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/MAS.png",
+     "avatar": {
+      "title": "Mokhsin IRSYAD NAQIUDDIN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "64081",
+     "nameDisplay": "LIAO Jhuo-Fu",
+     "nameType": 1,
+     "firstName": "Jhuo-Fu",
+     "lastName": "LIAO",
+     "initials": "LJ",
+     "nameShort": "LIAO J F ",
+     "nameShort2": "LIAO",
+     "slug": "jhuo-fu-liao",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Jhuo-Fu LIAO",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1693967317/assets/players/thumbnail/64081.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": "2",
+  "matchTime": "2026-10-01 12:30:00",
+  "matchTimeUtc": "2026-09-30 23:30:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "5",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "Court 4",
+  "courtCode": "4",
+  "courtIndex": 3,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551355,
+  "code": "24",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "IND",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "75366",
+     "nameDisplay": "Dev KUMAWAT",
+     "nameType": 0,
+     "firstName": "Dev",
+     "lastName": "KUMAWAT",
+     "initials": "DK",
+     "nameShort": "D KUMAWAT",
+     "nameShort2": "KUMAWAT",
+     "slug": "dev-kumawat",
+     "countryCode": "IND",
+     "countryName": "India",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/IND.png",
+     "avatar": {
+      "title": "Dev KUMAWAT",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "KOR",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/KOR.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "86283",
+     "nameDisplay": "CHO Hyeon Woo",
+     "nameType": 1,
+     "firstName": "Hyeon Woo",
+     "lastName": "CHO",
+     "initials": "CH",
+     "nameShort": "CHO H W ",
+     "nameShort2": "CHO",
+     "slug": "cho-hyeon-woo",
+     "countryCode": "KOR",
+     "countryName": "Korea",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/KOR.png",
+     "avatar": {
+      "title": "Hyeon Woo CHO",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1784101028/assets/players/thumbnail/86283.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 13:05:00",
+  "matchTimeUtc": "2026-10-01 00:05:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "6",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "MS",
+  "roundName": "R32",
+  "drawName": "MS",
+  "drawCode": "1",
+  "courtName": "Court 4",
+  "courtCode": "4",
+  "courtIndex": 3,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 1,
+  "matchTypeValue": "Men's Singles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551249,
+  "code": "277",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "JPN",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/JPN.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "69401",
+     "nameDisplay": "Machi NAGASAKO",
+     "nameType": 0,
+     "firstName": "Machi",
+     "lastName": "NAGASAKO",
+     "initials": "MN",
+     "nameShort": "M NAGASAKO",
+     "nameShort2": "NAGASAKO",
+     "slug": "machi-nagasako",
+     "countryCode": "JPN",
+     "countryName": "Japan",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/JPN.png",
+     "avatar": {
+      "title": "Machi NAGASAKO",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    },
+    {
+     "id": "43867",
+     "nameDisplay": "Yuzuki NAKASHIMA",
+     "nameType": 0,
+     "firstName": "Yuzuki",
+     "lastName": "NAKASHIMA",
+     "initials": "YN",
+     "nameShort": "Y NAKASHIMA",
+     "nameShort2": "NAKASHIMA",
+     "slug": "yuzuki-nakashima",
+     "countryCode": "JPN",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/JPN.png",
+     "avatar": {
+      "title": "Yuzuki NAKASHIMA",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "NZL",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "62294",
+     "nameDisplay": "Yibei XU",
+     "nameType": 0,
+     "firstName": "Yibei",
+     "lastName": "XU",
+     "initials": "YX",
+     "nameShort": "Y XU",
+     "nameShort2": "XU",
+     "slug": "yibei-xu",
+     "countryCode": "NZL",
+     "countryName": "New Zealand",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Yibei XU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    },
+    {
+     "id": "89361",
+     "nameDisplay": "Rebecca ZHANG",
+     "nameType": 0,
+     "firstName": "Rebecca",
+     "lastName": "ZHANG",
+     "initials": "RZ",
+     "nameShort": "R ZHANG",
+     "nameShort2": "ZHANG",
+     "slug": "rebecca-zhang",
+     "countryCode": "NZL",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/NZL.png",
+     "avatar": {
+      "title": "Rebecca ZHANG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 13:40:00",
+  "matchTimeUtc": "2026-10-01 00:40:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "7",
+  "oopText": "Court and time TBA",
+  "oopTypeId": 5,
+  "eventName": "WD",
+  "roundName": "R32",
+  "drawName": "WD",
+  "drawCode": "4",
+  "courtName": "Court 4",
+  "courtCode": "4",
+  "courtIndex": 3,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 4,
+  "matchTypeValue": "Women's Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551283,
+  "code": "329",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "CAN",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/CAN.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "59967",
+     "nameDisplay": "Lai Yin CHUNG",
+     "nameType": 0,
+     "firstName": "Lai Yin",
+     "lastName": "CHUNG",
+     "initials": "LC",
+     "nameShort": "L CHUNG",
+     "nameShort2": "CHUNG",
+     "slug": "Lai Yin-CHUNG",
+     "countryCode": "CAN",
+     "countryName": "Canada",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/CAN.png",
+     "avatar": {
+      "title": "Lai Yin CHUNG",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "26710",
+     "nameDisplay": "Farzaneh GHOLAMREZAEI NOOGH",
+     "nameType": 0,
+     "firstName": "Farzaneh",
+     "lastName": "GHOLAMREZAEI NOOGH",
+     "initials": "FG",
+     "nameShort": "F GHOLAMREZAEI NOOGH",
+     "nameShort2": "GHOLAMREZAEI NOOGH",
+     "slug": "farzaneh-gholamrezaei-noogh",
+     "countryCode": "CAN",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/CAN.png",
+     "avatar": {
+      "title": "Farzaneh GHOLAMREZAEI NOOGH",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "58966",
+     "nameDisplay": "Michael OWEN",
+     "nameType": 0,
+     "firstName": "Michael",
+     "lastName": "OWEN",
+     "initials": "MO",
+     "nameShort": "M OWEN",
+     "nameShort2": "OWEN",
+     "slug": "michael-owen",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Michael OWEN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "58488",
+     "nameDisplay": "Gronya SOMERVILLE",
+     "nameType": 0,
+     "firstName": "Gronya",
+     "lastName": "SOMERVILLE",
+     "initials": "GS",
+     "nameShort": "G SOMERVILLE",
+     "nameShort2": "SOMERVILLE",
+     "slug": "gronya-somerville",
+     "countryCode": "AUS",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Gronya SOMERVILLE",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/v1690355668/assets/players/thumbnail/58488.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": "3",
+  "matchTime": "2026-10-01 15:30:00",
+  "matchTimeUtc": "2026-10-01 02:30:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "9",
+  "oopText": "Not before 3:30 PM",
+  "oopTypeId": 2,
+  "eventName": "XD",
+  "roundName": "R16",
+  "drawName": "XD",
+  "drawCode": "5",
+  "courtName": "Court 4",
+  "courtCode": "4",
+  "courtIndex": 3,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 5,
+  "matchTypeValue": "Mixed Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ },
+ {
+  "id": 1551372,
+  "code": "328",
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatus": 0,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "countryCode": "TPE",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "98953",
+     "nameDisplay": "Yu Wei LIN",
+     "nameType": 0,
+     "firstName": "Yu Wei",
+     "lastName": "LIN",
+     "initials": "YL",
+     "nameShort": "Y LIN",
+     "nameShort2": "LIN",
+     "slug": "yu-wei-lin",
+     "countryCode": "TPE",
+     "countryName": "Chinese Taipei",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Yu Wei LIN",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "56318",
+     "nameDisplay": "HSIEH Mi Yen",
+     "nameType": 1,
+     "firstName": "Mi Yen",
+     "lastName": "HSIEH",
+     "initials": "HM",
+     "nameShort": "HSIEH M Y ",
+     "nameShort2": "HSIEH",
+     "slug": "mi-yen-hsieh",
+     "countryCode": "TPE",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/TPE.png",
+     "avatar": {
+      "title": "Mi Yen HSIEH",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team2": {
+   "countryCode": "AUS",
+   "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+   "teamId": null,
+   "teamName": null,
+   "players": [
+    {
+     "id": "69491",
+     "nameDisplay": "Chauncey YU",
+     "nameType": 0,
+     "firstName": "Chauncey",
+     "lastName": "YU",
+     "initials": "CY",
+     "nameShort": "C YU",
+     "nameShort2": "YU",
+     "slug": "chauncey-yu",
+     "countryCode": "AUS",
+     "countryName": "Australia",
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Chauncey YU",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_male.jpg"
+     }
+    },
+    {
+     "id": "91988",
+     "nameDisplay": "Maureen  Clarissa WIJAYA",
+     "nameType": 0,
+     "firstName": "Maureen  Clarissa",
+     "lastName": "WIJAYA",
+     "initials": "MW",
+     "nameShort": "M WIJAYA",
+     "nameShort2": "WIJAYA",
+     "slug": "maureen-clarissa-wijaya",
+     "countryCode": "AUS",
+     "countryName": null,
+     "countryFlagUrl": "https://img.bwfbadminton.com/image/upload/v2/assets/flag-circle-svg-custom/AUS.png",
+     "avatar": {
+      "title": "Maureen  Clarissa WIJAYA",
+      "thumbnailUrl": "https://img.bwfbadminton.com/image/upload/assets/players/thumbnail/profile_female.jpg"
+     }
+    }
+   ],
+   "linkName": null
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-10-01 16:05:00",
+  "matchTimeUtc": "2026-10-01 03:05:00",
+  "matchStatus": "N",
+  "matchStatusValue": "none",
+  "oopRound": "10",
+  "oopText": "Followed by",
+  "oopTypeId": 0,
+  "eventName": "XD",
+  "roundName": "R16",
+  "drawName": "XD",
+  "drawCode": "5",
+  "courtName": "Court 4",
+  "courtCode": "4",
+  "courtIndex": 3,
+  "locationName": "Badminton North Harbour Centre",
+  "duration": null,
+  "time": "00:00",
+  "matchOrder": null,
+  "matchTypeId": 5,
+  "matchTypeValue": "Mixed Doubles",
+  "matchTypeNo": null,
+  "reliability": 1,
+  "score": [],
+  "matches": []
+ }
+]

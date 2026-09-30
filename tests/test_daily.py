@@ -137,12 +137,16 @@ def test_publish_marks_sent_and_alerts_on_errors(monkeypatch):
     res = daily.run(con, FakeClient(), D("2026-09-30"), verbose=False)
     assert daily.publish(con, D("2026-09-30"), res) == []
     assert [u for u, _ in sent] == ["DISCORD_WEBHOOK_DAILY"]          # 沒錯誤就不告警
-    assert con.execute("SELECT COUNT(*) FROM digest_item").fetchone()[0] == res["matches_stored"]
+    text = sent[0][1]
+    assert text.startswith("**羽球晨報 2026-09-30**")
+    assert "2026 亞運" not in text                                      # notes 18:15：Super 100 以上改由 brief.watch 發
+    ic = con.execute("SELECT COUNT(*) FROM match WHERE tournament_id=5766").fetchone()[0]
+    assert con.execute("SELECT COUNT(*) FROM digest_item").fetchone()[0] == ic   # 只標記 IC／IS
 
     sent.clear()
     daily.publish(con, D("2026-09-30"), {**res, "errors": ["live: timeout"]})
-    assert [u for u, _ in sent] == ["DISCORD_WEBHOOK_DAILY", "DISCORD_WEBHOOK_ALERTS"]
-    assert "live: timeout" in sent[1][1]
+    assert [u for u, _ in sent] == ["DISCORD_WEBHOOK_ALERTS"]          # 沒有新內容就不發晨報，只告警
+    assert "live: timeout" in sent[0][1]
 
 
 def test_publish_failure_does_not_mark_sent(monkeypatch):

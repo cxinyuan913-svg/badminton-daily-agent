@@ -76,16 +76,34 @@ def _side(con, pairing_id: int) -> dict:
             "players": [(r[0], zh.player(str(r[1]), r[3]), r[2]) for r in rows]}
 
 
+MATCH_COLUMNS = """m.match_id, m.tournament_id, t.name, t.level, m.event, m.round, m.match_date,
+                  m.side1_id, m.side2_id, m.winner_side, m.score_status, m.team_tie_id,
+                  m.side1_seed, m.side2_seed"""
+
+
 def pending_matches(con, today: dt.date, include_sent: bool = False) -> list[dict]:
     since = (today - dt.timedelta(days=LOOKBACK_DAYS)).isoformat()
     rows = con.execute(
-        """SELECT m.match_id, m.tournament_id, t.name, t.level, m.event, m.round, m.match_date,
-                  m.side1_id, m.side2_id, m.winner_side, m.score_status, m.team_tie_id,
-                  m.side1_seed, m.side2_seed
+        f"""SELECT {MATCH_COLUMNS}
            FROM match m JOIN tournament t USING (tournament_id)
            LEFT JOIN digest_item d USING (match_id)
            WHERE (d.match_id IS NULL OR ?) AND m.match_date >= ? AND m.match_date <= ?
            ORDER BY m.match_date, m.match_id""", (include_sent, since, today.isoformat())).fetchall()
+    return _to_dicts(con, rows)
+
+
+def stage_matches(con, tournament_id: int, match_ids: list[int]) -> list[dict]:
+    """指定場次（brief.watch 用：一站一天的全部場次）。"""
+    if not match_ids:
+        return []
+    rows = con.execute(
+        f"""SELECT {MATCH_COLUMNS} FROM match m JOIN tournament t USING (tournament_id)
+            WHERE m.tournament_id=? AND m.match_id IN ({",".join("?" * len(match_ids))})
+            ORDER BY m.match_id""", (tournament_id, *match_ids)).fetchall()
+    return _to_dicts(con, rows)
+
+
+def _to_dicts(con, rows) -> list[dict]:
     out = []
     for (mid, tid, tname, level, event, rnd, mdate, s1, s2, win, status, tie, seed1, seed2) in rows:
         w, l = (s1, s2) if win == 1 else (s2, s1)
@@ -249,6 +267,70 @@ def build(con, today: dt.date, llm=None, errors: list | None = None, include_sen
     return text, matches, ties, news
 
 
+MORNING_NEWS_DAYS = 1
+
+
+def reminders(con, today: dt.date) -> list[str]:
+    """晨報提醒：前一天 brief.watch 保險發送（還有沒打完的）或漏發的站。"""
+    yesterday = (today - dt.timedelta(days=1)).isoformat()
+    lines = []
+    try:
+        for name, day, n in con.execute(
+                """SELECT t.name, s.local_date, s.unfinished FROM stage_digest s JOIN tournament t USING (tournament_id)
+                   WHERE s.forced = 1 AND s.local_date >= ? ORDER BY s.local_date""",
+                ((today - dt.timedelta(days=2)).isoformat(),)):
+            lines.append(f"- 提醒：{zh.tournament(name)} 當地 {day} 保險發送，當時有 {n} 場未完成")
+        for name, day in con.execute(
+                """SELECT DISTINCT t.name, m.match_date FROM match m JOIN tournament t USING (tournament_id)
+                   LEFT JOIN stage_digest s ON s.tournament_id = m.tournament_id AND s.local_date = m.match_date
+                   WHERE m.match_date = ? AND s.local_date IS NULL
+                     AND COALESCE(t.level, '') NOT IN ('IC', 'IS', 'FS')""", (yesterday,)):
+            lines.append(f"- 提醒：{zh.tournament(name)} 當地 {day} 的賽果還沒發（brief.watch 可能沒執行）")
+    except Exception:  # noqa: BLE001 — 還沒有 stage_digest（watch 沒跑過）
+        pass
+    return lines
+
+
+def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[str | None, list[dict], list[dict]]:
+    """06:00 晨報（notes 18:15）：最近 24 小時新聞＋ IC／IS 精選＋週一暱稱週報＋漏發提醒。
+    Super 100 以上的賽果由 brief.watch 逐站發送，這裡不放。什麼都沒有就回傳 None（不發）。"""
+    from brief import nickname
+    con.executescript(DIGEST_TABLE + NEWS_TABLE)
+    zh.apply_player_names(con)
+    g3 = [m for m in pending_matches(con, today) if m["level"] in grade3.GRADE3]
+    since = (today - dt.timedelta(days=MORNING_NEWS_DAYS)).isoformat()
+    news = [n for n in pending_news(con, today) if (n["published"] or "")[:10] >= since]
+    if llm is not None:
+        from brief.llm import news_gist
+        for n in news:
+            if n["source"] in ("bwf", "bwfworldtour"):
+                try:
+                    n["gist"] = news_gist(llm, n["title"])
+                except Exception as e:  # noqa: BLE001
+                    if errors is not None:
+                        errors.append(f"llm news: {e!r}")
+                    break
+    g3_lines, g3_shown = grade3_section(con, g3)
+    weekly = nickname.weekly_lines(con, today)
+    notes = reminders(con, today)
+    if not (news or g3_lines or weekly or notes):
+        return None, g3, news
+    lines = [f"**羽球晨報 {today.isoformat()}**"] + notes
+    if g3_lines:
+        lines += ["", "__**IC／IS 精選**__"] + g3_lines
+    if len(g3) - g3_shown:
+        lines += ["", f"另有 IC／IS 共 {len(g3) - g3_shown} 場，已存入資料庫。"]
+    if news:
+        lines += ["", "__**新聞**__（只當資訊來源，引用要改寫並附出處）"]
+        for n in news:
+            lines.append(f"- 【{NEWS_SOURCE.get(n['source'], n['source'])}】{n['title']}"
+                         f"（{(n['published'] or '')[:10]}） <{n['url']}>")
+            if n.get("gist"):
+                lines.append(f"  　重點：{n['gist']}")
+    lines += weekly
+    return "\n".join(lines), g3, news
+
+
 def _sent_players(con, tournament_id: int) -> set[int]:
     return {r[0] for r in con.execute(
         """SELECT DISTINCT pl FROM (
@@ -292,6 +374,7 @@ def grade3_section(con, matches: list[dict]) -> tuple[list[str], int]:
 
 
 def mark_sent(con, today: dt.date, matches: list[dict], ties: list[dict], news: list[dict] = ()) -> None:
+    con.executescript(DIGEST_TABLE + NEWS_TABLE)          # brief.watch 可能在日報之前先跑
     con.executemany("INSERT OR IGNORE INTO digest_news (url, digest_date) VALUES (?, ?)",
                     [(n["url"], today.isoformat()) for n in news])
     con.executemany("INSERT OR IGNORE INTO digest_item (match_id, digest_date) VALUES (?, ?)",

@@ -173,7 +173,7 @@ def highlight(llm: LLM, digest_text: str) -> str:
     """回傳要放在摘要最上方的段落；有查不到的內容就附上待確認清單。"""
     if hasattr(llm, "task"):
         llm.task = "highlight"
-    text = llm.complete(HIGHLIGHT_SYSTEM, digest_text).strip()
+    text = re.sub(r"^\**今日重點\**[:：]\s*", "", llm.complete(HIGHLIGHT_SYSTEM, digest_text).strip())   # 模型自己加的標題
     if "\n\n" in text or META.search(text):
         raise ValueError(f"今日重點格式異常，未採用：{text[:80]}…")
     missing = unverified(text, digest_text)
