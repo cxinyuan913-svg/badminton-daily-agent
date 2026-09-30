@@ -3,7 +3,94 @@
 Claude Code 每次工作結束前更新這份：做了什麼、卡在哪、下一步。
 Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
-## 2026-09-30 深夜（Claude Code）— notes 17:40–17:48 四段完成：模型分工、推送範圍、IC／IS 例外、暱稱收集、退休選手
+## 2026-09-30 晚上 18:40（Claude Code）— notes 18:05／18:10／18:15 完成：台灣選手中文名、每站打完就發、明日看點、晨報
+
+依 `docs/notes-from-claude-ai.md` 18:05、18:10、18:15 三段執行，已併入 CLAUDE.md「已決議」表（台灣選手名單、賽果推送時機、明日看點）。測試 **119 個全過**〔`python -m pytest -q`〕。
+
+### 完成
+- **18:05 台灣選手中文名**：`config/players_zh_draft.csv` 改名為 `config/players_zh.csv` 並進版控〔34e43f3〕；76 位選手中文名寫入 `player.name_zh`；戴資穎、李洋追蹤設 N。日報單打「周天成（CHOU Tien Chen）」，雙打兩人都有中文名時「王齊麟／李哲輝」。新聞關鍵字改用名單裡全部追蹤中的選手（名單目前沒有中文名空白的選手，英文名比對暫時用不到）
+- **18:15 每站打完就發**：`brief/watch.py`
+  - 每 30 分鐘：只抓推送層級、進行中賽事的「當地昨天、今天」（每站 1–2 個請求）；全部結束才發，當地隔天 03:00 保險發送；`stage_digest` 防重複，睡眠錯過下次補發
+  - 每則：標題（第 N 天、最深輪次、台灣時間幾點打完）→ 今日重點（routine＋事實檢查）→ 全部賽果 → 明日看點（決賽日改本站冠軍）；看點未公布時之後另發一則，只發一次、第一場開打後就不發
+  - 同一站連續 3 次抓不到 → 告警（一天最多一次）
+- **18:10 明日看點**：`brief/preview.py`，五條規則各有正反例；時間由 `matchTimeUtc + 8` 換算（不需時區資料庫），`oopText` 對應「HH:MM（台灣）」「約 HH:MM 後，接第 N 場」「不早於…」「時間未定」；歐、美、亞各一站的換算測試；戰績以台灣選手角度書寫
+- **06:00 晨報**：`digest.morning`，只放最近 24 小時新聞、IC／IS 精選、週一暱稱週報、前一天保險發送／漏發提醒；全都沒有就不發
+- 修正：`mark_sent` 在全新資料庫會找不到表（watch 比晨報先跑時）；LLM 自己加的「今日重點：」會重複，已去掉
+- **工作排程器**〔`scripts/register_task.ps1`，UTF-8 BOM 才能在 PowerShell 5.1 正確讀中文〕：
+  ```powershell
+  # 註冊（兩個工作）
+  & .\scripts\register_task.ps1
+  # 確認
+  Get-ScheduledTask -TaskName "badminton-daily-agent","badminton-watch" | Get-ScheduledTaskInfo
+  # 移除
+  Unregister-ScheduledTask -TaskName "badminton-daily-agent","badminton-watch" -Confirm:$false
+  ```
+  | 工作 | 觸發 | 執行 | 紀錄 |
+  |---|---|---|---|
+  | badminton-daily-agent | 每天 06:00 | `scripts/run_daily.cmd`（收集＋晨報） | `data/logs/daily.log` |
+  | badminton-watch | 每 30 分鐘（首次 2026-09-30 18:30） | `scripts/run_watch.cmd` | `data/logs/watch.log` |
+  - 上線前已把亞運 9/25–9/29 標為已發（稍早的日報報導過），避免補發洗版；以現在時間 dry-run 確認：目前沒有進行中的推送層級賽事，**第一次 watch 不會發任何訊息**
+
+### 亞運 9/29 dry-run（`python -m brief.watch --dry-run --now 2026-09-29T15:00:00`，在資料庫副本上跑，未推送）
+- 1 則、17 行；今日重點 claude-sonnet-5-5 輸入 805／輸出 401 token、US$0.0056〔副本 DB `llm_call`〕
+- 9/27、9/28 那兩則沒有「明日看點」是正常的：模擬過去日期時，隔天賽程已經打完，不算「已公布、未開打」；看點改用 North Harbour 10/1 真實賽程測試〔`tests/fixtures/north_harbour_2026-10-01_schedule.json`〕
+
+```
+**2026 亞運｜第 5 天 決賽**（當地 9/29，台灣時間 12:48 打完）
+今日重點（AI 整理，請審稿）：五項決賽全數落幕，男雙由印尼的 Leo Rolly CARNANDO / Daniel MARTHIN（#43）在先丟一局下，以 19-21 21-13 21-18 逆轉擊敗中國的 WANG Chang / LIANG Wei Keng（#3），屬於最大爆冷。女雙方面，韓國的 BAEK Ha Na / LEE So Hee（#2）以 26-28 21-18 21-18 逆轉擊敗中國的 TAN Ning / LIU Sheng Shu（#1）。單打由泰國的 Kunlavut VITIDSARN（#1）以 21-12 21-16 擊敗新加坡的 LOH Kean Yew（#13）奪冠，韓國的 AN Se Young（#1）則以 21-17 21-9 擊敗日本的 Akane YAMAGUCHI（#3）；混雙冠軍由中國的 WEI Ya Xin / JIANG Zhen Bang（#3）以 21-19 21-8 擊敗印尼的 Nita Violina MARWAH / Amri SYAHNAWI（#17）拿下。
+
+__賽果__
+- 男單 決賽：**Kunlavut VITIDSARN**（泰國，#1）勝 LOH Kean Yew（新加坡，#13） 21-12 21-16
+- 女單 決賽：**AN Se Young**（韓國，#1）勝 Akane YAMAGUCHI（日本，#3） 21-17 21-9
+- 男雙 決賽：**Leo Rolly CARNANDO / Daniel MARTHIN**（印尼，#43）勝 WANG Chang / LIANG Wei Keng（中國，#3） 19-21 21-13 21-18
+- 女雙 決賽：**BAEK Ha Na / LEE So Hee**（韓國，#2）勝 TAN Ning / LIU Sheng Shu（中國，#1） 26-28 21-18 21-18
+- 混雙 決賽：**WEI Ya Xin / JIANG Zhen Bang**（中國，#3）勝 Nita Violina MARWAH / Amri SYAHNAWI（印尼，#17） 21-19 21-8
+
+__本站冠軍__
+- 男單：**Kunlavut VITIDSARN**（泰國）
+- 女單：**AN Se Young**（韓國）
+- 男雙：**Leo Rolly CARNANDO / Daniel MARTHIN**（印尼）
+- 女雙：**BAEK Ha Na / LEE So Hee**（韓國）
+- 混雙：**WEI Ya Xin / JIANG Zhen Bang**（中國）
+```
+
+### 交接單 002 進度（穿插進行）
+- **十年回補在背景跑到 2 小時上限被系統停止**（已用最長時限，不再由我自動重啟）。已完成 **595 / 979 站**（done 579、empty 10、failed 6），比賽共 **108,061 場**，回到 2019-09-24〔DB：`backfill_status`、`match`〕。可續跑，會跳過已完成的站：
+  ```
+  .venv\Scripts\python -m brief.backfill run --db data\brief.db
+  .venv\Scripts\python -m brief.backfill run --db data\brief.db --retry-failed
+  ```
+  - failed 6 站：5 站是 BWF API 500 或逾時（3962、3972、3979、4155、4246，可重試）；4424「Asian Games 2022 (Postponed)」是延期前的舊紀錄，沒有 GUID，屬正常
+- **排名重建第一輪驗證**（60 週官方快照 vs 估算，`python -m brief.validate`）：
+  | 項目 | 前 100 重疊率 | 名次完全相同 | 誤差 ≤ 2 | 前 50 誤差 ≤ 2 | 積分平均絕對誤差 |
+  |---|---|---|---|---|---|
+  | MS | 95.7% | 18.2% | 55.3% | 79.3% | 1585 |
+  | WS | 96.8% | 18.3% | 54.6% | 70.6% | 1421 |
+  | MD | 96.8% | 15.7% | 54.0% | 72.9% | 1646 |
+  | WD | 95.3% | 13.8% | 48.4% | 62.3% | 1774 |
+  | XD | 94.5% | 17.1% | 53.1% | 78.6% | 1465 |
+  - **未達目標**（前 50 誤差 ≤ 2 應 ≥ 90%）。差最多的案例都是官方 2 萬分左右、估算擠不進前 100 → 系統性少算分。候選原因：Future Series 不在追蹤範圍、團體賽（規章 7.x）未計、Super 1000 12700 級非冠亞軍未計、當時回補只到 2024-06、資格賽積分的假設。下一步逐一排查，寫 `docs/ranking-validation.md`
+
+### 發現與決定
+- 今日重點出現「屬於最大爆冷」這類**主觀判斷**（依規則那場不算爆冷）；事實檢查只核對數字與名字，擋不到形容詞 → 見待決定第 2 題
+- 工作排程器的 `.ps1` 必須存成 UTF-8 BOM，否則 PowerShell 5.1 讀中文會解析失敗
+
+### 卡住
+- 十年回補需要重新啟動（上面的指令），我這邊的背景工作有 2 小時上限
+
+### 待 Raymond 決定
+1. **十年回補怎麼跑完**（剩約 384 站、約 1.5 小時）
+   - A. Raymond 在終端機執行上面的續跑指令　B. 我下次開工時分段續跑（每段 < 2 小時）　C. 加成一次性的工作排程器工作，今晚自動跑
+2. **今日重點的主觀字眼**
+   - 背景：LLM 會寫「最大爆冷」「逆轉」等評語，可能與我們的爆冷規則不一致
+   - A. 提示詞禁止評語，只陳述結果　B. 允許「逆轉」這類可由比分驗證的詞，「爆冷」只能用在規則判定的場次　C. 維持，Raymond 審稿時處理
+3. 前幾段仍有效：IC／IS「值得一提」寫法、日報長度、現行積分規章 V6.0、Super 1000 兩級名單、大英國協運動會是否計分、告警頻道、排程位置
+
+### 下一步
+1. 18:30 起 watch 每 30 分鐘自動執行；10/1 06:00 第一次晨報，確認 `data/logs/watch.log`、`daily.log` 與 Discord
+2. 回補跑完 → 排查驗證誤差、寫 `docs/ranking-validation.md`
+
+## 2026-09-30 晚上 18:00（Claude Code）— notes 17:40–17:48 四段完成：模型分工、推送範圍、IC／IS 例外、暱稱收集、退休選手
 
 依 `docs/notes-from-claude-ai.md` 17:40、17:45、17:47、17:48 四段執行，已併入 CLAUDE.md「已決議」表（LLM、日報推送範圍、暱稱、退休選手、台灣選手名單）。測試 **100 個全過**〔`python -m pytest -q`，fe8b045〕。
 
