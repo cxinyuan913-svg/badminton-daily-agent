@@ -15,10 +15,14 @@ Grade 1、2、3 用的是同一套元件與 API。
 | 進行中賽事 | `https://match-centre.bwfbadminton.com/` | 首頁列出正在打的賽事與其 id |
 | 進行中賽事 API | `https://extranet-lv.bwfbadminton.com/api/match-center/vue-current-live?showpara=0` | JSON：id、GUID、起訖日期。每日排程的入口（`brief/live.py`） |
 | 排名週次 API | `https://extranet-lv.bwfbadminton.com/api/vue-rankingweek?rankId=2` | 只列最近約 60 週 |
-| 排名表 API | `https://extranet-lv.bwfbadminton.com/api/vue-rankingtable?rankId=2&catId={6-10}&publicationId={id}&doubles={bool}&searchKey=&pageKey={每頁筆數}&page={n}&drawCount=1` | catId 6=MS、7=WS、8=MD、9=WD、10=XD。超過 60 週的 publicationId 回傳 0 筆 |
+| 選手排名週次 API | `https://extranet-lv.bwfbadminton.com/api/player/ranking/publication/weeks?rankingId=2&playerId={id}` | 該選手有排名的**所有**週次（周天成 34810 共 838 週，2010 起）；取長年在榜選手的聯集當歷史週次清單（`rankings --history`） |
+| 選手年度排名明細 API | `https://extranet-lv.bwfbadminton.com/api/player/rankings/history?playerId={id}&rankingId=2&year={YYYY}` | 每位選手每年的每週排名與積分明細；尚未使用，之後可做「生涯最高第 N 名」「近一年走勢」 |
+| 排名表 API | `https://extranet-lv.bwfbadminton.com/api/vue-rankingtable?rankId=2&catId={6-10}&publicationId={id}&doubles={bool}&searchKey=&pageKey={每頁筆數}&page={n}&drawCount=1` | catId 6=MS、7=WS、8=MD、9=WD、10=XD。**舊週次也查得到**（2026-09-30 更正：先前記錄「超過 60 週回傳 0 筆」有誤；實測 2019-08-06 publicationId 1497 男單第 1 桃田 103,118、第 2 周天成 86,698） |
 | 選手頁 | `https://bwfbadminton.com/player/{player_id}/{slug}/` | 近期比賽含亞運等綜合賽事 |
 
 `bwfbadminton.com` 的 robots.txt 只禁止 `/24-live-blog/` 與條款純文字頁。
+
+**API 主機 `extranet-lv.bwfbadminton.com` 的 robots.txt 是 `Disallow: /`**（2026-09-30 發現；P0 時沒有查這台）。Raymond 確認有授權或判斷可以抓，所以照常使用，見 CLAUDE.md 工作規則。`extranet.bwf.sport`（規章 PDF 所在）同樣禁止，不抓。
 
 ### 賽事 ID
 
