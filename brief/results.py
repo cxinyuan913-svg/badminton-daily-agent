@@ -37,10 +37,14 @@ MAIN_ROUNDS = {"Final": 2, "F": 2, "SF": 4, "QF": 8, "R16": 16, "R32": 32, "R64"
 POSITION_OF_SIZE = {2: "F", 4: "SF", 8: "QF", 16: "R16", 32: "R32", 64: "R64", 128: "R128",
                     256: "R256", 512: "R512", 1024: "R1024"}
 QUAL_PREFIX = "Qual. "
+# 舊年度資料的其他寫法（2026-09-30 回補發現）：「Semi-finals」＝四強；「3/4」是奧運銅牌戰，
+# 兩邊都已在四強落敗，名次由四強那場決定，所以銅牌戰本身不進籤表；輪次是 NULL 的場次無法判斷，略過
+ROUND_ALIAS = {"Semi-finals": "SF"}
+SKIP_ROUNDS = {"3/4", None, ""}
 
 
-def _qual_size(rnd: str) -> int | None:
-    if not rnd.startswith(QUAL_PREFIX):
+def _qual_size(rnd: str | None) -> int | None:
+    if not rnd or not rnd.startswith(QUAL_PREFIX):
         return None
     return MAIN_ROUNDS.get(rnd[len(QUAL_PREFIX):])
 
@@ -48,6 +52,7 @@ def _qual_size(rnd: str) -> int | None:
 def event_results(matches: list[dict]) -> dict[int, tuple[str, str]]:
     """一站一項目的所有單場 → {pairing_id: (名次, 最後一場日期)}。
     matches 每筆需有 round、side1、side2、winner_side、match_date。"""
+    matches = [{**m, "round": ROUND_ALIAS.get(m["round"], m["round"])} for m in matches if m["round"] not in SKIP_ROUNDS]
     main = [m for m in matches if m["round"] in MAIN_ROUNDS]
     qual = [m for m in matches if _qual_size(m["round"])]
     if not main:

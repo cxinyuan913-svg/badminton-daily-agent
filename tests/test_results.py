@@ -61,3 +61,13 @@ def test_compute_real_fixture_and_rerun_is_idempotent():
     # 首日只有第一輪，輸家拿首輪落敗積分，贏家還沒有名次
     pts = {r for (r,) in con.execute("SELECT points FROM tournament_result")}
     assert pts <= {360, 920, 170}
+
+
+def test_old_round_names_and_null_rounds():
+    """2016–2021 資料：Semi-finals、奧運銅牌戰 3/4、輪次為 NULL（2026-09-30 回補發現）。"""
+    ms = [m("QF", 1, 5), m("QF", 2, 6), m("QF", 3, 7), m("QF", 4, 8),
+          m("Semi-finals", 1, 2), m("Semi-finals", 3, 4), m("3/4", 2, 4), m(None, 9, 10), m("Final", 1, 3)]
+    got = results.event_results(ms)
+    assert got[1][0] == "W" and got[3][0] == "F"
+    assert got[2][0] == "SF" and got[4][0] == "SF"          # 銅牌戰勝負不改變四強名次
+    assert 9 not in got and 10 not in got                   # 輪次不明的場次略過

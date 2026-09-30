@@ -15,7 +15,7 @@ OFFICIAL_CSV = Path(__file__).resolve().parent.parent / "config" / "players_zh.c
 
 EVENT = {"MS": "男單", "WS": "女單", "MD": "男雙", "WD": "女雙", "XD": "混雙"}
 
-ROUND = {"Final": "決賽", "F": "決賽", "SF": "四強", "QF": "八強", "R16": "16 強", "R32": "32 強",
+ROUND = {"Final": "決賽", "F": "決賽", "SF": "四強", "Semi-finals": "四強", "3/4": "銅牌戰", "QF": "八強", "R16": "16 強", "R32": "32 強",
          "R64": "64 強", "R128": "128 強"}
 
 STATUS = {"Retired": "退賽", "Walkover": "不戰而勝", "Disqualified": "取消資格"}
