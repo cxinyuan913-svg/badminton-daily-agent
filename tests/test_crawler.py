@@ -93,3 +93,16 @@ def test_historical_null_status_and_retirement():
     assert stats["stored"] == 2
     assert con.execute("SELECT score_status FROM match WHERE match_id=900002").fetchone()[0] == "Retired"
     assert con.execute("SELECT COUNT(*) FROM game WHERE match_id=900001").fetchone()[0] == 3
+
+
+def test_team_tie_uber_cup_2026_sf():
+    """2026 尤伯盃四強 中國 3–0 日本（真實結構）：外層記成 team_tie，已打的 3 點拆成單場，未打的 2 點跳過。"""
+    con, _ = load_db()
+    data = json.loads((Path(__file__).parent / "fixtures" / "uber_cup_2026_sf_chn_jpn.json").read_text(encoding="utf-8"))
+    stats = crawler.store_day(con, 5766, data)
+    assert stats["team_ties"] == 1 and stats["stored"] == 3 and stats["skipped_unfinished"] == 2
+    assert con.execute("SELECT team1_country, team2_country, team1_score, team2_score, winner_side FROM team_tie").fetchone() == ("CHN", "JPN", 3, 0, 1)
+    rows = con.execute("SELECT event, rubber_no FROM match WHERE team_tie_id=1509588 ORDER BY match_time_utc, match_id").fetchall()
+    assert sorted(rows) == [("WD", 1), ("WS", 1), ("WS", 2)]
+    # 團體賽的單場也會出現在選手生涯裡
+    assert con.execute("SELECT event, won FROM player_match WHERE player_id=78778").fetchall() == [("WS", 1)]

@@ -63,11 +63,29 @@ CREATE TABLE IF NOT EXISTS match (
     side2_seed      TEXT,
     winner_side     INTEGER CHECK (winner_side IN (1, 2)),
     score_status    TEXT,                         -- Normal / Retired / Walkover / Disqualified
+    team_tie_id     INTEGER REFERENCES team_tie(team_tie_id),  -- 團體賽中的單場才有值
+    rubber_no       INTEGER,                      -- 團體賽第幾點（例如第一單打 = 1）
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS ix_match_side1 ON match(side1_id);
 CREATE INDEX IF NOT EXISTS ix_match_side2 ON match(side2_id);
 CREATE INDEX IF NOT EXISTS ix_match_date  ON match(match_date);
+
+-- 團體賽對戰（湯尤盃、蘇迪曼盃等）：一場國家對國家，底下的單場記在 match，並以 team_tie_id 連回
+CREATE TABLE IF NOT EXISTS team_tie (
+    team_tie_id     INTEGER PRIMARY KEY,          -- BWF match id（isTeamMatch=true 的外層）
+    tournament_id   INTEGER NOT NULL REFERENCES tournament(tournament_id),
+    competition     TEXT,                         -- Thomas Cup / Uber Cup / Sudirman Cup …
+    stage           TEXT,                         -- 例如 'Uber Cup - Play-Off'
+    round           TEXT,
+    match_date      TEXT NOT NULL,
+    team1_country   TEXT,
+    team2_country   TEXT,
+    team1_score     INTEGER,
+    team2_score     INTEGER,
+    winner_side     INTEGER CHECK (winner_side IN (1, 2)),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
 -- 每局比分
 CREATE TABLE IF NOT EXISTS game (
@@ -78,15 +96,21 @@ CREATE TABLE IF NOT EXISTS game (
     PRIMARY KEY (match_id, game_no)
 );
 
--- 世界排名快照（之後由排名爬蟲寫入；「爆冷」判斷要看比賽當時的排名）
+-- 世界排名快照（「爆冷」判斷要看比賽當時的排名）
+-- 注意：BWF API 只保留最近約 60 週（2026-09 實測最早到 2025-08-12），
+--       所以要每週存一次，歷史才會累積下來
 CREATE TABLE IF NOT EXISTS ranking_snapshot (
-    week_date       TEXT NOT NULL,
+    week_date       TEXT NOT NULL,                -- 排名發布日 YYYY-MM-DD
+    publication_id  INTEGER,                      -- BWF 的排名發布 ID
     event           TEXT NOT NULL,
     pairing_id      INTEGER NOT NULL REFERENCES pairing(pairing_id),
     rank            INTEGER NOT NULL,
+    rank_previous   INTEGER,
     points          REAL,
+    tournaments     INTEGER,
     PRIMARY KEY (week_date, event, pairing_id)
 );
+CREATE INDEX IF NOT EXISTS ix_ranking_pairing ON ranking_snapshot(pairing_id, week_date);
 
 -- 方便查詢的檢視表：每位選手的每一場比賽（含搭檔、對手、勝負）
 CREATE VIEW IF NOT EXISTS player_match AS

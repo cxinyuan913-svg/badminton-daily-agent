@@ -1,0 +1,57 @@
+"""排名快照測試：使用 2026 第 40 週的真實 API 回應（節錄）。"""
+import json
+from pathlib import Path
+
+from brief import crawler, rankings
+
+FIX = json.loads((Path(__file__).parent / "fixtures" / "rankings_2026-w40_sample.json").read_text(encoding="utf-8"))
+
+
+def db():
+    return crawler.connect(":memory:")
+
+
+def test_store_singles_and_doubles():
+    con = db()
+    assert rankings.store_rows(con, "2026-09-29", "MS", FIX["ms"]["results"]["data"]) == 3
+    assert rankings.store_rows(con, "2026-09-29", "MD", FIX["md"]["results"]["data"]) == 3
+    top_md = con.execute("""SELECT p.player_a_id, p.player_b_id, r.points FROM ranking_snapshot r
+                            JOIN pairing p USING (pairing_id) WHERE r.event='MD' AND r.rank=1""").fetchone()
+    assert top_md == (61444, 66513, 114099.0)
+
+
+def test_rerun_same_week_is_idempotent():
+    con = db()
+    rows = FIX["ms"]["results"]["data"]
+    rankings.store_rows(con, "2026-09-29", "MS", rows)
+    rankings.store_rows(con, "2026-09-29", "MS", rows)
+    assert con.execute("SELECT COUNT(*) FROM ranking_snapshot").fetchone()[0] == 3
+
+
+def test_rank_on_uses_latest_week_before_match():
+    con = db()
+    rows = FIX["ms"]["results"]["data"]
+    rankings.store_rows(con, "2026-09-22", "MS", [{**rows[0], "rank": 2}])
+    rankings.store_rows(con, "2026-09-29", "MS", [rows[0]])
+    pid = crawler.pairing_id(con, [64032])
+    assert rankings.rank_on(con, pid, "MS", "2026-09-25") == 2   # 比賽在第 39 週與第 40 週之間
+    assert rankings.rank_on(con, pid, "MS", "2026-09-30") == 1
+    assert rankings.rank_on(con, pid, "MS", "2026-09-01") is None
+
+
+def test_weeks_missing():
+    con = db()
+    rankings.store_rows(con, "2026-09-29", "MS", FIX["ms"]["results"]["data"][:1])
+    missing = rankings.weeks_missing(con, FIX["weeks"])
+    assert [w["week"] for w in missing] == [39]
+
+
+def test_ranking_player_then_match_keeps_first_seen():
+    """排名先建了只有 slug 的選手，之後比賽資料要補上名字與 first_seen。"""
+    con = db()
+    rankings.store_rows(con, "2026-09-29", "MS", FIX["ms"]["results"]["data"][:1])
+    crawler.upsert_player(con, {"id": "64032", "firstName": "Kunlavut", "lastName": "VITIDSARN",
+                                "nameDisplay": "Kunlavut VITIDSARN", "nameShort": "K VITIDSARN",
+                                "countryCode": "THA", "slug": "kunlavut-vitidsarn"}, "2026-07-22")
+    row = con.execute("SELECT name_display, first_seen FROM player WHERE player_id=64032").fetchone()
+    assert row == ("Kunlavut VITIDSARN", "2026-07-22")

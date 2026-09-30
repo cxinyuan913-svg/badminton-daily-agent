@@ -13,6 +13,9 @@ Grade 1、2、3 用的是同一套元件與 API。
 | 頒獎台 API | `https://extranet-lv.bwfbadminton.com/api/vue-tournament-podium?drawCount=1&searchKey=&tmtTab=podium&tmtId={id}&tmtType=0&podiumEventCode={1-5}&isPara=false` | 前四名、獎金、積分 |
 | 項目清單 API | `https://extranet-lv.bwfbadminton.com/api/vue-tournament-events?drawCount=0&searchKey=&tmtTab=podium&tmtId={id}&tmtType=0&eventName=1&isPara=false` | |
 | 進行中賽事 | `https://match-centre.bwfbadminton.com/` | 首頁列出正在打的賽事與其 id |
+| 進行中賽事 API | `https://extranet-lv.bwfbadminton.com/api/match-center/vue-current-live?showpara=0` | JSON：id、GUID、起訖日期。每日排程的入口（`brief/live.py`） |
+| 排名週次 API | `https://extranet-lv.bwfbadminton.com/api/vue-rankingweek?rankId=2` | 只列最近約 60 週 |
+| 排名表 API | `https://extranet-lv.bwfbadminton.com/api/vue-rankingtable?rankId=2&catId={6-10}&publicationId={id}&doubles={bool}&searchKey=&pageKey={每頁筆數}&page={n}&drawCount=1` | catId 6=MS、7=WS、8=MD、9=WD、10=XD。超過 60 週的 publicationId 回傳 0 筆 |
 | 選手頁 | `https://bwfbadminton.com/player/{player_id}/{slug}/` | 近期比賽含亞運等綜合賽事 |
 
 `bwfbadminton.com` 的 robots.txt 只禁止 `/24-live-blog/` 與條款純文字頁。
@@ -29,6 +32,15 @@ Grade 1、2、3 用的是同一套元件與 API。
 - World Championships 2026（5601）8/20：40 場，選手 ID 齊全
 - North Harbour International 2026（5766）9/30：37 場，比賽進行中，狀態欄位有 F/O/C/I/N
 - Myanmar International Series 2019（3600）：6 天共 126 場全部可寫入，男單決賽與頒獎台一致
+
+### 團體賽（湯尤盃 2026，id 5600）
+
+四強中國 3–0 日本：外層 `isTeamMatch=true`，比分 `3-0`；`matches` 內有 5 點，已打 3 點（F），未打 2 點（N）。單場 `matchTypeNo` 是第幾單／雙打。
+
+### 行事曆 API（不採用）
+
+`vue-tournament-categories` 列出的分類包含 16=International Challenge、17=International Series、18=Future Series，
+但 `vue-grouped-year-tournaments?year=&category[]=` 的篩選結果與分類對不上（例如 category 16 回傳俱樂部錦標賽），所以不用它找賽事。
 
 ## 不使用的來源
 

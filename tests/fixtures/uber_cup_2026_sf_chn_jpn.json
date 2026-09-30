@@ -1,0 +1,365 @@
+[
+ {
+  "id": 1509588,
+  "isTeamMatch": true,
+  "eventName": "Uber Cup",
+  "drawName": "Uber Cup - Play-Off",
+  "roundName": "SF",
+  "matchTypeValue": null,
+  "matchTypeNo": null,
+  "matchStatus": "F",
+  "winner": 1,
+  "scoreStatusValue": "Normal",
+  "matchTime": "2026-05-02 10:00:00",
+  "team1": {
+   "countryCode": "CHN",
+   "teamName": "China",
+   "teamId": 2918,
+   "players": []
+  },
+  "team2": {
+   "countryCode": "JPN",
+   "teamName": "Japan",
+   "teamId": 2923,
+   "players": []
+  },
+  "score": [
+   {
+    "set": null,
+    "home": 3,
+    "away": 0
+   }
+  ],
+  "matches": [
+   {
+    "id": 1509724,
+    "isTeamMatch": false,
+    "eventName": "Uber Cup",
+    "drawName": "Uber Cup - Play-Off",
+    "roundName": "SF",
+    "matchTypeValue": "Women's Singles",
+    "matchTypeNo": 1,
+    "matchStatus": "F",
+    "winner": 1,
+    "scoreStatusValue": "Normal",
+    "matchTime": "2026-05-02 10:00:00",
+    "matchTimeUtc": null,
+    "duration": null,
+    "courtName": "1",
+    "team1seed": null,
+    "team2seed": null,
+    "team1": {
+     "countryCode": "CHN",
+     "teamName": "China",
+     "teamId": 2918,
+     "players": [
+      {
+       "id": "61854",
+       "firstName": "WANG",
+       "lastName": "Yi",
+       "nameDisplay": "WANG Zhi Yi",
+       "nameShort": "WANG Zhi Yi",
+       "countryCode": null,
+       "slug": "wang-zhi-yi"
+      }
+     ]
+    },
+    "team2": {
+     "countryCode": "JPN",
+     "teamName": "Japan",
+     "teamId": 2923,
+     "players": [
+      {
+       "id": "96312",
+       "firstName": "Akane",
+       "lastName": "YAMAGUCHI",
+       "nameDisplay": "Akane YAMAGUCHI",
+       "nameShort": "Akane YAMAGUCHI",
+       "countryCode": null,
+       "slug": "akane-yamaguchi"
+      }
+     ]
+    },
+    "score": [
+     {
+      "set": 1,
+      "home": 21,
+      "away": 23
+     },
+     {
+      "set": 2,
+      "home": 21,
+      "away": 11
+     },
+     {
+      "set": 3,
+      "home": 21,
+      "away": 16
+     }
+    ]
+   },
+   {
+    "id": 1509656,
+    "isTeamMatch": false,
+    "eventName": "Uber Cup",
+    "drawName": "Uber Cup - Play-Off",
+    "roundName": "SF",
+    "matchTypeValue": "Women's Doubles",
+    "matchTypeNo": 1,
+    "matchStatus": "F",
+    "winner": 1,
+    "scoreStatusValue": "Normal",
+    "matchTime": "2026-05-02 11:30:00",
+    "matchTimeUtc": null,
+    "duration": null,
+    "courtName": "1",
+    "team1seed": null,
+    "team2seed": null,
+    "team1": {
+     "countryCode": "CHN",
+     "teamName": "China",
+     "teamId": 2918,
+     "players": [
+      {
+       "id": "81599",
+       "firstName": "LIU",
+       "lastName": "Shu",
+       "nameDisplay": "LIU Sheng Shu",
+       "nameShort": "LIU Sheng Shu",
+       "countryCode": null,
+       "slug": "liu-sheng-shu"
+      },
+      {
+       "id": "59880",
+       "firstName": "TAN",
+       "lastName": "Ning",
+       "nameDisplay": "TAN Ning",
+       "nameShort": "TAN Ning",
+       "countryCode": null,
+       "slug": "tan-ning"
+      }
+     ]
+    },
+    "team2": {
+     "countryCode": "JPN",
+     "teamName": "Japan",
+     "teamId": 2923,
+     "players": [
+      {
+       "id": "71023",
+       "firstName": "Yuki",
+       "lastName": "FUKUSHIMA",
+       "nameDisplay": "Yuki FUKUSHIMA",
+       "nameShort": "Yuki FUKUSHIMA",
+       "countryCode": null,
+       "slug": "yuki-fukushima"
+      },
+      {
+       "id": "81609",
+       "firstName": "Mayu",
+       "lastName": "MATSUMOTO",
+       "nameDisplay": "Mayu MATSUMOTO",
+       "nameShort": "Mayu MATSUMOTO",
+       "countryCode": null,
+       "slug": "mayu-matsumoto"
+      }
+     ]
+    },
+    "score": [
+     {
+      "set": 1,
+      "home": 21,
+      "away": 18
+     },
+     {
+      "set": 2,
+      "home": 21,
+      "away": 14
+     }
+    ]
+   },
+   {
+    "id": 1509659,
+    "isTeamMatch": false,
+    "eventName": "Uber Cup",
+    "drawName": "Uber Cup - Play-Off",
+    "roundName": "SF",
+    "matchTypeValue": "Women's Singles",
+    "matchTypeNo": 2,
+    "matchStatus": "F",
+    "winner": 1,
+    "scoreStatusValue": "Normal",
+    "matchTime": "2026-05-02 12:30:00",
+    "matchTimeUtc": null,
+    "duration": null,
+    "courtName": "1",
+    "team1seed": null,
+    "team2seed": null,
+    "team1": {
+     "countryCode": "CHN",
+     "teamName": "China",
+     "teamId": 2918,
+     "players": [
+      {
+       "id": "78778",
+       "firstName": "CHEN",
+       "lastName": "Fei",
+       "nameDisplay": "CHEN Yu Fei",
+       "nameShort": "CHEN Yu Fei",
+       "countryCode": null,
+       "slug": "chen-yu-fei"
+      }
+     ]
+    },
+    "team2": {
+     "countryCode": "JPN",
+     "teamName": "Japan",
+     "teamId": 2923,
+     "players": [
+      {
+       "id": "82070",
+       "firstName": "Tomoka",
+       "lastName": "MIYAZAKI",
+       "nameDisplay": "Tomoka MIYAZAKI",
+       "nameShort": "Tomoka MIYAZAKI",
+       "countryCode": null,
+       "slug": "tomoka-miyazaki"
+      }
+     ]
+    },
+    "score": [
+     {
+      "set": 1,
+      "home": 21,
+      "away": 11
+     },
+     {
+      "set": 2,
+      "home": 22,
+      "away": 20
+     }
+    ]
+   },
+   {
+    "id": 1509756,
+    "isTeamMatch": false,
+    "eventName": "Uber Cup",
+    "drawName": "Uber Cup - Play-Off",
+    "roundName": "SF",
+    "matchTypeValue": "Women's Doubles",
+    "matchTypeNo": 2,
+    "matchStatus": "N",
+    "winner": 0,
+    "scoreStatusValue": "Normal",
+    "matchTime": "2026-05-02 12:30:00",
+    "matchTimeUtc": null,
+    "duration": null,
+    "courtName": "1",
+    "team1seed": null,
+    "team2seed": null,
+    "team1": {
+     "countryCode": "CHN",
+     "teamName": "China",
+     "teamId": 2918,
+     "players": [
+      {
+       "id": "65144",
+       "firstName": "JIA",
+       "lastName": "Fan",
+       "nameDisplay": "JIA Yi Fan",
+       "nameShort": "JIA Yi Fan",
+       "countryCode": null,
+       "slug": "jia-yi-fan"
+      },
+      {
+       "id": "85914",
+       "firstName": "ZHANG",
+       "lastName": "Xian",
+       "nameDisplay": "ZHANG Shu Xian",
+       "nameShort": "ZHANG Shu Xian",
+       "countryCode": null,
+       "slug": "zhang-shu-xian"
+      }
+     ]
+    },
+    "team2": {
+     "countryCode": "JPN",
+     "teamName": "Japan",
+     "teamId": 2923,
+     "players": [
+      {
+       "id": "79558",
+       "firstName": "Arisa",
+       "lastName": "IGARASHI",
+       "nameDisplay": "Arisa IGARASHI",
+       "nameShort": "Arisa IGARASHI",
+       "countryCode": null,
+       "slug": "arisa-igarashi"
+      },
+      {
+       "id": "87428",
+       "firstName": "Kie",
+       "lastName": "NAKANISHI",
+       "nameDisplay": "Kie NAKANISHI",
+       "nameShort": "Kie NAKANISHI",
+       "countryCode": null,
+       "slug": "kie-nakanishi"
+      }
+     ]
+    },
+    "score": []
+   },
+   {
+    "id": 1509660,
+    "isTeamMatch": false,
+    "eventName": "Uber Cup",
+    "drawName": "Uber Cup - Play-Off",
+    "roundName": "SF",
+    "matchTypeValue": "Women's Singles",
+    "matchTypeNo": 3,
+    "matchStatus": "N",
+    "winner": 0,
+    "scoreStatusValue": "Normal",
+    "matchTime": "2026-05-02 13:20:00",
+    "matchTimeUtc": null,
+    "duration": null,
+    "courtName": "1",
+    "team1seed": null,
+    "team2seed": null,
+    "team1": {
+     "countryCode": "CHN",
+     "teamName": "China",
+     "teamId": 2918,
+     "players": [
+      {
+       "id": "92967",
+       "firstName": "HAN",
+       "lastName": "Yue",
+       "nameDisplay": "HAN Yue",
+       "nameShort": "HAN Yue",
+       "countryCode": null,
+       "slug": "han-yue"
+      }
+     ]
+    },
+    "team2": {
+     "countryCode": "JPN",
+     "teamName": "Japan",
+     "teamId": 2923,
+     "players": [
+      {
+       "id": "76079",
+       "firstName": "Riko",
+       "lastName": "GUNJI",
+       "nameDisplay": "Riko GUNJI",
+       "nameShort": "Riko GUNJI",
+       "countryCode": null,
+       "slug": "riko-gunji"
+      }
+     ]
+    },
+    "score": []
+   }
+  ]
+ }
+]

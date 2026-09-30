@@ -152,7 +152,7 @@ def upsert_player(con, p: dict, seen_date: str):
              first_name=excluded.first_name, last_name=excluded.last_name,
              name_display=excluded.name_display, name_short=excluded.name_short,
              country_code=excluded.country_code, slug=excluded.slug,
-             first_seen=MIN(player.first_seen, excluded.first_seen),
+             first_seen=MIN(COALESCE(player.first_seen, excluded.first_seen), excluded.first_seen),
              updated_at=datetime('now')""",
         (int(p["id"]), p.get("firstName"), p.get("lastName"), p.get("nameDisplay"),
          (p.get("nameShort") or "").strip(), p.get("countryCode"), p.get("slug"), seen_date),
@@ -171,44 +171,79 @@ def pairing_id(con, player_ids: list[int]) -> int:
     return row[0]
 
 
+DISCIPLINE = {"Men's Singles": "MS", "Women's Singles": "WS", "Men's Doubles": "MD",
+              "Women's Doubles": "WD", "Mixed Doubles": "XD"}
+
+
+def _store_individual(con, tournament_id: int, m: dict, stats: dict,
+                      event: str | None = None, team_tie_id: int | None = None) -> None:
+    if not is_finished(m):
+        stats["skipped_unfinished"] += 1
+        return
+    t1 = (m.get("team1") or {}).get("players") or []
+    t2 = (m.get("team2") or {}).get("players") or []
+    if not t1 or not t2:
+        stats["skipped_no_players"] += 1    # 輪空等情況
+        return
+    match_date = (m.get("matchTime") or "")[:10]
+    for p in t1 + t2:
+        upsert_player(con, p, match_date)
+    s1 = pairing_id(con, [int(p["id"]) for p in t1])
+    s2 = pairing_id(con, [int(p["id"]) for p in t2])
+    con.execute(
+        """INSERT INTO match (match_id, tournament_id, event, round, match_date, match_time_utc,
+                              duration_min, court, side1_id, side2_id, side1_seed, side2_seed,
+                              winner_side, score_status, team_tie_id, rubber_no)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(match_id) DO UPDATE SET
+             round=excluded.round, match_date=excluded.match_date,
+             duration_min=excluded.duration_min, winner_side=excluded.winner_side,
+             score_status=excluded.score_status, team_tie_id=excluded.team_tie_id,
+             rubber_no=excluded.rubber_no, updated_at=datetime('now')""",
+        (int(m["id"]), tournament_id, event or m.get("eventName"), m.get("roundName"), match_date,
+         m.get("matchTimeUtc"), m.get("duration"), m.get("courtName"), s1, s2,
+         m.get("team1seed"), m.get("team2seed"), m["winner"], m.get("scoreStatusValue"),
+         team_tie_id, m.get("matchTypeNo") if team_tie_id else None),
+    )
+    con.execute("DELETE FROM game WHERE match_id=?", (int(m["id"]),))
+    for g in m.get("score") or []:
+        con.execute("INSERT INTO game (match_id, game_no, side1_points, side2_points) VALUES (?,?,?,?)",
+                    (int(m["id"]), g["set"], g.get("home"), g.get("away")))
+    stats["stored"] += 1
+
+
+def _store_team_tie(con, tournament_id: int, m: dict, stats: dict) -> None:
+    """團體賽：外層是國家對國家（比分如 3-0），單場在 m["matches"]。
+    單場的 eventName 是賽事名（例如 Uber Cup），項目要從 matchTypeValue 轉成 MS/WS/…"""
+    tie_id = int(m["id"])
+    team_score = (m.get("score") or [{}])[0]
+    con.execute(
+        """INSERT INTO team_tie (team_tie_id, tournament_id, competition, stage, round, match_date,
+                                 team1_country, team2_country, team1_score, team2_score, winner_side)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(team_tie_id) DO UPDATE SET
+             team1_score=excluded.team1_score, team2_score=excluded.team2_score,
+             winner_side=excluded.winner_side, updated_at=datetime('now')""",
+        (tie_id, tournament_id, m.get("eventName"), m.get("drawName"), m.get("roundName"),
+         (m.get("matchTime") or "")[:10], (m.get("team1") or {}).get("countryCode"),
+         (m.get("team2") or {}).get("countryCode"), team_score.get("home"), team_score.get("away"),
+         m["winner"] if m.get("winner") in (1, 2) else None),
+    )
+    stats["team_ties"] += 1
+    for sub in m.get("matches") or []:
+        _store_individual(con, tournament_id, sub, stats,
+                          event=DISCIPLINE.get(sub.get("matchTypeValue"), sub.get("eventName")),
+                          team_tie_id=tie_id)
+
+
 def store_day(con, tournament_id: int, matches: list[dict]) -> dict:
-    """寫入一天的比賽。只收已完成、有勝方的個人賽；回傳統計。"""
-    stats = {"stored": 0, "skipped_unfinished": 0, "skipped_team": 0, "skipped_no_players": 0}
+    """寫入一天的比賽。只收已完成、有勝方的單場；團體賽的單場也會拆開寫入。回傳統計。"""
+    stats = {"stored": 0, "skipped_unfinished": 0, "team_ties": 0, "skipped_no_players": 0}
     for m in matches:
         if m.get("isTeamMatch"):
-            stats["skipped_team"] += 1          # 團體賽的外層；個別對戰在 m["matches"] 內，之後處理
-            continue
-        if not is_finished(m):
-            stats["skipped_unfinished"] += 1
-            continue
-        t1 = (m.get("team1") or {}).get("players") or []
-        t2 = (m.get("team2") or {}).get("players") or []
-        if not t1 or not t2:
-            stats["skipped_no_players"] += 1    # 輪空等情況
-            continue
-        match_date = (m.get("matchTime") or "")[:10]
-        for p in t1 + t2:
-            upsert_player(con, p, match_date)
-        s1 = pairing_id(con, [int(p["id"]) for p in t1])
-        s2 = pairing_id(con, [int(p["id"]) for p in t2])
-        con.execute(
-            """INSERT INTO match (match_id, tournament_id, event, round, match_date, match_time_utc,
-                                  duration_min, court, side1_id, side2_id, side1_seed, side2_seed,
-                                  winner_side, score_status)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-               ON CONFLICT(match_id) DO UPDATE SET
-                 round=excluded.round, match_date=excluded.match_date,
-                 duration_min=excluded.duration_min, winner_side=excluded.winner_side,
-                 score_status=excluded.score_status, updated_at=datetime('now')""",
-            (int(m["id"]), tournament_id, m.get("eventName"), m.get("roundName"), match_date,
-             m.get("matchTimeUtc"), m.get("duration"), m.get("courtName"), s1, s2,
-             m.get("team1seed"), m.get("team2seed"), m["winner"], m.get("scoreStatusValue")),
-        )
-        con.execute("DELETE FROM game WHERE match_id=?", (int(m["id"]),))
-        for g in m.get("score") or []:
-            con.execute("INSERT INTO game (match_id, game_no, side1_points, side2_points) VALUES (?,?,?,?)",
-                        (int(m["id"]), g["set"], g.get("home"), g.get("away")))
-        stats["stored"] += 1
+            _store_team_tie(con, tournament_id, m, stats)
+        else:
+            _store_individual(con, tournament_id, m, stats)
     return stats
 
 
@@ -218,10 +253,16 @@ def crawl_tournament(client: Client, con, tournament_id: int, verbose=True) -> d
     if r is None:
         raise ValueError(f"找不到賽事 {tournament_id}")
     t = parse_tournament_page(tournament_id, r.text)
+    return crawl_known(client, con, t, verbose)
+
+
+def crawl_known(client: Client, con, t: dict, verbose=True) -> dict:
+    """已經知道 GUID 與日期時（例如來自 live.current_live），直接抓每日賽果。"""
+    tournament_id = t["tournament_id"]
     if not (t["code"] and t["start_date"]):
         raise ValueError(f"賽事 {tournament_id} 缺少 GUID 或日期：{t}")
     upsert_tournament(con, t)
-    total = {"stored": 0, "skipped_unfinished": 0, "skipped_team": 0, "skipped_no_players": 0}
+    total = {"stored": 0, "skipped_unfinished": 0, "team_ties": 0, "skipped_no_players": 0}
     for day in dates_between(t["start_date"], t["end_date"]):
         resp = client.get(f"{API}/tournaments/day-matches",
                           tournamentCode=t["code"], date=day, order=2, court=0)

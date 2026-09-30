@@ -1,0 +1,167 @@
+{
+ "weeks": [
+  {
+   "id": 4477,
+   "year": 2026,
+   "week": 40,
+   "date": "2026-09-29 00:00:00",
+   "key": "2026-40-4477",
+   "display": "Week 40 (2026-09-29)"
+  },
+  {
+   "id": 4471,
+   "year": 2026,
+   "week": 39,
+   "date": "2026-09-22 00:00:00",
+   "key": "2026-39-4471",
+   "display": "Week 39 (2026-09-22)"
+  }
+ ],
+ "md": {
+  "results": {
+   "current_page": 1,
+   "last_page": 172,
+   "total": 1718,
+   "data": [
+    {
+     "ranking_publication_id": 4477,
+     "ranking_category_id": 8,
+     "player1_id": 61444,
+     "player2_id": 66513,
+     "rank": 1,
+     "rank_previous": 1,
+     "points": "114099.0000",
+     "tournaments": 14,
+     "player1_model": {
+      "id": "61444",
+      "slug": "won-ho-kim"
+     },
+     "player2_model": {
+      "id": "66513",
+      "slug": "seung-jae-seo"
+     },
+     "p1_country_model": {
+      "name": "Korea"
+     },
+     "p2_country_model": {
+      "name": "Korea"
+     }
+    },
+    {
+     "ranking_publication_id": 4477,
+     "ranking_category_id": 8,
+     "player1_id": 88876,
+     "player2_id": 91440,
+     "rank": 2,
+     "rank_previous": 2,
+     "points": "94453.0000",
+     "tournaments": 14,
+     "player1_model": {
+      "id": "88876",
+      "slug": "fajar-alfian"
+     },
+     "player2_model": {
+      "id": "91440",
+      "slug": "muhammad-shohibul-fikri"
+     },
+     "p1_country_model": {
+      "name": "Indonesia"
+     },
+     "p2_country_model": {
+      "name": "Indonesia"
+     }
+    },
+    {
+     "ranking_publication_id": 4477,
+     "ranking_category_id": 8,
+     "player1_id": 90531,
+     "player2_id": 55414,
+     "rank": 3,
+     "rank_previous": 3,
+     "points": "91309.0000",
+     "tournaments": 16,
+     "player1_model": {
+      "id": "90531",
+      "slug": "wei-keng-liang"
+     },
+     "player2_model": {
+      "id": "55414",
+      "slug": "chang-wang"
+     },
+     "p1_country_model": {
+      "name": "China"
+     },
+     "p2_country_model": {
+      "name": "China"
+     }
+    }
+   ]
+  }
+ },
+ "ms": {
+  "results": {
+   "current_page": 1,
+   "last_page": 223,
+   "total": 2224,
+   "data": [
+    {
+     "ranking_publication_id": 4477,
+     "ranking_category_id": 6,
+     "player1_id": 64032,
+     "player2_id": null,
+     "rank": 1,
+     "rank_previous": 2,
+     "points": "86915.0000",
+     "tournaments": 16,
+     "player1_model": {
+      "id": "64032",
+      "slug": "kunlavut-vitidsarn"
+     },
+     "player2_model": null,
+     "p1_country_model": {
+      "name": "Thailand"
+     },
+     "p2_country_model": null
+    },
+    {
+     "ranking_publication_id": 4477,
+     "ranking_category_id": 6,
+     "player1_id": 72885,
+     "player2_id": null,
+     "rank": 2,
+     "rank_previous": 3,
+     "points": "86632.0000",
+     "tournaments": 19,
+     "player1_model": {
+      "id": "72885",
+      "slug": "christo-popov"
+     },
+     "player2_model": null,
+     "p1_country_model": {
+      "name": "France"
+     },
+     "p2_country_model": null
+    },
+    {
+     "ranking_publication_id": 4477,
+     "ranking_category_id": 6,
+     "player1_id": 73442,
+     "player2_id": null,
+     "rank": 3,
+     "rank_previous": 1,
+     "points": "84431.0000",
+     "tournaments": 16,
+     "player1_model": {
+      "id": "73442",
+      "slug": "jonatan-christie"
+     },
+     "player2_model": null,
+     "p1_country_model": {
+      "name": "Indonesia"
+     },
+     "p2_country_model": null
+    }
+   ]
+  }
+ }
+}
