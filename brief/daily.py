@@ -4,8 +4,9 @@
   1. 年度賽程（calendar）：更新今年的賽事清單，挑出「最近幾天有比賽」的賽事
   2. 進行中賽事（live）：交叉檢查，補上賽程日期對不上、但在追蹤範圍內的賽事
   3. 賽果（crawler）：只抓每站最近 LOOKBACK_DAYS 天，漏跑一兩天也補得回來
-  4. 排名（rankings）：API 有新的一週就存下來（API 只留約 60 週，漏了就永久遺失）
-  5. 執行紀錄寫進 crawl_run
+  4. 新聞（news）：BWF 與台灣媒體的列表頁
+  5. 排名（rankings）：API 有新的一週就存下來（API 只留約 60 週，漏了就永久遺失）
+  6. 執行紀錄寫進 crawl_run
 
 追蹤範圍以 calendar 為準：live 的名稱篩選會把湯尤盃等團體賽排除，不能拿來判斷範圍。
 
@@ -20,7 +21,7 @@ import datetime as dt
 import sys
 import traceback
 
-from brief import calendar, crawler, live, rankings
+from brief import calendar, crawler, live, news, rankings
 from brief.crawler import Client, connect
 
 TAIPEI = dt.timezone(dt.timedelta(hours=8))   # 台灣沒有日光節約時間，用固定時差即可
@@ -115,6 +116,12 @@ def run(con, client: Client, today: dt.date, lookback: int = LOOKBACK_DAYS, verb
                 traceback.print_exc()
 
     try:
+        _, news_errors = news.collect(client, con)
+        errors += news_errors
+    except Exception as e:  # noqa: BLE001
+        errors.append(f"news: {e!r}")
+
+    try:
         for w in rankings.weeks_missing(con, rankings.list_weeks(client)):
             ranking_rows += rankings.crawl_week(client, con, w, verbose=verbose)
     except Exception as e:  # noqa: BLE001
@@ -134,9 +141,9 @@ def publish(con, today: dt.date, res: dict) -> list[str]:
     from brief import digest, discord
     errors = []
     try:
-        text, matches, ties = digest.build(con, today)
+        text, matches, ties, news_rows = digest.build(con, today)
         discord.send(discord.webhook("DISCORD_WEBHOOK_DAILY"), text)
-        digest.mark_sent(con, today, matches, ties)
+        digest.mark_sent(con, today, matches, ties, news_rows)
     except Exception as e:  # noqa: BLE001
         errors.append(f"digest: {e!r}")
     problems = res["errors"] + errors

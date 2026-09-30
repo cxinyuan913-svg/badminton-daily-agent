@@ -3,7 +3,7 @@ import datetime as dt
 import json
 from pathlib import Path
 
-from brief import calendar, crawler, daily, live
+from brief import calendar, crawler, daily, live, news
 
 FIXDIR = Path(__file__).parent / "fixtures"
 
@@ -52,9 +52,14 @@ def test_cancelled_and_untracked_are_skipped():
     assert got == [5874]
 
 
+NEWS_PAGES = {"bwf": "bwf_news_2026-09-30.html", "bwfworldtour": "bwfworldtour_news_2026-09-30.html",
+              "cna": "cna_aspt_2026-09-30.html", "nownews": "nownews_sport_2026-09-30.html"}
+
+
 class FakeResponse:
-    def __init__(self, payload):
+    def __init__(self, payload=None, text=""):
         self.payload = payload
+        self.text = text
 
     def json(self):
         return self.payload
@@ -83,6 +88,9 @@ class FakeClient:
                 return FakeResponse({"results": {"data": [], "last_page": 0}})
             ms = self.rank["ms"]["results"]           # 節錄只有 3 筆，當成只有一頁
             return FakeResponse({"results": {**ms, "last_page": 1}})
+        pages = {news.SOURCES[k]: f for k, f in NEWS_PAGES.items()}
+        if url in pages:
+            return FakeResponse(text=(FIXDIR / pages[url]).read_text(encoding="utf-8"))
         raise AssertionError(f"沒有預期的請求：{url}")
 
 

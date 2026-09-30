@@ -41,7 +41,7 @@ def test_upset_rule():
 
 def test_digest_lists_only_new_matches_and_scores_winner_first():
     con = db()
-    text, matches, ties = digest.build(con, D("2026-10-01"))
+    text, matches, ties, _ = digest.build(con, D("2026-10-01"))
     assert len(matches) == 6 and ties == []     # 湯尤盃在 7 天以外
     assert "MAXX North Harbour International 2026" in text
     for m in matches:                            # 勝方比分在前：每局勝方分數較高的局數要過半
@@ -50,7 +50,7 @@ def test_digest_lists_only_new_matches_and_scores_winner_first():
             assert sum(a > b for a, b in games) > len(games) / 2
 
     digest.mark_sent(con, D("2026-10-01"), matches, ties)
-    text2, matches2, _ = digest.build(con, D("2026-10-01"))
+    text2, matches2, _, _ = digest.build(con, D("2026-10-01"))
     assert matches2 == [] and "沒有新的賽果" in text2
     digest.mark_sent(con, D("2026-10-01"), matches, ties)   # 重複標記不出錯
     assert con.execute("SELECT COUNT(*) FROM digest_item").fetchone()[0] == 6
@@ -58,13 +58,13 @@ def test_digest_lists_only_new_matches_and_scores_winner_first():
 
 def test_upset_is_highlighted_with_ranks():
     con = db()
-    _, matches, _ = digest.build(con, D("2026-10-01"))
+    _, matches, _, _ = digest.build(con, D("2026-10-01"))
     m = matches[0]
     loser_pairing = con.execute("SELECT CASE winner_side WHEN 1 THEN side2_id ELSE side1_id END FROM match "
                                 "WHERE match_id=?", (m["match_id"],)).fetchone()[0]
     con.execute("INSERT INTO ranking_snapshot (week_date, event, pairing_id, rank) VALUES ('2026-09-29', ?, ?, 12)",
                 (m["event"], loser_pairing))
-    text, matches, _ = digest.build(con, D("2026-10-01"))
+    text, matches, _, _ = digest.build(con, D("2026-10-01"))
     hit = next(x for x in matches if x["match_id"] == m["match_id"])
     assert hit["upset"] and hit["loser_rank"] == 12 and hit["winner_rank"] is None
     assert "⚡爆冷" in text and "#12" in text
@@ -72,7 +72,7 @@ def test_upset_is_highlighted_with_ranks():
 
 def test_team_tie_line():
     con = db()
-    text, _, ties = digest.build(con, D("2026-05-02"))
+    text, _, ties, _ = digest.build(con, D("2026-05-02"))
     assert [(t["team1"], t["score1"], t["score2"], t["team2"]) for t in ties] == [("CHN", 3, 0, "JPN")]
     assert "Uber Cup SF：CHN 3–0 JPN（CHN 勝）" in text
 
@@ -121,3 +121,15 @@ def test_webhook_reads_env_file(tmp_path, monkeypatch):
     assert discord.webhook("DISCORD_WEBHOOK_ALERTS", env) == "https://a"
     with pytest.raises(RuntimeError):
         discord.webhook("DISCORD_WEBHOOK_DAILY", env)          # 空值視為未設定
+
+
+def test_news_section_recent_only_and_marked():
+    from brief import news
+    con = db()
+    news.store(con, news.parse("bwf", (FIXDIR / "bwf_news_2026-09-30.html").read_text(encoding="utf-8")))
+    text, _, _, items = digest.build(con, D("2026-09-30"))
+    assert [n["published"] for n in items] == ["2026-09-30"]            # 9/28–9/30 只有一則
+    assert "World Juniors: Africa Beckons" in text
+    assert "<https://bwfbadminton.com/news-single/2026/09/30/poised-to-make-deep-inroads/>" in text
+    digest.mark_sent(con, D("2026-09-30"), [], [], items)
+    assert digest.build(con, D("2026-09-30"))[3] == []

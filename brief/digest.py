@@ -22,13 +22,15 @@ from collections import defaultdict
 
 from brief import discord
 from brief.crawler import connect
+from brief.news import NEWS_TABLE
 from brief.rankings import rank_on
 
 LATE_ROUNDS = {"QF", "SF", "Final", "F"}
 ROUND_ORDER = ["Q1", "Q2", "Q3", "R128", "R64", "R32", "R16", "R1", "R2", "R3", "QF", "SF", "Final", "F"]
 EVENT_ORDER = ["MS", "WS", "MD", "WD", "XD"]
 HOME_COUNTRY = "TPE"
-LOOKBACK_DAYS = 7          # 只看最近幾天的比賽，避免第一次推送時把十年份全推出去
+NEWS_DAYS = 2              # 新聞只推最近兩天發布的
+LOOKBACK_DAYS = 7         # 只看最近幾天的比賽，避免第一次推送時把十年份全推出去
 # 暫定：敗方有排名，且勝方沒排名或名次至少差 max(UPSET_MIN_GAP, 敗方名次)，也就是勝方名次至少是敗方的兩倍
 UPSET_MIN_GAP = 10
 
@@ -124,9 +126,20 @@ def _sort_key(m):
     return (-rnd, ev, m["match_id"])
 
 
-def render(today: dt.date, matches: list[dict], ties: list[dict]) -> str:
+def render(today: dt.date, matches: list[dict], ties: list[dict], news: list[dict] = ()) -> str:
+    lines = [f"**羽球日報 {today.isoformat()}**"]
     if not matches and not ties:
-        return f"**羽球日報 {today.isoformat()}**\n今天沒有新的賽果。"
+        lines.append("今天沒有新的賽果。")
+    lines += _render_results(matches, ties)
+    if news:
+        lines += ["", "__**新聞**__（只當資訊來源，引用要改寫並附出處）"]
+        for n in news:
+            lines.append(f"- [{n['source']}] {n['title']}（{(n['published'] or '')[:10]}） <{n['url']}>")
+    return "\n".join(lines)
+
+
+def _render_results(matches: list[dict], ties: list[dict]) -> list[str]:
+    lines: list[str] = []
     by_t: dict[int, list[dict]] = defaultdict(list)
     names: dict[int, tuple[str, str | None]] = {}
     for m in matches:
@@ -136,7 +149,6 @@ def render(today: dt.date, matches: list[dict], ties: list[dict]) -> str:
     for t in ties:
         ties_by_t[t["tournament_id"]].append(t)
 
-    lines = [f"**羽球日報 {today.isoformat()}**"]
     for tid in sorted(set(by_t) | set(ties_by_t)):
         name, level = names.get(tid, (f"賽事 {tid}", None))
         ms = by_t.get(tid, [])
@@ -164,16 +176,29 @@ def render(today: dt.date, matches: list[dict], ties: list[dict]) -> str:
             summary = "、".join(f"{r} {counts[r]} 場" for r in sorted(counts, key=lambda r: ROUND_ORDER.index(r)
                                                                     if r in ROUND_ORDER else -1))
             lines.append(f"- 其他：{summary}" + (f"（未列出 {rest} 場）" if rest else ""))
-    return "\n".join(lines)
+    return lines
 
 
-def build(con, today: dt.date) -> tuple[str, list[dict], list[dict]]:
-    con.executescript(DIGEST_TABLE)
-    matches, ties = pending_matches(con, today), pending_ties(con, today)
-    return render(today, matches, ties), matches, ties
+def pending_news(con, today: dt.date) -> list[dict]:
+    """最近 NEWS_DAYS 天、還沒推送過的新聞。"""
+    since = (today - dt.timedelta(days=NEWS_DAYS)).isoformat()
+    rows = con.execute(
+        """SELECT n.url, n.source, n.title, n.published FROM news_item n
+           LEFT JOIN digest_news d USING (url)
+           WHERE d.url IS NULL AND substr(n.published, 1, 10) BETWEEN ? AND ?
+           ORDER BY n.published DESC, n.url""", (since, today.isoformat())).fetchall()
+    return [dict(zip(("url", "source", "title", "published"), r)) for r in rows]
 
 
-def mark_sent(con, today: dt.date, matches: list[dict], ties: list[dict]) -> None:
+def build(con, today: dt.date) -> tuple[str, list[dict], list[dict], list[dict]]:
+    con.executescript(DIGEST_TABLE + NEWS_TABLE)
+    matches, ties, news = pending_matches(con, today), pending_ties(con, today), pending_news(con, today)
+    return render(today, matches, ties, news), matches, ties, news
+
+
+def mark_sent(con, today: dt.date, matches: list[dict], ties: list[dict], news: list[dict] = ()) -> None:
+    con.executemany("INSERT OR IGNORE INTO digest_news (url, digest_date) VALUES (?, ?)",
+                    [(n["url"], today.isoformat()) for n in news])
     con.executemany("INSERT OR IGNORE INTO digest_item (match_id, digest_date) VALUES (?, ?)",
                     [(m["match_id"], today.isoformat()) for m in matches])
     con.executemany("INSERT OR IGNORE INTO digest_tie (team_tie_id, digest_date) VALUES (?, ?)",
@@ -190,13 +215,13 @@ def main():
     a = ap.parse_args()
     today = dt.date.fromisoformat(a.date) if a.date else today_taipei()
     con = connect(a.db)
-    text, matches, ties = build(con, today)
+    text, matches, ties, news = build(con, today)
     if not a.send:
         print(text)
         return
     discord.send(discord.webhook("DISCORD_WEBHOOK_DAILY"), text)
-    mark_sent(con, today, matches, ties)
-    print(f"已推送：{len(matches)} 場、{len(ties)} 場團體對戰")
+    mark_sent(con, today, matches, ties, news)
+    print(f"已推送：{len(matches)} 場、{len(ties)} 場團體對戰、{len(news)} 則新聞")
 
 
 if __name__ == "__main__":
