@@ -70,10 +70,17 @@ def store_rows(con, week_date: str, event: str, rows: list[dict]) -> int:
 def crawl_week(client: Client, con, week: dict, max_rank: int = 500, verbose=True) -> int:
     week_date = week["date"][:10]
     total = 0
+    errors = []
     for cat_id, event in CATEGORIES.items():
+        if con.execute("SELECT 1 FROM ranking_snapshot WHERE week_date=? AND event=? LIMIT 1", (week_date, event)).fetchone():
+            continue                                        # 續跑：這週這項已經存過
         page = 1
         while True:
-            res = fetch_page(client, week["id"], cat_id, page)
+            try:
+                res = fetch_page(client, week["id"], cat_id, page)
+            except Exception as e:  # noqa: BLE001 — BWF API 偶爾 500，這項跳過，下次續跑再補
+                errors.append(f"{event}: {e!r}"[:200])
+                break
             rows = [r for r in res.get("data", []) if int(r["rank"]) <= max_rank]
             total += store_rows(con, week_date, event, rows)
             con.commit()
@@ -81,14 +88,26 @@ def crawl_week(client: Client, con, week: dict, max_rank: int = 500, verbose=Tru
                     or int(rows[-1]["rank"]) >= max_rank):      # 已經到 max_rank，不必再請求下一頁
                 break
             page += 1
+    con.executescript(FAILED_TABLE)
+    if errors:
+        con.execute("INSERT OR REPLACE INTO ranking_week_failed (week_date, error) VALUES (?, ?)", (week_date, "; ".join(errors)))
+    else:
+        con.execute("DELETE FROM ranking_week_failed WHERE week_date=?", (week_date,))
+    con.commit()
     if verbose:
-        print(f"{week['display']}: {total} 筆")
+        print(f"{week['display']}: {total} 筆" + (f"；失敗 {len(errors)} 項：{errors}" if errors else ""))
     return total
 
 
+FAILED_TABLE = "CREATE TABLE IF NOT EXISTS ranking_week_failed (week_date TEXT PRIMARY KEY, error TEXT, at TEXT DEFAULT (datetime('now')));"
+
+
 def weeks_missing(con, weeks: list[dict]) -> list[dict]:
+    """還沒存、或上次有項目失敗的週（中途出錯的週要能補回來）。"""
+    con.executescript(FAILED_TABLE)
     have = {r[0] for r in con.execute("SELECT DISTINCT week_date FROM ranking_snapshot")}
-    return [w for w in weeks if w["date"][:10] not in have]
+    failed = {r[0] for r in con.execute("SELECT week_date FROM ranking_week_failed")}
+    return [w for w in weeks if w["date"][:10] not in have or w["date"][:10] in failed]
 
 
 def rank_lookup(con, pairing: int, event: str, on_date: str) -> tuple[int | None, str | None]:

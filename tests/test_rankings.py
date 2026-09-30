@@ -137,3 +137,20 @@ def test_rank_lookup_outside_top100_in_history_weeks():
     assert rankings.rank_lookup(con, pid, "MS", "2019-08-10") == (None, "outside100")
     from brief import digest
     assert digest._rank(None, "outside100") == "百名外"
+
+
+def test_week_with_missing_event_is_retried_and_500_skipped():
+    """2026-10-01：歷史排名抓到一半遇到 BWF API 500，整支程式停掉；缺項的週要能續跑補回。"""
+    con = db()
+
+    class Flaky(FakeHistClient):
+        def get(self, url, **params):
+            if params.get("catId") == 7:
+                raise RuntimeError("500 Server Error")
+            return super().get(url, **params)
+    week = {"id": 1497, "date": "2019-08-06", "display": "Week 32"}
+    rankings.crawl_week(Flaky(), con, week, max_rank=5, verbose=False)        # WS 失敗，不中斷
+    assert rankings.weeks_missing(con, [week]) == [week]                      # 缺項 → 還算沒抓完
+    client = FakeHistClient()
+    rankings.crawl_week(client, con, week, max_rank=5, verbose=False)
+    assert not any(c[1].get("catId") == 6 for c in client.calls)            # 男單已存，不重抓
