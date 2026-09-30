@@ -124,14 +124,16 @@ def tournament_meta(con) -> dict[int, tuple[str | None, tuple | None]]:
     return meta
 
 
-def compute(con, weeks: list[dt.date], events=("MS", "WS", "MD", "WD", "XD")) -> int:
+def compute(con, weeks: list[dt.date], events=("MS", "WS", "MD", "WD", "XD"), exclude_levels=()) -> int:
+    """exclude_levels：驗證分項用，暫時不計某些層級的成績（例如比較有無 Future Series）。"""
     con.executescript(ESTIMATE_TABLE)
     meta = tournament_meta(con)
     n = 0
+    level_filter = f"AND COALESCE(t.level, '') NOT IN ({','.join('?' * len(exclude_levels))})" if exclude_levels else ""
     for event in events:
         est = Estimator([(d, pid, pts, team, *meta.get(tid, (None, None))) for d, pid, pts, team, tid in con.execute(
-            "SELECT result_date, pairing_id, points, round_reached = 'TEAM', tournament_id FROM tournament_result "
-            "WHERE event=?", (event,))])
+            "SELECT r.result_date, r.pairing_id, r.points, r.round_reached = 'TEAM', r.tournament_id FROM tournament_result r "
+            f"LEFT JOIN tournament t USING (tournament_id) WHERE r.event=? {level_filter}", (event, *exclude_levels))])
         frozen_list = None
         for week in weeks:
             if FREEZE_START <= week <= FREEZE_END:

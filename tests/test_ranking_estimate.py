@@ -78,3 +78,11 @@ def test_series_key_and_s1000_grade_lookup():
     assert rp.s1000_level("VICTOR China Open 2026", D(2026, 7, 21), grades) == "S1000"
     assert rp.s1000_level("PETRONAS Malaysia Open 2027", D(2027, 1, 5), grades) == "S1000_12700"   # 沿用最近一年
     assert rp.s1000_level("Some New Open 2026", D(2026, 5, 1), grades) == "S1000"                  # 查不到採最高級
+
+
+def test_exclude_levels_for_ablation():
+    con = db_with_results()
+    con.execute("UPDATE tournament SET level='FS' WHERE tournament_id <= 10")
+    re_.compute(con, [D(2020, 3, 17)], events=("MS",), exclude_levels=("FS",))
+    top = con.execute("SELECT pairing_id FROM ranking_estimate WHERE week_date='2020-03-17' AND rank=1").fetchone()[0]
+    assert top == 11                                                  # 1–10 號的 FS 成績不計
