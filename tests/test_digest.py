@@ -30,13 +30,15 @@ def db():
 
 
 def test_upset_rule():
-    assert digest.is_upset(None, 30)            # 無排名勝有排名
-    assert digest.is_upset(15, 5)               # 差 10 名
-    assert not digest.is_upset(14, 5)
-    assert digest.is_upset(200, 100)            # 名次至少是兩倍
-    assert not digest.is_upset(150, 100)
-    assert not digest.is_upset(3, 40)           # 高排名勝低排名
-    assert not digest.is_upset(40, None)
+    """2026-09-30 Raymond：種子被 100 名以外擊敗 = 大爆冷、50 名以外 = 爆冷，種子自己的排名要在門檻以內。"""
+    assert digest.upset_level(120, 8, "1") == "大爆冷"
+    assert digest.upset_level(None, 30, "2") == "大爆冷"      # 無排名視為門檻以外
+    assert digest.upset_level(60, 8, "3") == "爆冷"
+    assert digest.upset_level(120, 70, "5") == "大爆冷"      # 種子 #70 在前 100 內，輸給 100 名外
+    assert digest.upset_level(60, 70, "5") is None            # 種子 #70 不在前 50，輸給 #60 不算
+    assert digest.upset_level(45, 8, "1") is None             # 勝方在前 50 內
+    assert digest.upset_level(300, 12, None) is None          # 敗方不是種子
+    assert digest.upset_level(300, None, "4") is None         # 種子沒有排名，無法判斷
 
 
 def test_digest_lists_only_new_matches_and_scores_winner_first():
@@ -65,9 +67,12 @@ def test_upset_is_highlighted_with_ranks():
     con.execute("INSERT INTO ranking_snapshot (week_date, event, pairing_id, rank) VALUES ('2026-09-29', ?, ?, 12)",
                 (m["event"], loser_pairing))
     text, matches, _, _ = digest.build(con, D("2026-10-01"))
+    assert next(x for x in matches if x["match_id"] == m["match_id"])["upset"] is None   # 還不是種子
+    con.execute("UPDATE match SET side1_seed='1', side2_seed='1' WHERE match_id=?", (m["match_id"],))
+    text, matches, _, _ = digest.build(con, D("2026-10-01"))
     hit = next(x for x in matches if x["match_id"] == m["match_id"])
-    assert hit["upset"] and hit["loser_rank"] == 12 and hit["winner_rank"] is None
-    assert "⚡爆冷" in text and "#12" in text
+    assert hit["upset"] == "大爆冷" and hit["loser_rank"] == 12 and hit["winner_rank"] is None
+    assert "💥大爆冷" in text and "#12" in text
 
 
 def test_team_tie_line():
@@ -152,7 +157,8 @@ def test_walkover_is_not_upset_and_has_no_empty_score():
                         (m["match_id"],)).fetchone()[0]
     con.execute("INSERT INTO ranking_snapshot (week_date, event, pairing_id, rank) VALUES ('2026-09-29', ?, ?, 12)",
                 (m["event"], loser))
-    con.execute("UPDATE match SET score_status='Walkover' WHERE match_id=?", (m["match_id"],))
+    con.execute("UPDATE match SET score_status='Walkover', side1_seed='1', side2_seed='1' WHERE match_id=?",
+                (m["match_id"],))
     con.execute("DELETE FROM game WHERE match_id=?", (m["match_id"],))
     _, matches, _, _ = digest.build(con, D("2026-10-01"))
     hit = next(x for x in matches if x["match_id"] == m["match_id"])

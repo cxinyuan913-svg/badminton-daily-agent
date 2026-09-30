@@ -8,7 +8,8 @@
   - 更早的輪次：只列爆冷與台灣選手，其餘只給場數
   - 團體賽：列各場對戰的國家比分
 
-爆冷的門檻（UPSET_*）是暫定值，待 Raymond 確認。
+爆冷規則（2026-09-30 Raymond 決議）：敗方必須是本站種子；種子序號依當次報名排出，不等於世界排名，
+所以兩邊都用比賽當週的世界排名判斷，見 upset_level()。
 
 用法：
   python -m brief.digest --db data/brief.db                # 印出摘要，不推送
@@ -32,8 +33,8 @@ HOME_COUNTRY = "TPE"
 NEWS_SOURCE = {"bwf": "BWF", "bwfworldtour": "BWF 世界巡迴賽", "cna": "中央社", "nownews": "NOWnews"}
 NEWS_DAYS = 2              # 新聞只推最近兩天發布的
 LOOKBACK_DAYS = 7         # 只看最近幾天的比賽，避免第一次推送時把十年份全推出去
-# 暫定：敗方有排名，且勝方沒排名或名次至少差 max(UPSET_MIN_GAP, 敗方名次)，也就是勝方名次至少是敗方的兩倍
-UPSET_MIN_GAP = 10
+# (門檻, 標籤)：種子的世界排名在門檻以內，輸給門檻以外（或無排名）的選手。由嚴到寬比對
+UPSET_LEVELS = [(100, "大爆冷"), (50, "爆冷")]
 
 DIGEST_TABLE = """
 CREATE TABLE IF NOT EXISTS digest_item (
@@ -47,12 +48,15 @@ CREATE TABLE IF NOT EXISTS digest_tie (
 """
 
 
-def is_upset(winner_rank: int | None, loser_rank: int | None) -> bool:
-    if loser_rank is None:
-        return False
-    if winner_rank is None:
-        return True
-    return winner_rank - loser_rank >= max(UPSET_MIN_GAP, loser_rank)
+def upset_level(winner_rank: int | None, loser_rank: int | None, loser_seed: str | None) -> str | None:
+    """種子被世界排名 100 名以外擊敗 = 大爆冷、50 名以外 = 爆冷；前提是種子自己的排名在該門檻以內。
+    無排名的勝方視為在任何門檻以外；種子沒有排名時無法判斷，不算。"""
+    if not loser_seed or loser_rank is None:
+        return None
+    for limit, label in UPSET_LEVELS:
+        if loser_rank <= limit and (winner_rank is None or winner_rank > limit):
+            return label
+    return None
 
 
 def _side(con, pairing_id: int) -> dict:
@@ -70,14 +74,16 @@ def pending_matches(con, today: dt.date, include_sent: bool = False) -> list[dic
     since = (today - dt.timedelta(days=LOOKBACK_DAYS)).isoformat()
     rows = con.execute(
         """SELECT m.match_id, m.tournament_id, t.name, t.level, m.event, m.round, m.match_date,
-                  m.side1_id, m.side2_id, m.winner_side, m.score_status, m.team_tie_id
+                  m.side1_id, m.side2_id, m.winner_side, m.score_status, m.team_tie_id,
+                  m.side1_seed, m.side2_seed
            FROM match m JOIN tournament t USING (tournament_id)
            LEFT JOIN digest_item d USING (match_id)
            WHERE (d.match_id IS NULL OR ?) AND m.match_date >= ? AND m.match_date <= ?
            ORDER BY m.match_date, m.match_id""", (include_sent, since, today.isoformat())).fetchall()
     out = []
-    for (mid, tid, tname, level, event, rnd, mdate, s1, s2, win, status, tie) in rows:
+    for (mid, tid, tname, level, event, rnd, mdate, s1, s2, win, status, tie, seed1, seed2) in rows:
         w, l = (s1, s2) if win == 1 else (s2, s1)
+        loser_seed = seed2 if win == 1 else seed1
         games = con.execute("SELECT side1_points, side2_points FROM game WHERE match_id=? ORDER BY game_no",
                             (mid,)).fetchall()
         score = " ".join(f"{a}-{b}" if win == 1 else f"{b}-{a}" for a, b in games)   # 勝方在前
@@ -86,7 +92,8 @@ def pending_matches(con, today: dt.date, include_sent: bool = False) -> list[dic
             "match_id": mid, "tournament_id": tid, "tournament": tname, "level": level, "event": event,
             "round": rnd, "date": mdate, "winner": _side(con, w), "loser": _side(con, l),
             "winner_rank": wr, "loser_rank": lr, "score": score, "status": status,
-            "team_tie_id": tie, "upset": status != "Walkover" and is_upset(wr, lr),   # 不戰而勝沒有真的比賽
+            "team_tie_id": tie, "loser_seed": loser_seed,
+            "upset": None if status == "Walkover" else upset_level(wr, lr, loser_seed),   # 不戰而勝沒有真的比賽
         })
     return out
 
@@ -113,7 +120,7 @@ def _line(m: dict) -> str:
     w, l = m["winner"], m["loser"]
     tags = []
     if m["upset"]:
-        tags.append("⚡爆冷")
+        tags.append(("💥" if m["upset"] == "大爆冷" else "⚡") + m["upset"])
     if w["home"] or l["home"]:
         tags.append("🇹🇼")
     status = "" if m["status"] in (None, "Normal") else f"（{zh.status(m['status'])}）"
