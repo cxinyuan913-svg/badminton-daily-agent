@@ -3,6 +3,186 @@
 Claude Code 每次工作結束前更新這份：做了什麼、卡在哪、下一步。
 Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
+## 2026-09-30 深夜（Claude Code）— notes 17:40–17:48 四段完成：模型分工、推送範圍、IC／IS 例外、暱稱收集、退休選手
+
+依 `docs/notes-from-claude-ai.md` 17:40、17:45、17:47、17:48 四段執行，已併入 CLAUDE.md「已決議」表（LLM、日報推送範圍、暱稱、退休選手、台灣選手名單）。測試 **100 個全過**〔`python -m pytest -q`，fe8b045〕。
+
+### 完成
+- **模型分工**〔3b7ce49〕：`AnthropicLLM("routine" | "heavy")`，例行預設 `claude-sonnet-5-5`、重要預設 `claude-opus-5-5`，`.env` 可用 `LLM_MODEL_ROUTINE`／`LLM_MODEL_HEAVY` 覆寫；每次呼叫寫入 `llm_call`（用途、任務、實際模型、token、估計費用）
+- **日報推送範圍**〔1cae701〕：只推 Grade 1、年終總決賽、Super 1000–100、洲際錦標賽、綜合運動會；IC／IS 照存不推，例外見 `brief/grade3.py`：
+  - 曾在 Super 750 以上／Grade 1 打進八強（依已回補的比賽）、官方排名曾進前 30（依 60 週快照）→「值得一提」附理由
+  - 中華台北選手冠軍／亞軍／季軍，一站一行；進行中先推「確定至少季軍／亞軍」
+  - 結尾「今天另有 IC／IS 共 N 場，已存入資料庫」
+  - 每條規則都有正反例測試〔`tests/test_grade3.py`〕
+- **新聞關鍵字**〔1cae701〕：基本詞＋追蹤選手＋退休保留（戴資穎）＋已採用暱稱；**李洋移除**。名單改為優先讀 `config/players_zh.csv`（等 Raymond 改名後自動生效；草稿未進版控）
+- **暱稱收集**〔75ec56d〕：`brief/nickname.py`，規則（XY配、小X、X神，須唯一對回選手）＋ LLM（必附原文證據，證據不在原文就不收）；同篇出現全名且 ≥ 2 來源或 ≥ 3 次 → auto。冷啟動「麟洋配 → 李洋／王齊麟」confirmed。只掃中文新聞、每則只掃一次；週一日報最後附暱稱週報。以中央社、NOWnews 真實標題測試〔`tests/fixtures/news_nickname_titles.json`〕
+- **每站成績自動更新**：每日流程與回補抓完一站就重算 `tournament_result`（IC／IS「曾經打過」規則要用）
+
+### LLM 實測（2026-09-30，`python -m brief.digest --db data/brief.db --include-sent --llm`，不推送）
+| 次 | 任務 | 模型 | 輸入 token | 輸出 token | 估計費用 | 結果 |
+|---|---|---|---|---|---|---|
+| 1 | 今日重點 | claude-sonnet-5-5 | 8,963 | 897 | US$0.0269 | ❌ **捏造**「男團決賽印尼 3–2 中國、女團決賽中國 3–0 日本」（資料裡沒有團體賽）；還把「等一下，我寫錯了」的自我更正一起輸出 |
+| 2 | 今日重點 | claude-sonnet-5-5 | 9,040 | 336 | US$0.0214 | ✅ 內容正確；但「周天成以 21-10 21-11 不敵」比分角度寫反 |
+| 3 | 今日重點 | claude-sonnet-5-5 | 9,107 | 412 | US$0.0223 | ✅ 全部可查證，比分改為主詞角度 |
+| 1–3 | 新聞一句重點 | claude-sonnet-5-5 | 118 | 20–22 | US$0.0005 | ✅「世青賽登場，非洲成為矚目焦點」 |
+〔DB：`SELECT * FROM llm_call`；三次合計 27,464 輸入、1,709 輸出 token，US$0.072〕
+
+- **事實檢查的漏洞已修正**〔fe8b045〕：舊檢查把「3–2」拆成 3 和 2 單獨比對，兩個數字在資料裡都有就放行。改為比分整組比對（正反順序皆可），並拒收多段落或含「等一下／更正／我寫錯」的輸出；第 1 次的真實輸出已做成回歸測試
+- 提示詞補上：摘要沒有的賽事不提、比分以主詞角度書寫
+- **每日費用估計**：今日重點約 US$0.02–0.03 ＋ 新聞重點每則約 US$0.0005 → **每月約 US$1**（亞運這種大賽日輸入較長）
+- 日報長度：**119 行、16,146 位元組，切成 6 則 Discord 訊息**（亞運約 60 行、IC／IS 精選約 20 行）
+
+<details>
+<summary>第 3 次完整輸出（未推送）</summary>
+
+```
+**羽球日報 2026-09-30**
+**今日重點**（AI 整理，請審稿）
+2026 亞運羽球項目落幕，男單由 Kunlavut VITIDSARN（泰國）以 21-12 21-16 擊敗 LOH Kean Yew（新加坡）奪冠，女單由 AN Se Young（韓國）以 21-17 21-9 擊敗 Akane YAMAGUCHI（日本）封后。男雙由 Leo Rolly CARNANDO / Daniel MARTHIN（印尼，#43）以 19-21 21-13 21-18 逆轉擊敗 WANG Chang / LIANG Wei Keng（中國，#3）奪冠；女雙由 BAEK Ha Na / LEE So Hee（韓國，#2）以 26-28 21-18 21-18 逆轉擊敗 TAN Ning / LIU Sheng Shu（中國，#1）。中華台北方面，周天成（CHOU Tien Chen）八強以 10-21 11-21 不敵 Alwi FARHAN（印尼），Nicole Gonzales CHAN / YE Hong Wei 則在混雙四強以 13-21 9-21 不敵 WEI Ya Xin / JIANG Zhen Bang（中國）。
+
+
+__**2026 亞運**__（綜合運動會）　2026-09-25 → 2026-09-29
+- 男單 決賽：**Kunlavut VITIDSARN**（泰國，#1）勝 LOH Kean Yew（新加坡，#13） 21-12 21-16
+- 女單 決賽：**AN Se Young**（韓國，#1）勝 Akane YAMAGUCHI（日本，#3） 21-17 21-9
+- 男雙 決賽：**Leo Rolly CARNANDO / Daniel MARTHIN**（印尼，#43）勝 WANG Chang / LIANG Wei Keng（中國，#3） 19-21 21-13 21-18
+- 女雙 決賽：**BAEK Ha Na / LEE So Hee**（韓國，#2）勝 TAN Ning / LIU Sheng Shu（中國，#1） 26-28 21-18 21-18
+- 混雙 決賽：**WEI Ya Xin / JIANG Zhen Bang**（中國，#3）勝 Nita Violina MARWAH / Amri SYAHNAWI（印尼，#17） 21-19 21-8
+- 男單 四強：**Kunlavut VITIDSARN**（泰國，#2）勝 Alwi FARHAN（印尼，#10） 21-13 21-15
+- 男單 四強：**LOH Kean Yew**（新加坡，#13）勝 YOO Tae Bin（韓國，#46） 21-19 19-21 21-12
+- 女單 四強：**Akane YAMAGUCHI**（日本，#3）勝 WANG Zhi Yi（中國，#2） 21-11 22-20
+- 女單 四強：**AN Se Young**（韓國，#1）勝 CHEN Yu Fei（中國，#4） 21-5 21-12
+- 男雙 四強：**Leo Rolly CARNANDO / Daniel MARTHIN**（印尼，#46）勝 KIM Won Ho / SEO Seung Jae（韓國，#1） 21-11 21-14
+- 男雙 四強：**WANG Chang / LIANG Wei Keng**（中國，#3）勝 Fajar ALFIAN / Muhammad Shohibul FIKRI（印尼，#2） 21-17 13-21 21-9
+- 女雙 四強：**BAEK Ha Na / LEE So Hee**（韓國，#2）勝 Kie NAKANISHI / Rin IWANAGA（日本，#7） 21-13 21-12
+- 女雙 四強：**TAN Ning / LIU Sheng Shu**（中國，#1）勝 THINAAH Muralitharan / Pearly TAN（馬來西亞，#5） 16-21 22-20 21-12
+- 混雙 四強：**WEI Ya Xin / JIANG Zhen Bang**（中國，#3）勝 Nicole Gonzales CHAN / YE Hong Wei（中華台北，#9） 21-13 21-9  🇹🇼
+- 混雙 四強：**Nita Violina MARWAH / Amri SYAHNAWI**（印尼，#15）勝 FENG Yan Zhe / HUANG Dong Ping（中國，#1） 21-12 21-14
+- 男單 八強：**Kunlavut VITIDSARN**（泰國，#2）勝 NG Ka Long Angus（香港，#30） 16-21 21-10 21-13
+- 男單 八強：**Alwi FARHAN**（印尼，#10）勝 周天成（CHOU Tien Chen）（中華台北，#5） 21-10 21-11  🇹🇼
+- 男單 八強：**YOO Tae Bin**（韓國，#46）勝 Kodai NARAOKA（日本，#7） 12-21 21-5 21-11
+- 男單 八強：**LOH Kean Yew**（新加坡，#13）勝 Jonatan CHRISTIE（印尼，#1） 21-14 21-19
+- 女單 八強：**AN Se Young**（韓國，#1）勝 Ratchanok INTANON（泰國，#5） 21-8 21-9
+- 女單 八強：**WANG Zhi Yi**（中國，#2）勝 LIN Hsiang Ti（中華台北，#19） 21-7 21-12  🇹🇼
+- 女單 八強：**CHEN Yu Fei**（中國，#4）勝 PUSARLA V. Sindhu（印度，#11） 11-21 21-18 21-10
+- 女單 八強：**Akane YAMAGUCHI**（日本，#3）勝 Unnati HOODA（印度，#24） 21-16 14-21 21-17
+- 男雙 八強：**Leo Rolly CARNANDO / Daniel MARTHIN**（印尼，#46）勝 NGUYEN Dinh Hoang / TRAN Dinh Manh（越南，#107） 21-6 21-10
+- 男雙 八強：**KIM Won Ho / SEO Seung Jae**（韓國，#1）勝 Hiroki NISHI / Kakeru KUMAGAI（日本，#20） 15-21 21-17 21-15
+- 男雙 八強：**WANG Chang / LIANG Wei Keng**（中國，#3）勝 GOH Sze Fei / Nur IZZUDDIN（馬來西亞，#6） 21-13 21-17
+- 男雙 八強：**Fajar ALFIAN / Muhammad Shohibul FIKRI**（印尼，#2）勝 KANG Min Hyuk / KI Dong Ju（韓國，#14） 21-14 20-22 21-14
+- 女雙 八強：**Kie NAKANISHI / Rin IWANAGA**（日本，#7）勝 YEUNG Nga Ting / YEUNG Pui Lam（香港，#22） 21-15 19-21 21-15
+- 女雙 八強：**BAEK Ha Na / LEE So Hee**（韓國，#2）勝 LIN Jhih Yun / HSU Yin-Hui（中華台北，#12） 22-20 21-17  🇹🇼
+- 女雙 八強：**TAN Ning / LIU Sheng Shu**（中國，#1）勝 HUNG En-Tzu / HSIEH Pei Shan（中華台北，#10） 21-15 21-15  🇹🇼
+- 女雙 八強：**THINAAH Muralitharan / Pearly TAN**（馬來西亞，#5）勝 GAYATRI GOPICHAND PULLELA / Treesa JOLLY（印度，#26） 21-18 21-9
+- 混雙 八強：**FENG Yan Zhe / HUANG Dong Ping**（中國，#1）勝 DHRUV KAPILA / Tanisha CRASTO（印度，#19） 21-14 18-21 21-18
+- 混雙 八強：**WEI Ya Xin / JIANG Zhen Bang**（中國，#3）勝 JANG Ha Jeong / KIM Jae Hyeon（韓國，#25） 21-13 21-15
+- 混雙 八強：**Nita Violina MARWAH / Amri SYAHNAWI**（印尼，#15）勝 JO Song Hyun / JEONG Na Eun（韓國，#83） 21-9 12-21 21-19
+- 混雙 八強：**Nicole Gonzales CHAN / YE Hong Wei**（中華台北，#9）勝 Jhenicha SUDJAIPRAPARAT / Ruttanapak OUPTHONG（泰國，#22） 21-18 21-14  🇹🇼
+- 男單 16 強：**周天成（CHOU Tien Chen）**（中華台北，#5）勝 Ayush SHETTY（印度，#20） 21-16 19-21 21-17  🇹🇼
+- 女單 16 強：**LIN Hsiang Ti**（中華台北，#19）勝 LO Sin Yan Happy（香港，#68） 21-19 7-21 21-15  🇹🇼
+- 男雙 16 強：**Hiroki NISHI / Kakeru KUMAGAI**（日本，#20）勝 楊博軒（YANG Po-Hsuan） / 李哲輝（LEE Jhe-Huei）（中華台北，#15） 20-22 21-17 21-12  🇹🇼
+- 女雙 16 強：**LIN Jhih Yun / HSU Yin-Hui**（中華台北，#12）勝 Nargiza RAKHMETULLAYEVA / Kamila SMAGULOVA（哈薩克，無排名） 21-8 21-5  🇹🇼
+- 女雙 16 強：**HUNG En-Tzu / HSIEH Pei Shan**（中華台北，#10）勝 Alissa KULESHOVA / Diana NAMENOVA（哈薩克，#391） 21-10 21-5  🇹🇼
+- 混雙 16 強：**Nicole Gonzales CHAN / YE Hong Wei**（中華台北，#9）勝 Sayaka HOBARA / Yuichi SHIMOGAMI（日本，#16） 21-10 21-15  🇹🇼
+- 男單 32 強：**YOO Tae Bin**（韓國，#46）勝 林俊易（LIN Chun-Yi）（中華台北，#11） 21-10 21-12  🇹🇼
+- 男單 32 強：**周天成（CHOU Tien Chen）**（中華台北，#5）勝 Ayman Ibn JAMAN（孟加拉，#382） 21-1 21-10  🇹🇼
+- 男單 32 強：**CHOI JIHOON**（韓國，#89）勝 LI Shi Feng（中國，#12） 18-21 21-19 21-18  ⚡爆冷
+- 女單 32 強：**PUSARLA V. Sindhu**（印度，#11）勝 CHIU Pin-Chian（中華台北，#17） 21-19 21-14  🇹🇼
+- 女單 32 強：**LIN Hsiang Ti**（中華台北，#19）勝 Pornpawee CHOCHUWONG（泰國，#8） 21-14 21-16  🇹🇼
+- 男雙 32 強：**楊博軒（YANG Po-Hsuan） / 李哲輝（LEE Jhe-Huei）**（中華台北，#15）勝 HE Ji Ting / LIU Yi（中國，無排名） 21-15 21-19  🇹🇼
+- 男雙 32 強：**GOH Sze Fei / Nur IZZUDDIN**（馬來西亞，#6）勝 CHIU Hsiang Chieh / 王齊麟（WANG Chi-Lin）（中華台北，#16） 21-17 21-14  🇹🇼
+- 女雙 32 強：**LIN Jhih Yun / HSU Yin-Hui**（中華台北，#12）勝 Zi Yu LOW / Noraqilah MAISARAH（馬來西亞，#49） 21-10 21-13  🇹🇼
+- 女雙 32 強：**HUNG En-Tzu / HSIEH Pei Shan**（中華台北，#10）勝 Amin-Erdene ODBAYAR / TSELMEG-OD Enkhlen（蒙古，無排名） 21-4 21-5  🇹🇼
+- 混雙 32 強：**LAI Shevon Jemie / GOH Soon Huat**（馬來西亞，#10）勝 楊博軒（YANG Po-Hsuan） / HU Ling Fang（中華台北，#12） 21-14 21-11  🇹🇼
+- 混雙 32 強：**Nicole Gonzales CHAN / YE Hong Wei**（中華台北，#9）勝 Praful MAHARJAN / Rashila MAHARJAN（尼泊爾，無排名） 21-14 21-9  🇹🇼
+- 男單 64 強：**林俊易（LIN Chun-Yi）**（中華台北，#11）勝 Gerelsukh JARGALSAIKHAN（蒙古，無排名） 21-10 21-9  🇹🇼
+- 女單 64 強：**CHIU Pin-Chian**（中華台北，#17）勝 Karupathevan LETSHANAA（馬來西亞，#28） 21-13 21-13  🇹🇼
+- 其他：64 強 9 場、32 強 72 場、16 強 40 場（未列出 102 場）
+
+__**2026 亞運**__（綜合運動會團體）　2026-09-23 → 2026-09-24
+- Women's Team 四強：中國 3–0 印尼（中國勝）
+- Women's Team 四強：韓國 1–3 日本（日本勝）
+- Men's Team 四強：印尼 3–1 泰國（印尼勝）
+- Men's Team 四強：印度 1–3 中國（中國勝）
+- Women's Team 決賽：中國 3–0 日本（中國勝）
+- Men's Team 決賽：印尼 3–2 中國（印尼勝）
+
+__**IC／IS 精選**__
+- IC／IS｜POLYTRON Surabaya International Challenge 2026（國際挑戰賽）：Jia Ling KE 女單季軍
+- 值得一提：前世界第 4 名（男雙，2025-08-12 官方排名）的 Muhammad Rian ARDIANTO（印尼）出現在 POLYTRON Surabaya International Challenge 2026（國際挑戰賽）
+  - 男雙 32 強：**Dimas Jayawardana HASAN / Hamid HAMID**（印尼，無排名）勝 Muhammad Rian ARDIANTO / Daniel Edgar MARVINO（印尼，#225） 14-21 21-18 21-19
+- 值得一提：前世界第 26 名（男雙，2026-07-21 官方排名）的 Rahmat HIDAYAT（印尼）出現在 POLYTRON Surabaya International Challenge 2026（國際挑戰賽）
+  - 混雙 八強：**Bagas MAULANA / Apriyani RAHAYU**（印尼，無排名）勝 Rahmat HIDAYAT / Priskila Venus ELSADAI（印尼，無排名） 22-20 21-15
+  - 混雙 16 強：**Rahmat HIDAYAT / Priskila Venus ELSADAI**（印尼，無排名）勝 Luna Rianty SAFFANA / Kenzie YOE（印尼，#111） 21-16 21-17
+  - 男雙 32 強：**Alexius Ongkytama SUBAGIO / Taufik ADERYA**（印尼，#252）勝 Karsten Spencer DARMA / Rahmat HIDAYAT（澳洲／印尼，無排名） 21-6 21-11
+  - 混雙 32 強：**Rahmat HIDAYAT / Priskila Venus ELSADAI**（印尼，無排名）勝 CHEN Yu Tong / Tzu Hung CHIU（中華台北，#275） 19-21 21-16 21-12  🇹🇼
+- 值得一提：前世界第 10 名（男雙，2025-08-12 官方排名）的 Bagas MAULANA（印尼）出現在 POLYTRON Surabaya International Challenge 2026（國際挑戰賽）
+  - 混雙 決賽：**Melati Daeva OKTAVIANTI / Rehan Naufal KUSHARJANTO**（印尼，#202）勝 Bagas MAULANA / Apriyani RAHAYU（印尼，無排名） 21-19 21-15
+  - 混雙 四強：**Bagas MAULANA / Apriyani RAHAYU**（印尼，無排名）勝 Jessica Maya RISMAWARDANI / Muhammad Al FARIZI（印尼，#145） 11-21 21-13 21-17
+  - 混雙 八強：**Bagas MAULANA / Apriyani RAHAYU**（印尼，無排名）勝 Rahmat HIDAYAT / Priskila Venus ELSADAI（印尼，無排名） 22-20 21-15
+  - 混雙 16 強：**Bagas MAULANA / Apriyani RAHAYU**（印尼，無排名）勝 Salma MUFIDA / Aquino Evano Keneddy TANGKA（印尼，無排名） 21-17 21-11
+  - 混雙 32 強：**Bagas MAULANA / Apriyani RAHAYU**（印尼，無排名）勝 NGE Joo Jin / TAY Andrea Jacqui（新加坡，無排名） 19-21 21-16 21-16
+- 值得一提：前世界第 13 名（混雙，2025-09-23 官方排名）的 Rehan Naufal KUSHARJANTO（印尼）出現在 POLYTRON Surabaya International Challenge 2026（國際挑戰賽）
+  - 混雙 決賽：**Melati Daeva OKTAVIANTI / Rehan Naufal KUSHARJANTO**（印尼，#202）勝 Bagas MAULANA / Apriyani RAHAYU（印尼，無排名） 21-19 21-15
+  - 混雙 四強：**Melati Daeva OKTAVIANTI / Rehan Naufal KUSHARJANTO**（印尼，#202）勝 Bernadine Anindya WARDANA / Verrell Yustin MULIA（印尼，#195） 21-16 21-14
+  - 混雙 八強：**Melati Daeva OKTAVIANTI / Rehan Naufal KUSHARJANTO**（印尼，#202）勝 Meisa Rizka FITRIA / Kleopas Binar Putra PRAKOSO（印尼，無排名） 21-8 21-10
+  - 混雙 16 強：**Melati Daeva OKTAVIANTI / Rehan Naufal KUSHARJANTO**（印尼，#202）勝 TEOH Mei Xing / TAN Zhi Yang（馬來西亞，#138） 21-18 21-14
+  - 混雙 32 強：**Melati Daeva OKTAVIANTI / Rehan Naufal KUSHARJANTO**（印尼，#202）勝 Zi Shun Nicholas KAT / TEO Eng Ker（新加坡，#224） 21-9 21-10
+- 值得一提：前世界第 13 名（女雙，2025-09-02 官方排名）的 Lanny Tria MAYASARI（印尼）出現在 POLYTRON Surabaya International Challenge 2026（國際挑戰賽）
+  - 女雙 四強：**Mikoto AISO / Momoha NIIMI**（日本，#133）勝 Lanny Tria MAYASARI / Ester Nurumi Tri WARDOYO（印尼，#302） 21-13 21-16
+  - 女雙 八強：**Lanny Tria MAYASARI / Ester Nurumi Tri WARDOYO**（印尼，#302）勝 Nadhifa Nur ZAHRA / Nathania PRASETYA（印尼，無排名） 21-6 22-20
+  - 女雙 16 強：**Lanny Tria MAYASARI / Ester Nurumi Tri WARDOYO**（印尼，#302）勝 Afina Musa PUTRI / Nur Aliah RAHMA（印尼，#391） 21-8 21-12
+  - 女雙 32 強：**Lanny Tria MAYASARI / Ester Nurumi Tri WARDOYO**（印尼，#302）勝 HERNANDEZ Andrea Princess / Mary Destiny UNTAL（菲律賓，#429） 21-12 21-8
+- 值得一提：前世界第 30 名（混雙，2025-09-02 官方排名）的 Pitha Haningtyas MENTARI（印尼）出現在 POLYTRON Surabaya International Challenge 2026（國際挑戰賽）
+  - 女雙 四強：**CHENG Su Hui / CHONG Jie Yu**（馬來西亞，#161）勝 Pitha Haningtyas MENTARI / Jania Novalita SITUMORANG（印尼，#321） 18-21 21-15 21-10
+  - 女雙 八強：**Pitha Haningtyas MENTARI / Jania Novalita SITUMORANG**（印尼，#321）勝 Wilia RENASYA / Aqelatul Amaliyah RAHMA（印尼，#375） 21-14 21-11
+  - 女雙 16 強：**Pitha Haningtyas MENTARI / Jania Novalita SITUMORANG**（印尼，#321）勝 Anggun Arvina PRAWIRANATA / Syalma Nurwijaya KUSUMA（印尼，無排名） 26-24 21-13
+  - 女雙 32 強：**Pitha Haningtyas MENTARI / Jania Novalita SITUMORANG**（印尼，#321）勝 Suzu NAKAHARA / Maiko KAWAZOE（日本，無排名） 19-21 21-18 21-17
+- 值得一提：前世界第 18 名（女雙，2025-08-12 官方排名）的 TEOH Mei Xing（馬來西亞）出現在 POLYTRON Surabaya International Challenge 2026（國際挑戰賽）
+  - 混雙 16 強：**Melati Daeva OKTAVIANTI / Rehan Naufal KUSHARJANTO**（印尼，#202）勝 TEOH Mei Xing / TAN Zhi Yang（馬來西亞，#138） 21-18 21-14
+  - 混雙 32 強：**TEOH Mei Xing / TAN Zhi Yang**（馬來西亞，#138）勝 Hamid HAMID / Asah Nailu RAHMANIYAH（印尼，無排名） 21-3 21-8
+- 值得一提：前世界第 28 名（男雙，2026-05-05 官方排名）的 Muhammad HAIKAL（馬來西亞）出現在 POLYTRON Surabaya International Challenge 2026（國際挑戰賽）
+  - 男雙 八強：**Alexius Ongkytama SUBAGIO / Taufik ADERYA**（印尼，#252）勝 Bryan Jeremy GOONTING / Muhammad HAIKAL（馬來西亞，#114） 21-14 21-11
+  - 男雙 16 強：**Bryan Jeremy GOONTING / Muhammad HAIKAL**（馬來西亞，#114）勝 Muhammad Nadhif AL MAREN / Muhammad Hazeral MASYHUR（印尼，無排名） 21-18 21-8
+  - 男雙 32 強：**Bryan Jeremy GOONTING / Muhammad HAIKAL**（馬來西亞，#114）勝 Ikhsan Lintang PRAMUDYA / Aquino Evano Keneddy TANGKA（印尼，#339） 19-21 21-13 21-10
+- 值得一提：前世界第 28 名（混雙，2026-07-07 官方排名）的 Bernadine Anindya WARDANA（印尼）出現在 POLYTRON Surabaya International Challenge 2026（國際挑戰賽）
+  - 混雙 四強：**Melati Daeva OKTAVIANTI / Rehan Naufal KUSHARJANTO**（印尼，#202）勝 Bernadine Anindya WARDANA / Verrell Yustin MULIA（印尼，#195） 21-16 21-14
+  - 混雙 八強：**Bernadine Anindya WARDANA / Verrell Yustin MULIA**（印尼，#195）勝 Masita MAHMUDIN / Renaldi SAMOSIR（印尼，#93） 21-12 21-6  💥大爆冷
+  - 混雙 16 強：**Bernadine Anindya WARDANA / Verrell Yustin MULIA**（印尼，#195）勝 Salsabila Zahra AULIA / Ikhsan Lintang PRAMUDYA（印尼，#389） 16-21 21-17 21-18
+  - 混雙 32 強：**Bernadine Anindya WARDANA / Verrell Yustin MULIA**（印尼，#195）勝 Nicole TAN / LOH Ziheng（馬來西亞，#123） 21-19 21-18
+
+今天另有 IC／IS 共 163 場，已存入資料庫。
+
+__**新聞**__（只當資訊來源，引用要改寫並附出處）
+- 【BWF】World Juniors: Africa Beckons（2026-09-30） <https://bwfbadminton.com/news-single/2026/09/30/poised-to-make-deep-inroads/>
+  　重點：世界青年賽登場，非洲首度迎來賽事
+```
+</details>
+
+### 發現與決定
+- 例行模型在第一次就捏造了比分，**「今日重點」一定要經過事實檢查與 Raymond 審稿**，不能自動放行（符合 CLAUDE.md「事實正確優先」）
+- IC／IS 精選目前會把「值得一提」選手當天的所有比賽都列出，一位選手可能佔 5 行（例如 Bagas MAULANA）→ 見待決定第 2 題
+- 李洋的 BWF 選手 ID 不在資料庫（退休、不在排名），所以「麟洋配」只記中文名，`player_ids` 只有王齊麟
+
+### 卡住
+- 無
+
+### 待 Raymond 決定
+1. **台灣選手名單**
+   - 背景：`config/players_zh_draft.csv` 在 Raymond 手上編輯中
+   - 預設：改名為 `config/players_zh.csv` 後程式自動改讀；之前沿用 5 人暫用表
+   - A. 填好後直接改名，我下次開工時提交　B. 填好後告訴我，我檢查格式再提交
+2. **IC／IS「值得一提」的寫法**
+   - 背景：現在會列出該選手當天全部比賽，較長
+   - A. 維持　B. 只列理由＋當天最後一場　C. 只列理由一行
+3. **日報長度**（大賽日 6 則 Discord 訊息）
+   - A. 維持　B. 大型賽事只列四強以後＋爆冷＋台灣選手　C. 每站最多 N 行
+4. 前幾段仍有效：現行積分規章 V6.0 取得、Super 1000 兩級名單、大英國協運動會是否計分、告警頻道、排程位置
+- 已移除：洲際／綜合運動會是否推送（17:45 定案：推送）、LLM 金鑰（已填）、爆冷門檻（已定案）、新聞選手名單（改由名單檔與暱稱機制）
+
+### 下一步
+1. 回補（背景，目前在 2024-11）補到 2024 年中 → 排名重建與驗證（交接單 002 第 5 步）
+2. 2026-10-01 06:00 第一次自動排程（這次起含今日重點、IC／IS 規則與暱稱掃描）
+
 ## 2026-09-30 晚上（Claude Code）— 爆冷規則定案、交接單 002 第 1–4、6 步程式完成，回補執行中
 
 ### 完成
