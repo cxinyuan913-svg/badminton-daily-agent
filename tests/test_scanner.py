@@ -13,6 +13,8 @@ def test_name_filter_on_real_titles():
     assert not keep("Bulgarian Junior International 2017")
     assert not keep("GPB U15 Praha Radotin 2017")
     assert not keep("2016 Oceania Mixed Team Championships")
+    assert keep("Paraguay International Series 2023")            # para 要整個字比對
+    assert not keep("Para Badminton International 2023")
 
 def test_points_mapping():
     assert scanner.POINTS_TO_LEVEL[4000] == "IC"

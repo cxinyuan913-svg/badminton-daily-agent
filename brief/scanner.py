@@ -26,7 +26,7 @@ from brief.crawler import API, SITE, Client
 
 POINTS_TO_LEVEL = {4000: "IC", 2500: "IS", 1700: "FS"}
 # 名稱明顯不是成人國際個人賽的，直接排除，不必查積分
-EXCLUDE = re.compile(r"junior|\bU1\d\b|\bU2\d\b|under ?\d|youth|para|team|senior|masters games|"
+EXCLUDE = re.compile(r"junior|\bU1\d\b|\bU2\d\b|under ?\d|youth|\bpara\b|team|senior|masters games|"
                      r"university|school|club|league|national championships", re.I)
 GRADE3_HINT = re.compile(r"international|challenge|series|open", re.I)
 
