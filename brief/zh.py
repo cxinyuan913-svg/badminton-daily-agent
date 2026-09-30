@@ -25,7 +25,7 @@ COMPETITION = {"Thomas Cup": "湯姆斯盃", "Uber Cup": "尤伯盃", "Sudirman 
 LEVEL = {"G1_IND": "Grade 1", "G1_TEAM": "Grade 1 團體", "G1_EVENT": "Grade 1", "WTF": "年終總決賽",
          "S1000": "超級 1000", "S750": "超級 750", "S500": "超級 500", "S300": "超級 300", "S100": "超級 100",
          "SSP": "超級系列賽頂級", "SS": "超級系列賽", "GPG": "黃金大獎賽", "GP": "大獎賽",
-         "IC": "國際挑戰賽", "IS": "國際系列賽", "FS": "未來系列賽", "CONT_IND": "洲際錦標賽", "CONT_TEAM": "洲際團體錦標賽", "MULTI": "綜合運動會",
+         "IC": "國際挑戰賽", "IS": "國際系列賽", "FS": "未來系列賽", "CONT_IND": "洲際錦標賽", "CONT_TEAM": "洲際團體錦標賽", "FISU": "世大運", "MULTI": "綜合運動會",
          "MULTI_TEAM": "綜合運動會團體"}
 
 # IOC／BWF 國家代碼 → 台灣慣用名稱
@@ -61,6 +61,7 @@ TOURNAMENT = [
     (r"thomas\s*&\s*uber cup", "湯尤盃"),
     (r"sudirman cup", "蘇迪曼盃"),
     (r"asian games", "亞運"),
+    (r"world university games|universiade", "世大運"),
     (r"commonwealth games", "大英國協運動會"),
     (r"asia(n)? championships", "亞洲錦標賽"),
     (r"european championships", "歐洲錦標賽"),

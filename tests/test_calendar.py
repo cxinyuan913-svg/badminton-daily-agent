@@ -62,3 +62,17 @@ def test_future_series_and_continental_team():
             assert rows[t["id"]] == "CONT_TEAM"
         else:
             assert t["id"] not in rows                            # 青少年團體賽不收
+
+
+def test_fisu_university_games_tracked():
+    """22:45 決議：世大運（V6.0 §7.1 計入排名）納入追蹤，level = FISU；元老賽照樣排除。"""
+    fix = json.loads((Path(__file__).parent / "fixtures" / "calendar_2025_fisu.json").read_text(encoding="utf-8"))
+    raw = [t for m in fix["results"] for t in m["tournaments"]]
+    rows = {r["tournament_id"]: r["level"] for r in calendar.parse_year(fix)}
+    for t in raw:
+        if "FISU" in t["name"]:
+            assert rows[t["id"]] == "FISU"
+        else:
+            assert t["id"] not in rows
+    assert calendar.classify({"id": 1, "name": "Chengdu 2021 FISU World University Games (INDIVIDUAL))",
+                              "category": "Grade 1 – Team Tournaments"})["level"] == "FISU"

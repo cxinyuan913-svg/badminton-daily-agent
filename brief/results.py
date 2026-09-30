@@ -204,7 +204,7 @@ if __name__ == "__main__":
 
 
 # ---------------------------------------------------------------- 團體賽（規章 7.x）
-TEAM_LEVELS = ("G1_TEAM", "MULTI_TEAM", "CONT_TEAM")
+TEAM_LEVELS = ("G1_TEAM", "MULTI_TEAM", "CONT_TEAM", "FISU")   # 世大運個人賽也列在 §7.1，用 7.2 公式計分
 TEAM_POSITION = "TEAM"
 
 
@@ -281,7 +281,7 @@ def compute_team(con, tournament_id: int | None = None) -> int:
     rows = con.execute(
         f"""SELECT m.tournament_id, t.start_date, m.event, m.side1_id, m.side2_id, m.winner_side, m.match_date
             FROM match m JOIN tournament t USING (tournament_id)
-            WHERE m.team_tie_id IS NOT NULL AND m.winner_side IN (1, 2)
+            WHERE (m.team_tie_id IS NOT NULL OR t.level = 'FISU') AND m.winner_side IN (1, 2)
               AND t.level IN ({",".join("?" * len(TEAM_LEVELS))}) {where}""", (*TEAM_LEVELS, *args)).fetchall()
     best: dict[tuple, float] = {}
     last_day: dict[int, str] = {}

@@ -1,0 +1,98 @@
+{
+ "results": [
+  {
+   "tournaments": [
+    {
+     "prize_money": null,
+     "start_date": "2025-07-17 00:00:00",
+     "end_date": "2025-07-20 00:00:00",
+     "name": "Rhine-Ruhr 2025 FISU World University Games (Team)",
+     "url": "https://bwfbadminton.com/tournament/5277/rhine-ruhr-2025-fisu-world-university-games-team",
+     "id": 5277,
+     "code": "0682EE25-FF8C-47E0-993C-999484FFDC8B",
+     "has_live_scores": true,
+     "date": "17  - 20 Jul",
+     "location": "Mülheim an der Ruhr, Germany",
+     "country": "Germany",
+     "flag_url": "https://img.bwfbadminton.com/image/upload/t_flags_small/v2/assets/flag-circle-svg-custom/GER.png",
+     "logo": "https://img.bwfbadminton.com/image/upload/v1746695510/assets/tournaments/logo/0682EE25-FF8C-47E0-993C-999484FFDC8B.png",
+     "cat_logo": null,
+     "category": "Multi-Sport Games",
+     "header_url_tpl": "https://img.bwfbadminton.com/image/upload/{transform}/v1746695532/assets/tournaments/header/0682EE25-FF8C-47E0-993C-999484FFDC8B.png",
+     "header_url": "https://img.bwfbadminton.com/image/upload/t_Fansite_Tournament_Card_Header_Wide/v1746695532/assets/tournaments/header/0682EE25-FF8C-47E0-993C-999484FFDC8B.png",
+     "header_url_mobile": "https://img.bwfbadminton.com/image/upload/t_Fansite_Tournament_Card_Header_Squared/v1746695532/assets/tournaments/header/0682EE25-FF8C-47E0-993C-999484FFDC8B.png",
+     "is_etihad": false,
+     "live_status": "post",
+     "status": {
+      "status": "0",
+      "code": "normal",
+      "label": "Normal"
+     },
+     "month": "July",
+     "monthNo": 7,
+     "order": 122
+    },
+    {
+     "prize_money": null,
+     "start_date": "2025-07-22 00:00:00",
+     "end_date": "2025-07-26 00:00:00",
+     "name": "Rhine-Ruhr 2025 FISU World University Games (Individual)",
+     "url": "https://bwfbadminton.com/tournament/5080/rhine-ruhr-2025-fisu-world-university-games-individual",
+     "id": 5080,
+     "code": "9592566C-F121-431C-8EE6-341C995E702F",
+     "has_live_scores": true,
+     "date": "22  - 26 Jul",
+     "location": "Mülheim an der Ruhr, Germany",
+     "country": "Germany",
+     "flag_url": "https://img.bwfbadminton.com/image/upload/t_flags_small/v2/assets/flag-circle-svg-custom/GER.png",
+     "logo": "https://img.bwfbadminton.com/image/upload/v1/assets/tournaments/logo/shuttle-placeholder.svg",
+     "cat_logo": null,
+     "category": "Multi-Sport Games",
+     "header_url_tpl": "https://img.bwfbadminton.com/image/upload/{transform}/v1/assets/tournaments/header/B4U-Header-Placeholder.jpg",
+     "header_url": "https://img.bwfbadminton.com/image/upload/t_Fansite_Tournament_Card_Header_Wide/v1/assets/tournaments/header/B4U-Header-Placeholder.jpg",
+     "header_url_mobile": "https://img.bwfbadminton.com/image/upload/t_Fansite_Tournament_Card_Header_Squared/v1/assets/tournaments/header/B4U-Header-Placeholder.jpg",
+     "is_etihad": false,
+     "live_status": "post",
+     "status": {
+      "status": "0",
+      "code": "normal",
+      "label": "Normal"
+     },
+     "month": "July",
+     "monthNo": 7,
+     "order": 126
+    },
+    {
+     "prize_money": null,
+     "start_date": "2025-09-07 08:00:00",
+     "end_date": "2025-09-14 08:00:00",
+     "name": "Amazing Thailand-Pattaya BWF World Senior Championships 2025",
+     "url": "https://bwfbadminton.com/tournament/5264/amazing-thailand-pattaya-bwf-world-senior-championships-2025",
+     "id": 5264,
+     "code": "472E06FD-4200-403E-A93F-A21BFB6F8942",
+     "has_live_scores": true,
+     "date": "07  - 14 Sep",
+     "location": "Pattaya, Thailand",
+     "country": "Thailand",
+     "flag_url": "https://img.bwfbadminton.com/image/upload/t_flags_small/v2/assets/flag-circle-svg-custom/THA.png",
+     "logo": "https://img.bwfbadminton.com/image/upload/v1748336036/assets/tournaments/logo/472E06FD-4200-403E-A93F-A21BFB6F8942.png",
+     "cat_logo": null,
+     "category": "Grade 1 – Individual Senior Tournaments",
+     "header_url_tpl": "https://img.bwfbadminton.com/image/upload/{transform}/v1734512951/assets/tournaments/header/472E06FD-4200-403E-A93F-A21BFB6F8942.png",
+     "header_url": "https://img.bwfbadminton.com/image/upload/t_Fansite_Tournament_Card_Header_Wide/v1734512951/assets/tournaments/header/472E06FD-4200-403E-A93F-A21BFB6F8942.png",
+     "header_url_mobile": "https://img.bwfbadminton.com/image/upload/t_Fansite_Tournament_Card_Header_Squared/v1734512951/assets/tournaments/header/472E06FD-4200-403E-A93F-A21BFB6F8942.png",
+     "is_etihad": false,
+     "live_status": "post",
+     "status": {
+      "status": "0",
+      "code": "normal",
+      "label": "Normal"
+     },
+     "month": "September",
+     "monthNo": 9,
+     "order": 164
+    }
+   ]
+  }
+ ]
+}

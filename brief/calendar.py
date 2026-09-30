@@ -46,6 +46,10 @@ CATEGORY_LEVEL = {
 # 早期的綜合運動會被歸在其他分類（例如 2018 亞運是 "Other"），用名稱補抓
 MULTI_NAME = re.compile(r"asian games|commonwealth games", re.I)
 MULTI_FALLBACK_CATEGORIES = {"Other", "Continental Team Games"}
+# 世大運：V6.0 §7.1 個人與團體賽都計入世界排名（2026-09-30 22:45 決議納入、推送）。分類不固定，用名稱辨認
+FISU_NAME = re.compile(r"FISU|world university games|universiade", re.I)
+FISU_CATEGORIES = {"Multi-Sport Games", "Multi-Sport Games - Team Tournaments", "Grade 1 – Team Tournaments",
+                   "Grade 1 – Individual Tournaments", "Other"}
 EXCLUDE_NAME = re.compile(r"junior|senior|university|youth|\bpara\b|\bU1\d\b|\bU2\d\b", re.I)
 G1_EVENT_NAME = re.compile(r"world championships|sudirman|thomas|uber|olympic|superseries finals", re.I)
 
@@ -53,9 +57,11 @@ G1_EVENT_NAME = re.compile(r"world championships|sudirman|thomas|uber|olympic|su
 def classify(t: dict):
     cat = re.sub(r"\s+", " ", t.get("category") or "").strip()
     name = t.get("name") or ""
-    if EXCLUDE_NAME.search(name):
+    if FISU_NAME.search(name) and cat in FISU_CATEGORIES and not re.search(r"junior|youth", name, re.I):
+        grade, level = None, "FISU"
+    elif EXCLUDE_NAME.search(name):
         return None
-    if cat in MULTI_FALLBACK_CATEGORIES and MULTI_NAME.search(name):
+    elif cat in MULTI_FALLBACK_CATEGORIES and MULTI_NAME.search(name):
         grade, level = None, ("MULTI_TEAM" if re.search(r"team", name, re.I) else "MULTI")
     elif cat not in CATEGORY_LEVEL:
         return None
