@@ -142,7 +142,7 @@ def publish(con, today: dt.date, res: dict) -> list[str]:
     errors = []
     try:
         from brief import llm
-        model = llm.AnthropicLLM() if llm.available() else None
+        model = llm.AnthropicLLM("routine", con=con) if llm.available() else None
         text, matches, ties, news_rows = digest.build(con, today, llm=model, errors=errors)
         discord.send(discord.webhook("DISCORD_WEBHOOK_DAILY"), text)
         digest.mark_sent(con, today, matches, ties, news_rows)

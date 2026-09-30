@@ -1,6 +1,10 @@
 """LLM 介面（已決議用雲端 API，程式包一層介面，之後可換模型）。
 
-目前只有一個用途：根據 digest 整理好的事實，寫一段繁體中文「今日重點」。
+依用途選模型（2026-09-30 Raymond 決議）：
+  routine（每天、量大、格式固定：今日重點、新聞一句話重點、暱稱擷取）→ LLM_MODEL_ROUTINE，預設 claude-sonnet-5-5
+  heavy（一次性、需要推理：賽前分析、影片草稿、驗證報告差異分析）   → LLM_MODEL_HEAVY，預設 claude-opus-5-5
+每次呼叫把用途、實際回應的模型、token 寫進 llm_call 表，之後才能算每月費用。
+
 LLM 只能改寫、不能新增事實；輸出裡的數字與英文名字要能在原始資料找到，
 找不到的標成「⚠️待確認」給 Raymond 看（CLAUDE.md：事實正確優先）。
 
@@ -14,7 +18,24 @@ from typing import Protocol
 
 from brief.discord import ENV_FILE
 
-MODEL = "claude-opus-5-5"
+MODELS = {"routine": ("LLM_MODEL_ROUTINE", "claude-sonnet-5-5"), "heavy": ("LLM_MODEL_HEAVY", "claude-opus-5-5")}
+EFFORT = {"routine": "medium", "heavy": "high"}
+# 每百萬 token 美元（輸入, 輸出），2026-09 定價；用來估算費用
+PRICE = {"claude-sonnet-5-5": (2.0, 10.0), "claude-opus-5-5": (4.0, 20.0), "claude-haiku-4-5": (1.0, 5.0),
+         "claude-fable-5-1": (10.0, 50.0), "claude-opus-4-8": (5.0, 25.0)}
+
+CALL_TABLE = """
+CREATE TABLE IF NOT EXISTS llm_call (
+    call_id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    called_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    purpose         TEXT NOT NULL,                -- routine / heavy
+    task            TEXT,                         -- highlight / news_gist / nickname …
+    model           TEXT NOT NULL,                -- 實際回應的模型（fallback 時可能不同）
+    input_tokens    INTEGER NOT NULL,
+    output_tokens   INTEGER NOT NULL,
+    cost_usd        REAL                          -- 依 PRICE 估算；未知模型為 NULL
+);
+"""
 
 HIGHLIGHT_SYSTEM = """你是羽球日報的編輯助理，讀者是台灣的羽球愛好者，審稿人是前職業選手。
 根據使用者提供的賽果摘要，用繁體中文、台灣用語寫 2–4 句「今日重點」。
@@ -43,11 +64,30 @@ def _env(name: str) -> str | None:
     return value or None
 
 
+def model_for(purpose: str) -> str:
+    env, default = MODELS[purpose]
+    return _env(env) or default
+
+
+def cost(model: str, input_tokens: int, output_tokens: int) -> float | None:
+    price = PRICE.get(model)
+    return None if price is None else (input_tokens * price[0] + output_tokens * price[1]) / 1_000_000
+
+
+def log_call(con, purpose: str, task: str | None, model: str, input_tokens: int, output_tokens: int) -> None:
+    con.executescript(CALL_TABLE)
+    con.execute("INSERT INTO llm_call (purpose, task, model, input_tokens, output_tokens, cost_usd) VALUES (?,?,?,?,?,?)",
+                (purpose, task, model, input_tokens, output_tokens, cost(model, input_tokens, output_tokens)))
+    con.commit()
+
+
 class AnthropicLLM:
-    def __init__(self, model: str = MODEL, api_key: str | None = None):
+    """purpose 決定模型；con 有給就記錄每次呼叫的用量。task 是呼叫端設定的標籤（記錄用）。"""
+
+    def __init__(self, purpose: str = "routine", con=None, api_key: str | None = None):
         import anthropic
         self.client = anthropic.Anthropic(api_key=api_key or _env("ANTHROPIC_API_KEY"))
-        self.model = model
+        self.purpose, self.model, self.con, self.task = purpose, model_for(purpose), con, None
 
     def complete(self, system: str, user: str) -> str:
         # 伺服器端 fallback：安全分類器拒答時，由 API 自動改用其他模型完成同一個請求
@@ -55,11 +95,14 @@ class AnthropicLLM:
             model=self.model,
             max_tokens=16000,
             system=system,
-            output_config={"effort": "medium"},
+            output_config={"effort": EFFORT[self.purpose]},
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
             messages=[{"role": "user", "content": user}],
         )
+        if self.con is not None:
+            log_call(self.con, self.purpose, self.task, response.model,
+                     response.usage.input_tokens, response.usage.output_tokens)
         if response.stop_reason == "refusal":
             raise RuntimeError(f"LLM 拒答：{getattr(response.stop_details, 'category', None)}")
         return "".join(b.text for b in response.content if b.type == "text").strip()
@@ -112,11 +155,15 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
 
 
 def news_gist(llm: LLM, title: str) -> str:
+    if hasattr(llm, "task"):
+        llm.task = "news_gist"
     return llm.complete(NEWS_SYSTEM, title).strip().splitlines()[0]
 
 
 def highlight(llm: LLM, digest_text: str) -> str:
     """回傳要放在摘要最上方的段落；有查不到的內容就附上待確認清單。"""
+    if hasattr(llm, "task"):
+        llm.task = "highlight"
     text = llm.complete(HIGHLIGHT_SYSTEM, digest_text)
     missing = unverified(text, digest_text)
     lines = [f"**今日重點**（AI 整理，請審稿）\n{text}"]

@@ -53,3 +53,21 @@ def test_no_llm_call_when_nothing_new():
     fake = FakeLLM("x")
     digest.build(con, dt.date(2026, 12, 31), llm=fake)
     assert fake.calls == []
+
+
+def test_model_routing_and_env_override(monkeypatch):
+    monkeypatch.delenv("LLM_MODEL_ROUTINE", raising=False)
+    monkeypatch.setattr(llm, "ENV_FILE", llm.ENV_FILE.with_name("__no_such_env__"))
+    assert llm.model_for("routine") == "claude-sonnet-5-5"
+    assert llm.model_for("heavy") == "claude-opus-5-5"
+    monkeypatch.setenv("LLM_MODEL_ROUTINE", "claude-haiku-4-5")
+    assert llm.model_for("routine") == "claude-haiku-4-5"
+
+
+def test_usage_logged_with_cost():
+    from brief import crawler
+    con = crawler.connect(":memory:")
+    llm.log_call(con, "routine", "highlight", "claude-sonnet-5-5", 1_000_000, 100_000)
+    llm.log_call(con, "heavy", None, "some-unknown-model", 10, 10)
+    rows = con.execute("SELECT purpose, task, model, cost_usd FROM llm_call ORDER BY call_id").fetchall()
+    assert rows == [("routine", "highlight", "claude-sonnet-5-5", 3.0), ("heavy", None, "some-unknown-model", None)]
