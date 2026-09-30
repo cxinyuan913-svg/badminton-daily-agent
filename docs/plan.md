@@ -22,6 +22,8 @@
 見 `data-sources.md`。
 
 ### P1 每日收集 + 文字摘要（W1–W2）
+> **2026-09-30 狀態**：程式完成並上線（`brief.watch` 每 30 分鐘、`brief.daily` 06:00），開始累積關卡「連續 7 天沒有漏抓」。實際做法比原計畫多了：每站打完就發、明日看點、今日重點事實檢查、中文化、暱稱收集、空檔週 IC／IS 升格。詳見 `docs/status.md`。
+
 - 排程：每日 06:00（Asia/Taipei）
 - 從 Match Centre 取進行中賽事、從行事曆取 Grade 1–2、定期掃新 ID 找 Grade 3
 - 賽事的 grade / level 欄位補齊

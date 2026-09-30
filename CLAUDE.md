@@ -21,8 +21,8 @@
 - P1 每日收集＋推送：**程式完成、已上線**，開始累積關卡「連續 7 天沒有漏抓」
   - `brief.watch`（每 30 分鐘）每站當地當天打完就發；`brief.daily`（06:00）收集＋晨報
   - 日報中文化、爆冷規則、IC／IS 例外、明日看點、今日重點（LLM＋事實檢查）、暱稱收集
-- 交接單 002（十年回補＋排名重建）：回補進行中；排名重建與驗證完成（`docs/ranking-validation.md`，前 10 名 95%+ 誤差 ≤ 2）
-- 測試 127 個（`python -m pytest -q`），fixture 全是真實回應
+- 交接單 002（十年回補＋排名重建）：**十年回補完成**；排名重建與驗證完成後收尾（`docs/ranking-validation.md`），日報改用 2017 年起的**官方歷史排名**
+- 測試 147 個（`python -m pytest -q`），fixture 全是真實回應
 - 模組一覽見 `README.md`
 - 第一個實戰目標：HSBC BWF World Tour Finals 2026（12/9–13 杭州）的賽前分析
 
