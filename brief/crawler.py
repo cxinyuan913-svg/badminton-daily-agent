@@ -256,14 +256,15 @@ def crawl_tournament(client: Client, con, tournament_id: int, verbose=True) -> d
     return crawl_known(client, con, t, verbose)
 
 
-def crawl_known(client: Client, con, t: dict, verbose=True) -> dict:
-    """已經知道 GUID 與日期時（例如來自 live.current_live），直接抓每日賽果。"""
+def crawl_known(client: Client, con, t: dict, verbose=True, days=None) -> dict:
+    """已經知道 GUID 與日期時（例如來自 calendar 或 live），直接抓每日賽果。
+    days 不給就抓整站；每日排程只給最近幾天。"""
     tournament_id = t["tournament_id"]
     if not (t["code"] and t["start_date"]):
         raise ValueError(f"賽事 {tournament_id} 缺少 GUID 或日期：{t}")
     upsert_tournament(con, t)
     total = {"stored": 0, "skipped_unfinished": 0, "team_ties": 0, "skipped_no_players": 0}
-    for day in dates_between(t["start_date"], t["end_date"]):
+    for day in (days if days is not None else dates_between(t["start_date"], t["end_date"])):
         resp = client.get(f"{API}/tournaments/day-matches",
                           tournamentCode=t["code"], date=day, order=2, court=0)
         day_matches = resp.json() if resp is not None else []

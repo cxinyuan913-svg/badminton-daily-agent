@@ -112,6 +112,18 @@ CREATE TABLE IF NOT EXISTS ranking_snapshot (
 );
 CREATE INDEX IF NOT EXISTS ix_ranking_pairing ON ranking_snapshot(pairing_id, week_date);
 
+-- 每日排程的執行紀錄（P1 關卡「連續 7 天沒有漏抓」用這張表檢查）
+CREATE TABLE IF NOT EXISTS crawl_run (
+    run_id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_date        TEXT NOT NULL,                -- 排程認定的「今天」（Asia/Taipei）
+    started_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    finished_at     TEXT,
+    tournaments     TEXT,                         -- 這次抓的賽事 ID，逗號分隔
+    matches_stored  INTEGER NOT NULL DEFAULT 0,
+    ranking_rows    INTEGER NOT NULL DEFAULT 0,
+    errors          TEXT                          -- 沒有錯誤時是 NULL
+);
+
 -- 方便查詢的檢視表：每位選手的每一場比賽（含搭檔、對手、勝負）
 CREATE VIEW IF NOT EXISTS player_match AS
 SELECT
