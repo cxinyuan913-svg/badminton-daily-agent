@@ -1,0 +1,20 @@
+# 本機資料與機密，一律不進版控
+*.db
+*.db-journal
+data/*
+!data/.gitkeep
+exports/
+.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# 編輯器
+.vscode/
+.idea/
+.DS_Store

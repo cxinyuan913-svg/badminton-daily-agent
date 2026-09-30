@@ -1,0 +1,64 @@
+# CLAUDE.md — 羽球日報 Agent
+
+給接手的 Claude Code session 看的專案說明。每次開始工作前先讀這份，再看 `docs/`。
+
+## 這是什麼
+
+每天自動收集國際羽球賽果與新聞，記住每位選手的歷史，產出可以直接錄製的一分鐘 IG 影片草稿，推送到 Discord。
+同時是負責人 Raymond 的 AI 工程師求職主作品，所以程式品質、測試、架構說明都要能拿去面試展示。
+
+- 負責人：Raymond（前職業羽球雙打選手、羽球教練，轉職 AI 工程師）
+- 溝通語言：繁體中文。需要他做決定時，給 A/B/C/D 選項，不要開放式提問
+- 他懂羽球遠比懂程式多：領域問題（賽制、術語、選手）以他的說法為準
+
+## 目前狀態（2026-09-30）
+
+- P0 資料來源調查：**完成**，細節在 `docs/data-sources.md`
+- 資料層原型：**完成**，`brief/crawler.py`、`brief/scanner.py`、`brief/schema.sql`，10 個測試通過
+- 賽事 ID 掃描：第一次全掃是在 claude.ai 的瀏覽器面板裡跑的，結果會另外交給 Raymond。
+  要重新產生，直接跑 `python -m brief.scanner scan --from 2400 --to 5900`
+- 下一步：P1（每日排程 + Discord 摘要），見 `docs/plan.md`
+- 第一個實戰目標：HSBC BWF World Tour Finals 2026（12/9–13 杭州）的賽前分析
+
+## 指令
+
+```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+cp .env.example .env
+python -m pytest -q
+python -m brief.crawler 5766 --db data/brief.db       # 抓一站
+python -m brief.scanner scan --from 5760 --db data/brief.db   # 掃新賽事 ID
+```
+
+## 已決議（改動前先問 Raymond）
+
+| 項目 | 決議 |
+|---|---|
+| 項目 | 五項全收：MS、WS、MD、WD、XD |
+| 賽事層級 | 成人國際賽：Grade 1（奧運、世錦賽、湯尤盃、蘇迪曼盃）、Grade 2（World Tour 全部）、Grade 3 的 International Challenge 與 International Series。**不收 Future Series**、青少年、元老賽 |
+| 賽果來源 | BWF 官網與其 JSON API，Grade 1–3 共用同一支爬蟲 |
+| 選手主鍵 | BWF 選手 ID；雙打記在「組合」上，組合連到兩位選手 |
+| LLM | 雲端 API；程式要包一層介面，之後可換模型 |
+| 推送 | Discord webhook，推到既有伺服器的指定頻道 |
+| 發布 | 系統只產草稿，Raymond 審稿、錄製、發布；**不做自動發文** |
+| 影片 | 不用轉播畫面；本人入鏡 + 數據圖卡。新聞只當資訊來源，草稿要改寫並附出處 |
+
+## 工作規則
+
+- **爬蟲禮貌**：每次請求至少間隔 2 秒（`REQUEST_GAP_SEC`），遵守 robots.txt。tournamentsoftware 的 robots.txt 禁止程式抓取，不要用；Google 新聞 RSS 也被擋，不要用
+- **事實正確優先**：草稿裡每個比分、名字、數字都要能回資料庫查證。不確定的句子標出來給 Raymond 確認，不要自動放行
+- **冪等**：爬蟲重跑只更新、不重複寫入。新增寫入邏輯要附重跑測試
+- **測試資料用真實回應**：新 API 或新欄位，先存一份真實回應到 `tests/fixtures/`，再寫解析
+- **不進版控**：`.env`、`*.db`、`data/`
+- commit 訊息用中文或英文皆可，一個 commit 做一件事
+
+## 已知陷阱
+
+- 舊賽事（例如 2019）的 `matchStatus` 是 `null`，完成與否要看 `winner`（見 `crawler.is_finished`）
+- 進行中賽事的狀態有 F（Finished）、O（Off court）、C（On Court）、I（In Progress）、N（未開打），只收 F、O
+- 退賽的 `scoreStatusValue` 是 `Retired`，照樣寫入
+- 選手的 `nameShort` 可能帶結尾空白，例如 `"TEO W J "`
+- 團體賽的外層比賽 `isTeamMatch=true`，個別對戰在 `matches` 欄位，目前先跳過（待辦）
+- 賽事頁日期只有「日 月」，年份要從賽事名稱取；跨年賽事已處理
+- 冠軍積分判斷層級只適用 2018 年新制之後：4000=IC、2500=IS、1700=FS

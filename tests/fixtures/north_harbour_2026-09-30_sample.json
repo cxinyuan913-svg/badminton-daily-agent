@@ -1,0 +1,492 @@
+[
+ {
+  "id": 1551289,
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatusValue": "Normal",
+  "winner": 2,
+  "team1": {
+   "players": [
+    {
+     "id": "59967",
+     "firstName": "Lai Yin",
+     "lastName": "CHUNG",
+     "nameDisplay": "Lai Yin CHUNG",
+     "nameShort": "L CHUNG",
+     "countryCode": "CAN",
+     "slug": "Lai Yin-CHUNG"
+    }
+   ]
+  },
+  "team2": {
+   "players": [
+    {
+     "id": "79943",
+     "firstName": "Ricky",
+     "lastName": "CHENG",
+     "nameDisplay": "Ricky CHENG",
+     "nameShort": "R CHENG",
+     "countryCode": "NZL",
+     "slug": "ricky-cheng"
+    }
+   ]
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-09-30 12:00:00",
+  "matchTimeUtc": "2026-09-29 23:00:00",
+  "matchStatus": "F",
+  "eventName": "MS",
+  "roundName": "R64",
+  "courtName": "1 - Streaming",
+  "duration": 27,
+  "score": [
+   {
+    "set": 1,
+    "home": 12,
+    "away": 21
+   },
+   {
+    "set": 2,
+    "home": 12,
+    "away": 21
+   }
+  ]
+ },
+ {
+  "id": 1551308,
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatusValue": "Normal",
+  "winner": 1,
+  "team1": {
+   "players": [
+    {
+     "id": "96232",
+     "firstName": "Ros Leenard",
+     "lastName": "PEDROSA",
+     "nameDisplay": "Ros Leenard PEDROSA",
+     "nameShort": "R PEDROSA",
+     "countryCode": "PHI",
+     "slug": "ros leenard-pedrosa"
+    }
+   ]
+  },
+  "team2": {
+   "players": [
+    {
+     "id": "73890",
+     "firstName": "Isaac",
+     "lastName": "CHAN",
+     "nameDisplay": "Isaac CHAN",
+     "nameShort": "I CHAN",
+     "countryCode": "NZL",
+     "slug": "isaac-chan"
+    }
+   ]
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-09-30 12:30:00",
+  "matchTimeUtc": "2026-09-29 23:30:00",
+  "matchStatus": "F",
+  "eventName": "MS",
+  "roundName": "R64",
+  "courtName": "1 - Streaming",
+  "duration": 32,
+  "score": [
+   {
+    "set": 1,
+    "home": 21,
+    "away": 16
+   },
+   {
+    "set": 2,
+    "home": 21,
+    "away": 17
+   }
+  ]
+ },
+ {
+  "id": 1551255,
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatusValue": "Normal",
+  "winner": 1,
+  "team1": {
+   "players": [
+    {
+     "id": "62551",
+     "firstName": "Dylan",
+     "lastName": "CHAN",
+     "nameDisplay": "Dylan CHAN",
+     "nameShort": "D CHAN",
+     "countryCode": "NZL",
+     "slug": "dylan-chan"
+    }
+   ]
+  },
+  "team2": {
+   "players": [
+    {
+     "id": "61315",
+     "firstName": "Wei Jun",
+     "lastName": "TEO",
+     "nameDisplay": "Wei Jun TEO",
+     "nameShort": "TEO W J ",
+     "countryCode": "MAS",
+     "slug": "wei jun-teo"
+    }
+   ]
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-09-30 13:10:00",
+  "matchTimeUtc": "2026-09-30 00:10:00",
+  "matchStatus": "F",
+  "eventName": "MS",
+  "roundName": "R64",
+  "courtName": "1 - Streaming",
+  "duration": 23,
+  "score": [
+   {
+    "set": 1,
+    "home": 21,
+    "away": 10
+   },
+   {
+    "set": 2,
+    "home": 21,
+    "away": 10
+   }
+  ]
+ },
+ {
+  "id": 1551340,
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatusValue": "Normal",
+  "winner": 2,
+  "team1": {
+   "players": [
+    {
+     "id": "39304",
+     "firstName": "Tyler",
+     "lastName": "DREAVER",
+     "nameDisplay": "Tyler DREAVER",
+     "nameShort": "T DREAVER",
+     "countryCode": "NZL",
+     "slug": "tyler-dreaver"
+    }
+   ]
+  },
+  "team2": {
+   "players": [
+    {
+     "id": "56463",
+     "firstName": "Remus",
+     "lastName": "NG",
+     "nameDisplay": "Remus NG",
+     "nameShort": "R NG",
+     "countryCode": "SGP",
+     "slug": "remus-ng"
+    }
+   ]
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-09-30 13:40:00",
+  "matchTimeUtc": "2026-09-30 00:40:00",
+  "matchStatus": "F",
+  "eventName": "MS",
+  "roundName": "R64",
+  "courtName": "1 - Streaming",
+  "duration": 21,
+  "score": [
+   {
+    "set": 1,
+    "home": 5,
+    "away": 21
+   },
+   {
+    "set": 2,
+    "home": 14,
+    "away": 21
+   }
+  ]
+ },
+ {
+  "id": 1551320,
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatusValue": "Normal",
+  "winner": 1,
+  "team1": {
+   "players": [
+    {
+     "id": "29235",
+     "firstName": "Jordan",
+     "lastName": "WANG",
+     "nameDisplay": "Jordan WANG",
+     "nameShort": "J WANG",
+     "countryCode": "AUS",
+     "slug": "jordan-wang"
+    },
+    {
+     "id": "98556",
+     "firstName": "Jazmine",
+     "lastName": "LAM",
+     "nameDisplay": "Jazmine LAM",
+     "nameShort": "J LAM",
+     "countryCode": "AUS",
+     "slug": "jazmine-lam"
+    }
+   ]
+  },
+  "team2": {
+   "players": [
+    {
+     "id": "64828",
+     "firstName": "Ryan",
+     "lastName": "SOO-JONES",
+     "nameDisplay": "Ryan SOO-JONES",
+     "nameShort": "R SOO-JONES",
+     "countryCode": "NZL",
+     "slug": "ryan-soo-jones"
+    },
+    {
+     "id": "32004",
+     "firstName": "Rina",
+     "lastName": "KIM",
+     "nameDisplay": "Rina KIM",
+     "nameShort": "R KIM",
+     "countryCode": "NZL",
+     "slug": "rina-kim"
+    }
+   ]
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-09-30 15:00:00",
+  "matchTimeUtc": "2026-09-30 02:00:00",
+  "matchStatus": "F",
+  "eventName": "XD",
+  "roundName": "R32",
+  "courtName": "1 - Streaming",
+  "duration": 19,
+  "score": [
+   {
+    "set": 1,
+    "home": 21,
+    "away": 8
+   },
+   {
+    "set": 2,
+    "home": 21,
+    "away": 9
+   }
+  ]
+ },
+ {
+  "id": 1551371,
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatusValue": "Normal",
+  "winner": 1,
+  "team1": {
+   "players": [
+    {
+     "id": "59967",
+     "firstName": "Lai Yin",
+     "lastName": "CHUNG",
+     "nameDisplay": "Lai Yin CHUNG",
+     "nameShort": "L CHUNG",
+     "countryCode": "CAN",
+     "slug": "Lai Yin-CHUNG"
+    },
+    {
+     "id": "26710",
+     "firstName": "Farzaneh",
+     "lastName": "GHOLAMREZAEI NOOGH",
+     "nameDisplay": "Farzaneh GHOLAMREZAEI NOOGH",
+     "nameShort": "F GHOLAMREZAEI NOOGH",
+     "countryCode": "CAN",
+     "slug": "farzaneh-gholamrezaei noogh"
+    }
+   ]
+  },
+  "team2": {
+   "players": [
+    {
+     "id": "36756",
+     "firstName": "Tobias",
+     "lastName": "MIAO",
+     "nameDisplay": "Tobias MIAO",
+     "nameShort": "T MIAO",
+     "countryCode": "NZL",
+     "slug": "tobias-miao"
+    },
+    {
+     "id": "22435",
+     "firstName": "Jana Priya",
+     "lastName": "KRISHNAKUMAR",
+     "nameDisplay": "Jana Priya KRISHNAKUMAR",
+     "nameShort": "J KRISHNAKUMAR",
+     "countryCode": "NZL",
+     "slug": "jana priya-krishnakumar"
+    }
+   ]
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-09-30 16:00:00",
+  "matchTimeUtc": "2026-09-30 03:00:00",
+  "matchStatus": "O",
+  "eventName": "XD",
+  "roundName": "R32",
+  "courtName": "1 - Streaming",
+  "duration": 21,
+  "score": [
+   {
+    "set": 1,
+    "home": 21,
+    "away": 14
+   },
+   {
+    "set": 2,
+    "home": 21,
+    "away": 15
+   }
+  ]
+ },
+ {
+  "id": 1551218,
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "players": [
+    {
+     "id": "76268",
+     "firstName": "Samuel",
+     "lastName": "NAVARRA",
+     "nameDisplay": "Samuel NAVARRA",
+     "nameShort": "S NAVARRA",
+     "countryCode": "NZL",
+     "slug": "samuel-navarra"
+    },
+    {
+     "id": "81899",
+     "firstName": "Victoria",
+     "lastName": "GUO",
+     "nameDisplay": "Victoria GUO",
+     "nameShort": "V GUO",
+     "countryCode": "NZL",
+     "slug": "victoria-guo"
+    }
+   ]
+  },
+  "team2": {
+   "players": [
+    {
+     "id": "88675",
+     "firstName": "Landon Hosea",
+     "lastName": "KURNIAWAN",
+     "nameDisplay": "Landon Hosea KURNIAWAN",
+     "nameShort": "L KURNIAWAN",
+     "countryCode": "AUS",
+     "slug": "landon hosea-kurniawan"
+    },
+    {
+     "id": "44874",
+     "firstName": "Mimi",
+     "lastName": "NGO",
+     "nameDisplay": "Mimi NGO",
+     "nameShort": "M NGO",
+     "countryCode": "AUS",
+     "slug": "mimi-ngo"
+    }
+   ]
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-09-30 16:35:00",
+  "matchTimeUtc": "2026-09-30 03:35:00",
+  "matchStatus": "C",
+  "eventName": "XD",
+  "roundName": "R32",
+  "courtName": "1 - Streaming",
+  "duration": 0,
+  "score": []
+ },
+ {
+  "id": 1551241,
+  "tournamentCode": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
+  "tournamentName": "MAXX North Harbour International 2026",
+  "isTeamMatch": false,
+  "scoreStatusValue": "Normal",
+  "winner": 0,
+  "team1": {
+   "players": [
+    {
+     "id": "79943",
+     "firstName": "Ricky",
+     "lastName": "CHENG",
+     "nameDisplay": "Ricky CHENG",
+     "nameShort": "R CHENG",
+     "countryCode": "NZL",
+     "slug": "ricky-cheng"
+    },
+    {
+     "id": "76859",
+     "firstName": "Amanda",
+     "lastName": "TING",
+     "nameDisplay": "Amanda TING",
+     "nameShort": "A TING",
+     "countryCode": "NZL",
+     "slug": "amanda-ting"
+    }
+   ]
+  },
+  "team2": {
+   "players": [
+    {
+     "id": "94332",
+     "firstName": "Jack",
+     "lastName": "YU",
+     "nameDisplay": "Jack YU",
+     "nameShort": "J YU",
+     "countryCode": "AUS",
+     "slug": "jack-yu"
+    },
+    {
+     "id": "71065",
+     "firstName": "Angela",
+     "lastName": "YU",
+     "nameDisplay": "Angela YU",
+     "nameShort": "A YU",
+     "countryCode": "AUS",
+     "slug": "angela-yu"
+    }
+   ]
+  },
+  "team1seed": null,
+  "team2seed": null,
+  "matchTime": "2026-09-30 16:05:00",
+  "matchTimeUtc": "2026-09-30 03:05:00",
+  "matchStatus": "N",
+  "eventName": "XD",
+  "roundName": "R32",
+  "courtName": "1 - Streaming",
+  "duration": null,
+  "score": []
+ }
+]
