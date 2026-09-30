@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS tournament (
     name            TEXT NOT NULL,
     grade           INTEGER,                      -- 1 / 2 / 3
     level           TEXT,                         -- 'OLYMPICS','WORLD_CHAMPS','S1000'…'IC','IS'
+    status          TEXT,                         -- 賽程狀態：normal / cancelled / postponed / finished / unknown
     start_date      TEXT,                         -- YYYY-MM-DD
     end_date        TEXT,
     city            TEXT,

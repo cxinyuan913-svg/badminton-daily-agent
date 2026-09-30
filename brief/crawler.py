@@ -126,20 +126,34 @@ def connect(db_path: str) -> sqlite3.Connection:
     con = sqlite3.connect(db_path)
     con.execute("PRAGMA foreign_keys = ON")
     con.executescript(SCHEMA.read_text(encoding="utf-8"))
+    _migrate(con)
     return con
+
+
+# 既有資料庫補欄位：CREATE TABLE IF NOT EXISTS 不會幫舊表加新欄位
+MIGRATIONS = [("tournament", "status", "TEXT")]
+
+
+def _migrate(con) -> None:
+    for table, column, decl in MIGRATIONS:
+        have = {r[1] for r in con.execute(f"PRAGMA table_info({table})")}
+        if column not in have:
+            con.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+    con.commit()
 
 
 def upsert_tournament(con, t: dict):
     con.execute(
-        """INSERT INTO tournament (tournament_id, code, name, grade, level, start_date, end_date, source_url)
-           VALUES (:tournament_id, :code, :name, :grade, :level, :start_date, :end_date, :source_url)
+        """INSERT INTO tournament (tournament_id, code, name, grade, level, status, start_date, end_date, source_url)
+           VALUES (:tournament_id, :code, :name, :grade, :level, :status, :start_date, :end_date, :source_url)
            ON CONFLICT(tournament_id) DO UPDATE SET
              code=excluded.code, name=excluded.name,
              grade=COALESCE(excluded.grade, tournament.grade),
              level=COALESCE(excluded.level, tournament.level),
+             status=COALESCE(excluded.status, tournament.status),
              start_date=excluded.start_date, end_date=excluded.end_date,
              source_url=excluded.source_url, updated_at=datetime('now')""",
-        {"grade": None, "level": None, **t},
+        {"grade": None, "level": None, "status": None, **t},
     )
 
 
