@@ -129,18 +129,42 @@ def run(con, client: Client, today: dt.date, lookback: int = LOOKBACK_DAYS, verb
             "ranking_rows": ranking_rows, "errors": errors}
 
 
+def publish(con, today: dt.date, res: dict) -> list[str]:
+    """推送每日摘要；收集有錯誤時推到告警頻道。回傳推送本身的錯誤。"""
+    from brief import digest, discord
+    errors = []
+    try:
+        text, matches, ties = digest.build(con, today)
+        discord.send(discord.webhook("DISCORD_WEBHOOK_DAILY"), text)
+        digest.mark_sent(con, today, matches, ties)
+    except Exception as e:  # noqa: BLE001
+        errors.append(f"digest: {e!r}")
+    problems = res["errors"] + errors
+    if problems:
+        try:
+            discord.send(discord.webhook("DISCORD_WEBHOOK_ALERTS"),
+                         f"**每日收集 {today.isoformat()} 有 {len(problems)} 個錯誤**\n" +
+                         "\n".join(f"- `{p[:300]}`" for p in problems))
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"alert: {e!r}")
+    return errors
+
+
 def main():
     ap = argparse.ArgumentParser(description="每日收集：賽程 → 賽果 → 排名")
     ap.add_argument("--db", default="brief.db")
     ap.add_argument("--date", help="指定「今天」（YYYY-MM-DD），補跑用；預設為台北今天")
     ap.add_argument("--lookback", type=int, default=LOOKBACK_DAYS)
+    ap.add_argument("--send", action="store_true", help="收集完推送每日摘要到 Discord；有錯誤時推到告警頻道")
     a = ap.parse_args()
     today = dt.date.fromisoformat(a.date) if a.date else today_taipei()
-    res = run(connect(a.db), Client(), today, a.lookback)
+    con = connect(a.db)
+    res = run(con, Client(), today, a.lookback)
     print(f"完成：{len(res['tournaments'])} 站、{res['matches_stored']} 場、排名 {res['ranking_rows']} 筆")
-    for e in res["errors"]:
+    errors = res["errors"] + (publish(con, today, res) if a.send else [])
+    for e in errors:
         print("錯誤：", e, file=sys.stderr)
-    sys.exit(1 if res["errors"] else 0)
+    sys.exit(1 if errors else 0)
 
 
 if __name__ == "__main__":

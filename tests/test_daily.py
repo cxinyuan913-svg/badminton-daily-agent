@@ -117,3 +117,33 @@ def test_one_failing_step_does_not_stop_the_rest():
     assert res["tournaments"] == [5766, 5874]
     assert len(res["errors"]) == 1 and res["errors"][0].startswith("live:")
     assert con.execute("SELECT errors FROM crawl_run").fetchone()[0].startswith("live:")
+
+
+def test_publish_marks_sent_and_alerts_on_errors(monkeypatch):
+    from brief import discord
+    sent = []
+    monkeypatch.setattr(discord, "webhook", lambda name, *a: name)
+    monkeypatch.setattr(discord, "send", lambda url, text, **k: sent.append((url, text)) or 1)
+    con = crawler.connect(":memory:")
+    res = daily.run(con, FakeClient(), D("2026-09-30"), verbose=False)
+    assert daily.publish(con, D("2026-09-30"), res) == []
+    assert [u for u, _ in sent] == ["DISCORD_WEBHOOK_DAILY"]          # 沒錯誤就不告警
+    assert con.execute("SELECT COUNT(*) FROM digest_item").fetchone()[0] == res["matches_stored"]
+
+    sent.clear()
+    daily.publish(con, D("2026-09-30"), {**res, "errors": ["live: timeout"]})
+    assert [u for u, _ in sent] == ["DISCORD_WEBHOOK_DAILY", "DISCORD_WEBHOOK_ALERTS"]
+    assert "live: timeout" in sent[1][1]
+
+
+def test_publish_failure_does_not_mark_sent(monkeypatch):
+    from brief import discord
+
+    def no_webhook(name, *a):
+        raise RuntimeError(f"沒有設定 {name}")
+    monkeypatch.setattr(discord, "webhook", no_webhook)
+    con = crawler.connect(":memory:")
+    res = daily.run(con, FakeClient(), D("2026-09-30"), verbose=False)
+    errors = daily.publish(con, D("2026-09-30"), res)
+    assert [e.split(":")[0] for e in errors] == ["digest", "alert"]
+    assert con.execute("SELECT COUNT(*) FROM digest_item").fetchone()[0] == 0   # 下次會再推
