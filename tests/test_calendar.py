@@ -38,3 +38,12 @@ def test_rows_feed_crawler_directly():
     con = crawler.connect(":memory:")
     crawler.upsert_tournament(con, row)
     assert con.execute("SELECT grade, level FROM tournament WHERE tournament_id=5766").fetchone() == (3, "IC")
+
+
+def test_paraguay_is_not_para_badminton():
+    """「para」要比對整個字：Paraguay International Series 2023 曾被誤排除。"""
+    fix = json.loads((Path(__file__).parent / "fixtures" / "calendar_2023_paraguay.json").read_text(encoding="utf-8"))
+    rows = {r["tournament_id"]: r["level"] for r in calendar.parse_year(fix)}
+    assert rows == {4947: "IS"}
+    para = {"id": 1, "name": "Para Badminton World Championships 2024", "category": "International Series"}
+    assert calendar.classify(para) is None

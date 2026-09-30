@@ -44,7 +44,7 @@ CATEGORY_LEVEL = {
 # 早期的綜合運動會被歸在其他分類（例如 2018 亞運是 "Other"），用名稱補抓
 MULTI_NAME = re.compile(r"asian games|commonwealth games", re.I)
 MULTI_FALLBACK_CATEGORIES = {"Other", "Continental Team Games"}
-EXCLUDE_NAME = re.compile(r"junior|senior|university|youth|para|\bU1\d\b|\bU2\d\b", re.I)
+EXCLUDE_NAME = re.compile(r"junior|senior|university|youth|\bpara\b|\bU1\d\b|\bU2\d\b", re.I)
 G1_EVENT_NAME = re.compile(r"world championships|sudirman|thomas|uber|olympic|superseries finals", re.I)
 
 
