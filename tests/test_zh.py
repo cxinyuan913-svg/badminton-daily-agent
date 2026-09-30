@@ -48,7 +48,7 @@ def test_player_table_is_valid_and_applied():
 def test_digest_is_chinese():
     con = db()
     text, matches, _, _ = digest.build(con, dt.date(2026, 10, 1))
-    assert "（國際挑戰賽）" in text and "64 強" in text
+    assert "（超級 100）" in text and "64 強" in text
     for m in matches:
         assert m["event"] in zh.EVENT                       # 資料本身維持代碼，只有輸出轉中文
     line = digest._line({**matches[0], "status": "Retired"})

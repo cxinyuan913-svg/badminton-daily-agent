@@ -49,3 +49,28 @@ def test_store_is_idempotent():
     assert news.store(con, rows) == 10
     assert news.store(con, rows) == 0
     assert con.execute("SELECT COUNT(*) FROM news_item").fetchone()[0] == 10
+
+
+def test_keywords_retired_and_nicknames():
+    """2026-09-30：李洋已退休、現任運動部部長 → 不列關鍵字；戴資穎退休但保留；已採用的暱稱加入。"""
+    words = news.keywords()
+    assert "李洋" not in words and "戴資穎" in words and "羽球" in words
+    assert not news.BADMINTON.search("李洋部長視察國訓中心")                 # 非羽球的政策新聞不收
+    assert news.BADMINTON.search("李洋出席羽球頒獎典禮")                      # 含「羽球」照收
+    con = crawler.connect(":memory:")
+    con.execute("CREATE TABLE nickname (nickname TEXT, status TEXT)")
+    con.executemany("INSERT INTO nickname VALUES (?, ?)", [("麟洋配", "confirmed"), ("某某神", "candidate")])
+    pat = news.keyword_pattern(news.keywords(con))
+    assert pat.search("麟洋配再度同台") and not pat.search("某某神今天出賽")
+
+
+def test_official_player_table_format(tmp_path):
+    from brief import zh
+    f = tmp_path / "players_zh.csv"
+    f.write_text("﻿類型,bwf_player_id,英文名（BWF）,中文名,暱稱,目前排名（前100）,追蹤（Y/N）,備註\n"
+                 "選手,34810,CHOU Tien Chen,周天成,,MS 5,Y,\n"
+                 "選手,77848,CHI Yu Jen,,,MS 22,Y,\n"
+                 "選手,,,戴資穎,,,N,已退休\n"
+                 "組合,,A / B,,,MD 10,Y,\n", encoding="utf-8")
+    rows = zh.load_player_table(f)
+    assert rows == [{"player_id": "34810", "name_zh": "周天成", "name_en": "CHOU Tien Chen", "track": "Y"}]

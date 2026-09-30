@@ -28,9 +28,32 @@ SOURCES = {
     "cna": "https://www.cna.com.tw/list/aspt.aspx",
     "nownews": "https://www.nownews.com/cat/sport/",
 }
-# 台灣媒體的羽球篩選。選手名單請 Raymond 補充
-BADMINTON = re.compile(r"羽球|羽毛球|羽賽|BWF|湯姆斯盃|尤伯盃|蘇迪曼盃|湯盃|尤盃|"
-                       r"戴資穎|周天成|王齊麟|李洋|林俊易|王子維|李佳馨")
+# 台灣媒體的羽球篩選：基本詞 + 追蹤中的選手 + 退休但新聞仍以羽球為主的選手 + 已採用的暱稱
+BASE_KEYWORDS = ["羽球", "羽毛球", "羽賽", "BWF", "湯姆斯盃", "尤伯盃", "蘇迪曼盃", "湯盃", "尤盃"]
+# 正式名單 config/players_zh.csv 出現前的暫用選手（2026-09-30）；李洋已退休、現任運動部部長，新聞多為政策，不列
+FALLBACK_PLAYERS = ["周天成", "王齊麟", "林俊易", "王子維", "李佳馨"]
+# 退休、名單追蹤設 N，但新聞仍多與羽球有關，保留為關鍵字（2026-09-30 Raymond）
+KEEP_AFTER_RETIRE = ["戴資穎"]
+
+
+def keywords(con=None) -> list[str]:
+    from brief import zh
+    tracked = [r["name_zh"] for r in zh.load_player_table() if r.get("track", "Y") == "Y" and r["name_zh"]]
+    players = tracked if zh.official_table_exists() else sorted(set(tracked) | set(FALLBACK_PLAYERS))
+    words = BASE_KEYWORDS + players + KEEP_AFTER_RETIRE
+    if con is not None:
+        try:
+            words += [r[0] for r in con.execute("SELECT nickname FROM nickname WHERE status IN ('auto', 'confirmed')")]
+        except Exception:  # noqa: BLE001 — 還沒有 nickname 表
+            pass
+    return sorted(set(words))
+
+
+def keyword_pattern(words: list[str]) -> re.Pattern:
+    return re.compile("|".join(re.escape(w) for w in sorted(set(words), key=len, reverse=True)))
+
+
+BADMINTON = keyword_pattern(keywords())
 
 NEWS_TABLE = """
 CREATE TABLE IF NOT EXISTS news_item (
@@ -93,11 +116,11 @@ def parse_nownews(page: str) -> list[dict]:
     return list(out.values())
 
 
-def parse(source: str, page: str) -> list[dict]:
+def parse(source: str, page: str, pattern: re.Pattern | None = None) -> list[dict]:
     if source in ("bwf", "bwfworldtour"):
         return parse_bwf(page, source)
     rows = parse_cna(page) if source == "cna" else parse_nownews(page)
-    return [r for r in rows if BADMINTON.search(r["title"])]
+    return [r for r in rows if (pattern or BADMINTON).search(r["title"])]
 
 
 def store(con, rows: list[dict]) -> int:
@@ -115,12 +138,13 @@ def store(con, rows: list[dict]) -> int:
 def collect(client: Client, con, sources=SOURCES) -> tuple[int, list[str]]:
     """回傳（新增筆數, 錯誤）。單一來源失敗不影響其他來源。"""
     added, errors = 0, []
+    pattern = keyword_pattern(keywords(con))
     for source, url in sources.items():
         try:
             r = client.get(url)
             if r is None:
                 raise ValueError("404")
-            added += store(con, parse(source, r.text))
+            added += store(con, parse(source, r.text, pattern))
         except Exception as e:  # noqa: BLE001
             errors.append(f"news {source}: {e!r}")
     return added, errors

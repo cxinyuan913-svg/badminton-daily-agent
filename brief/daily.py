@@ -21,7 +21,7 @@ import datetime as dt
 import sys
 import traceback
 
-from brief import calendar, crawler, live, news, rankings
+from brief import calendar, crawler, live, news, rankings, results
 from brief.crawler import Client, connect
 
 TAIPEI = dt.timezone(dt.timedelta(hours=8))   # 台灣沒有日光節約時間，用固定時差即可
@@ -108,6 +108,7 @@ def run(con, client: Client, today: dt.date, lookback: int = LOOKBACK_DAYS, verb
             if verbose:
                 print(f"[{t['tournament_id']}] {t['name']}（{days[0]} → {days[-1]}）")
             res = crawler.crawl_known(client, con, t, verbose=verbose, days=days)
+            results.compute(con, t["tournament_id"])      # 每站成績（IC／IS「曾經打過」規則要用）
             stored += res["stored"]
             done.append(t["tournament_id"])
         except Exception as e:  # noqa: BLE001

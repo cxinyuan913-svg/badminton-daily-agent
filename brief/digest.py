@@ -21,7 +21,7 @@ import argparse
 import datetime as dt
 from collections import defaultdict
 
-from brief import discord, zh
+from brief import discord, grade3, zh
 from brief.crawler import connect
 from brief.news import NEWS_TABLE
 from brief.rankings import rank_lookup
@@ -65,9 +65,10 @@ def _side(con, pairing_id: int) -> dict:
            FROM pairing p JOIN player pl ON pl.player_id IN (p.player_a_id, p.player_b_id)
            WHERE p.pairing_id=? ORDER BY pl.player_id""", (pairing_id,)).fetchall()
     countries = sorted({r[2] for r in rows if r[2]})
-    return {"name": " / ".join(zh.player(str(r[1]), r[3]) for r in rows),
+    return {"pairing_id": pairing_id, "name": " / ".join(zh.player(str(r[1]), r[3]) for r in rows),
             "name_en": " / ".join(str(r[1]) for r in rows), "country": "/".join(countries),
-            "home": HOME_COUNTRY in countries}
+            "home": HOME_COUNTRY in countries,
+            "players": [(r[0], zh.player(str(r[1]), r[3]), r[2]) for r in rows]}
 
 
 def pending_matches(con, today: dt.date, include_sent: bool = False) -> list[dict]:
@@ -138,11 +139,16 @@ def _sort_key(m):
     return (-rnd, ev, m["match_id"])
 
 
-def render(today: dt.date, matches: list[dict], ties: list[dict], news: list[dict] = ()) -> str:
+def render(today: dt.date, matches: list[dict], ties: list[dict], news: list[dict] = (),
+           grade3_lines: list[str] = (), grade3_hidden: int = 0) -> str:
     lines = [f"**羽球日報 {today.isoformat()}**"]
-    if not matches and not ties:
+    if not matches and not ties and not grade3_lines:
         lines.append("今天沒有新的賽果。")
     lines += _render_results(matches, ties)
+    if grade3_lines:
+        lines += ["", "__**IC／IS 精選**__"] + list(grade3_lines)
+    if grade3_hidden:
+        lines += ["", f"今天另有 IC／IS 共 {grade3_hidden} 場，已存入資料庫。"]
     if news:
         lines += ["", "__**新聞**__（只當資訊來源，引用要改寫並附出處）"]
         for n in news:
@@ -222,8 +228,11 @@ def build(con, today: dt.date, llm=None, errors: list | None = None, include_sen
                     if errors is not None:
                         errors.append(f"llm news: {e!r}")
                     break
-    text = render(today, matches, ties, news)
-    if llm is not None and (matches or ties):
+    pushed = [m for m in matches if m["level"] not in grade3.GRADE3]
+    g3_lines, g3_shown = grade3_section(con, [m for m in matches if m["level"] in grade3.GRADE3])
+    g3_hidden = sum(1 for m in matches if m["level"] in grade3.GRADE3) - g3_shown
+    text = render(today, pushed, ties, news, g3_lines, g3_hidden)
+    if llm is not None and (pushed or ties or g3_lines):
         from brief.llm import highlight
         try:
             head, _, body = text.partition("\n")
@@ -232,6 +241,48 @@ def build(con, today: dt.date, llm=None, errors: list | None = None, include_sen
             if errors is not None:
                 errors.append(f"llm: {e!r}")
     return text, matches, ties, news
+
+
+def _sent_players(con, tournament_id: int) -> set[int]:
+    return {r[0] for r in con.execute(
+        """SELECT DISTINCT pl FROM (
+             SELECT p.player_a_id AS pl, m.tournament_id FROM digest_item d JOIN match m USING (match_id)
+             JOIN pairing p ON p.pairing_id IN (m.side1_id, m.side2_id)
+             UNION SELECT p.player_b_id, m.tournament_id FROM digest_item d JOIN match m USING (match_id)
+             JOIN pairing p ON p.pairing_id IN (m.side1_id, m.side2_id))
+           WHERE tournament_id = ? AND pl IS NOT NULL""", (tournament_id,))}
+
+
+def grade3_section(con, matches: list[dict]) -> tuple[list[str], int]:
+    """IC/IS 的例外（見 brief/grade3.py）。回傳（行, 列出的比賽場數）。"""
+    by_t: dict[int, list[dict]] = defaultdict(list)
+    for m in matches:
+        if m["team_tie_id"] is None:
+            by_t[m["tournament_id"]].append(m)
+    lines, shown = [], set()
+    for tid in sorted(by_t):
+        ms = by_t[tid]
+        name, level = ms[0]["tournament"], ms[0]["level"]
+        line = grade3.podium_line(name, level, ms)
+        if line:
+            lines.append(line)
+        already = _sent_players(con, tid)
+        seen = set()
+        for m in sorted(ms, key=lambda m: (m["date"], m["match_id"])):
+            for side in (m["winner"], m["loser"]):
+                for pid, pname, country in side["players"]:
+                    if pid in seen or pid in already:
+                        continue
+                    seen.add(pid)
+                    reason = grade3.notable_reason(con, pid, m["date"])
+                    if reason:
+                        lines.append(f"- 值得一提：{reason}的 {pname}（{zh.country(country)}）出現在 "
+                                     f"{zh.tournament(name)}（{zh.level(level)}）")
+                        mine = [x for x in ms if pid in {p[0] for p in x["winner"]["players"] + x["loser"]["players"]}]
+                        for x in sorted(mine, key=_sort_key):
+                            lines.append("  " + _line(x))
+                            shown.add(x["match_id"])
+    return lines, len(shown)
 
 
 def mark_sent(con, today: dt.date, matches: list[dict], ties: list[dict], news: list[dict] = ()) -> None:

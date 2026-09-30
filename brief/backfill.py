@@ -18,6 +18,7 @@ import datetime as dt
 import sys
 from collections import defaultdict
 
+from brief import results
 from brief.crawler import Client, connect, crawl_known
 
 SKIP_STATUS = ("cancelled", "postponed")
@@ -73,6 +74,7 @@ def run(con, client: Client, today: dt.date, year: int | None = None, limit: int
             if not t["code"]:
                 raise ValueError("缺少 GUID")
             res = crawl_known(client, con, t, verbose=False)
+            results.compute(con, tid)
             found = res["stored"] + res["skipped_unfinished"] + res["team_ties"] + res["skipped_no_players"]
             status = "done" if found else "empty"
             _record(con, tid, status, res)

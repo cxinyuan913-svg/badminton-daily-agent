@@ -15,10 +15,11 @@ def load(name):
     return json.loads((FIXDIR / name).read_text(encoding="utf-8"))
 
 
-def db():
+def db(level="S100"):
+    """North Harbour 實際是 IC；測日報格式時預設當成 Super 100，測 IC／IS 規則時傳 level="IC"。"""
     con = crawler.connect(":memory:")
     crawler.upsert_tournament(con, {"tournament_id": 5766, "code": "1B95960C-1C1B-41E2-B7CF-120E8CA38CE3",
-                                    "name": "MAXX North Harbour International 2026", "level": "IC",
+                                    "name": "MAXX North Harbour International 2026", "level": level,
                                     "start_date": "2026-09-30", "end_date": "2026-10-04", "source_url": ""})
     crawler.store_day(con, 5766, load("north_harbour_2026-09-30_sample.json"))
     crawler.upsert_tournament(con, {"tournament_id": 5600, "code": "X", "name": "BWF Thomas & Uber Cup Finals 2026",

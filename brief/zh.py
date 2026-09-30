@@ -10,7 +10,8 @@ import csv
 import re
 from pathlib import Path
 
-PLAYER_ZH_CSV = Path(__file__).with_name("player_zh.csv")
+PLAYER_ZH_CSV = Path(__file__).with_name("player_zh.csv")           # 暫用：正式名單出現前
+OFFICIAL_CSV = Path(__file__).resolve().parent.parent / "config" / "players_zh.csv"   # Raymond 維護的正式名單
 
 EVENT = {"MS": "男單", "WS": "女單", "MD": "男雙", "WD": "女雙", "XD": "混雙"}
 
@@ -134,9 +135,23 @@ def player(name_en: str, name_zh: str | None) -> str:
 
 
 # ---------------------------------------------------------------- 選手中文名對照表
-def load_player_table(path: Path = PLAYER_ZH_CSV) -> list[dict]:
-    with path.open(encoding="utf-8") as f:
-        return [r for r in csv.DictReader(f) if not r["player_id"].startswith("#")]
+def official_table_exists() -> bool:
+    return OFFICIAL_CSV.exists()
+
+
+def load_player_table(path: Path | None = None) -> list[dict]:
+    """[{player_id, name_zh, name_en, track}]。預設讀 config/players_zh.csv（Raymond 的正式名單，欄位：
+    類型, bwf_player_id, 英文名（BWF）, 中文名, 暱稱, 目前排名, 追蹤（Y/N）, 備註）；不存在時讀 brief/player_zh.csv。
+    只收有 BWF ID 與中文名的「選手」列；中文名一律照表，不自行翻譯。"""
+    if path is None:
+        path = OFFICIAL_CSV if OFFICIAL_CSV.exists() else PLAYER_ZH_CSV
+    with path.open(encoding="utf-8-sig") as f:
+        rows = list(csv.DictReader(f))
+    if rows and "bwf_player_id" in rows[0]:
+        return [{"player_id": r["bwf_player_id"].strip(), "name_zh": r["中文名"].strip(),
+                 "name_en": r["英文名（BWF）"].strip(), "track": (r.get("追蹤（Y/N）") or "Y").strip().upper() or "Y"}
+                for r in rows if r.get("類型", "").strip() == "選手" and r["bwf_player_id"].strip() and r["中文名"].strip()]
+    return [{**r, "track": r.get("track", "Y")} for r in rows if not r["player_id"].startswith("#")]
 
 
 def apply_player_names(con, path: Path = PLAYER_ZH_CSV) -> int:
