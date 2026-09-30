@@ -87,3 +87,19 @@ def test_news_gist_only_for_english_sources():
     text, _, _, items = digest.build(con, dt.date(2026, 9, 30), llm=FakeLLM())
     assert items[0]["gist"] == "世青賽即將在非洲開打"
     assert "【BWF】World Juniors: Africa Beckons" in text and "重點：世青賽即將在非洲開打" in text
+
+
+def test_official_list_and_doubles_display():
+    """2026-09-30：正式名單 config/players_zh.csv；雙打兩人都有中文名時寫「王齊麟／李哲輝」。"""
+    rows = {r["player_id"]: r for r in zh.load_player_table()}
+    assert zh.official_table_exists() and rows["34810"]["name_zh"] == "周天成"
+    assert all(r["track"] in ("Y", "N") for r in rows.values())
+    con = crawler.connect(":memory:")
+    for pid, en in [(96514, "WANG Chi-Lin"), (99102, "LEE Jhe-Huei"), (1, "Viktor AXELSEN")]:
+        con.execute("INSERT INTO player (player_id, name_display, country_code) VALUES (?, ?, ?)",
+                    (pid, en, "DEN" if pid == 1 else "TPE"))
+    zh.apply_player_names(con)
+    both = crawler.pairing_id(con, [96514, 99102])
+    mixed = crawler.pairing_id(con, [96514, 1])
+    assert digest._side(con, both)["name"] == "王齊麟／李哲輝"
+    assert digest._side(con, mixed)["name"] == "Viktor AXELSEN / 王齊麟（WANG Chi-Lin）"

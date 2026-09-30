@@ -65,7 +65,12 @@ def _side(con, pairing_id: int) -> dict:
            FROM pairing p JOIN player pl ON pl.player_id IN (p.player_a_id, p.player_b_id)
            WHERE p.pairing_id=? ORDER BY pl.player_id""", (pairing_id,)).fetchall()
     countries = sorted({r[2] for r in rows if r[2]})
-    return {"pairing_id": pairing_id, "name": " / ".join(zh.player(str(r[1]), r[3]) for r in rows),
+    # 2026-09-30：單打「周天成（CHOU Tien Chen）」；雙打兩人都有中文名時寫「王齊麟／李哲輝」，否則逐人寫
+    if len(rows) == 2 and all(r[3] for r in rows):
+        name = "／".join(r[3] for r in rows)
+    else:
+        name = " / ".join(zh.player(str(r[1]), r[3]) for r in rows)
+    return {"pairing_id": pairing_id, "name": name,
             "name_en": " / ".join(str(r[1]) for r in rows), "country": "/".join(countries),
             "home": HOME_COUNTRY in countries,
             "players": [(r[0], zh.player(str(r[1]), r[3]), r[2]) for r in rows]}
