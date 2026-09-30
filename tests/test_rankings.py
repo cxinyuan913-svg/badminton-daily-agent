@@ -154,3 +154,17 @@ def test_week_with_missing_event_is_retried_and_500_skipped():
     client = FakeHistClient()
     rankings.crawl_week(client, con, week, max_rank=5, verbose=False)
     assert not any(c[1].get("catId") == 6 for c in client.calls)            # 男單已存，不重抓
+
+
+def test_stale_official_week_falls_back_to_estimate():
+    """2019 以前 API 多數週回 500，只存到零星幾週：太舊的官方週不採用，改用估算；凍結期例外。"""
+    from brief import ranking_estimate
+    con = db()
+    rankings.store_rows(con, "2018-04-19", "WS", FIX["ms"]["results"]["data"][:1])
+    pid = crawler.pairing_id(con, [64032])
+    con.executescript(ranking_estimate.ESTIMATE_TABLE)
+    con.execute("INSERT INTO ranking_estimate VALUES ('2018-09-04', 'WS', ?, 9, 50000, 10, 'computed')", (pid,))
+    assert rankings.rank_lookup(con, pid, "WS", "2018-04-25") == (1, "official")        # 一週內：官方
+    assert rankings.rank_lookup(con, pid, "WS", "2018-09-10") == (9, "estimate")        # 半年前的官方週：不採用
+    rankings.store_rows(con, "2020-03-17", "MS", FIX["ms"]["results"]["data"][:1])
+    assert rankings.rank_lookup(con, pid, "MS", "2020-10-01")[1] == "official"            # 凍結期沿用

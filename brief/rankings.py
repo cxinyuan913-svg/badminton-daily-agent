@@ -116,6 +116,9 @@ def rank_lookup(con, pairing: int, event: str, on_date: str) -> tuple[int | None
     日期早於官方快照（API 只留約 60 週）時，改查 ranking_estimate（自行重建，只有前 100 名）。"""
     week = con.execute("SELECT MAX(week_date) FROM ranking_snapshot WHERE event=? AND week_date<=?",
                        (event, on_date)).fetchone()[0]
+    # 2019 年以前 API 多數週回 500，只存到零星幾週：官方週比比賽早超過 2 週就不採用，改查估算（凍結期沿用舊排名是正常的）
+    if week and not (FREEZE[0] <= on_date <= FREEZE[1]) and             (dt.date.fromisoformat(on_date[:10]) - dt.date.fromisoformat(week)).days > STALE_DAYS:
+        week = None
     if week:
         row = con.execute("SELECT rank FROM ranking_snapshot WHERE week_date=? AND event=? AND pairing_id=?",
                           (week, event, pairing)).fetchone()
@@ -145,7 +148,8 @@ def rank_on(con, pairing: int, event: str, on_date: str):
 HISTORY_FROM = "2017-01-01"
 HISTORY_TOP = 100
 SEED_PLAYERS = [34810]                  # 周天成：2010 年起一直在榜，週次最完整
-FREEZE = ("2020-03-17", "2021-01-26")    # 疫情凍結期，官方本來就沒有發布
+FREEZE = ("2020-03-17", "2021-02-02")    # 疫情凍結期（官方 2021-02-02 恢復發布）
+STALE_DAYS = 14
 
 
 def player_weeks(client: Client, player_id: int) -> list[dict]:
