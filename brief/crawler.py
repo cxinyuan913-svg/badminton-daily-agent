@@ -31,7 +31,7 @@ except ImportError:  # 解析與寫入不需要 requests，只有連網時才需
 
 SITE = "https://bwfbadminton.com"
 API = "https://extranet-lv.bwfbadminton.com/api"
-HEADERS = {"User-Agent": "badminton-brief/0.1 (personal research; contact via GitHub cxinyuan913-svg)"}
+HEADERS = {"User-Agent": "badminton-daily-agent/0.1 (personal research; contact via GitHub cxinyuan913-svg)"}
 REQUEST_GAP_SEC = 2.0          # 每次請求至少間隔 2 秒
 SCHEMA = Path(__file__).with_name("schema.sql")
 

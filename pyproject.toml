@@ -1,5 +1,5 @@
 [project]
-name = "badminton-brief"
+name = "badminton-daily-agent"
 version = "0.1.0"
 description = "每日收集國際羽球賽果與新聞，記住選手生涯，產出一分鐘 IG 影片草稿"
 requires-python = ">=3.11"

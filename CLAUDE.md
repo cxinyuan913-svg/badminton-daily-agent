@@ -4,6 +4,8 @@
 
 ## 這是什麼
 
+專案名稱：`badminton-daily-agent`（資料夾與 GitHub repo 同名；Python 套件名稱仍是 `brief`）
+
 每天自動收集國際羽球賽果與新聞，記住每位選手的歷史，產出可以直接錄製的一分鐘 IG 影片草稿，推送到 Discord。
 同時是負責人 Raymond 的 AI 工程師求職主作品，所以程式品質、測試、架構說明都要能拿去面試展示。
 

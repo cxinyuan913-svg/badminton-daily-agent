@@ -1,4 +1,4 @@
-# 羽球日報 Agent
+# badminton-daily-agent（羽球日報 Agent）
 
 每天自動收集國際羽球賽果與新聞，記住選手生涯，產出一分鐘 IG 影片草稿並推送到 Discord。
 

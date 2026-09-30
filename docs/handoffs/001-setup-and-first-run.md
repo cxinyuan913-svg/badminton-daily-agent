@@ -8,7 +8,7 @@
 ## 要做的事
 1. 讀 `CLAUDE.md`、`docs/plan.md`、`docs/data-sources.md`、`docs/status.md`
 2. 建虛擬環境、`pip install -e ".[dev]"`、跑 `python -m pytest -q`，確認 20 個測試全過
-3. 用 `gh` 在 cxinyuan913-svg 建立 public repo `badminton-brief` 並推上去；確認 GitHub Actions 是綠的
+3. 用 `gh` 在 cxinyuan913-svg 建立 public repo `badminton-daily-agent` 並推上去；確認 GitHub Actions 是綠的
    - 若 `gh` 未安裝或未登入，請 Raymond 執行 `gh auth login`
 4. 產生賽事清單：
    `python -m brief.calendar --from 2016 --to 2026 --db data/brief.db --csv data/tournaments.csv`
