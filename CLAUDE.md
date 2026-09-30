@@ -51,6 +51,15 @@ python -m brief.live                                  # 列出進行中賽事
 | 發布 | 系統只產草稿，Raymond 審稿、錄製、發布；**不做自動發文** |
 | 影片 | 不用轉播畫面；本人入鏡 + 數據圖卡。新聞只當資訊來源，草稿要改寫並附出處 |
 
+## 與 claude.ai 的分工
+
+Raymond 在 claude.ai 做調查、討論、決策與視覺化；在這裡（Claude Code）寫程式、跑程式、提交。
+
+- **開始工作時**：讀本檔與 `docs/status.md`
+- **收到 claude.ai 帶來的「交接單」**：照單實作；單上的決定要同步寫進下方「已決議」表或 `docs/`
+- **遇到需要 Raymond 做決定的事**：停下來用 A/B/C/D 問；若是需要深入討論或查資料的題目，建議他帶去 claude.ai
+- **結束工作前**：在 `docs/status.md` 最上方新增一段（日期、完成、卡住、待決定、下一步），並提交
+
 ## 工作規則
 
 - **爬蟲禮貌**：每次請求至少間隔 2 秒（`REQUEST_GAP_SEC`），遵守 robots.txt。tournamentsoftware 的 robots.txt 禁止程式抓取，不要用；Google 新聞 RSS 也被擋，不要用
