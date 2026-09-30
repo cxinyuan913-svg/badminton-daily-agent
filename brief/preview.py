@@ -116,9 +116,15 @@ def reasons(con, m: dict, on: str, tracked_tpe: set[int]) -> tuple[list[str], di
     return out, info
 
 
-def _side_name(con, ids: list[int]) -> str:
-    rows = [con.execute("SELECT COALESCE(name_display, slug, player_id), name_zh FROM player WHERE player_id=?",
-                        (i,)).fetchone() or (i, None) for i in ids]
+def _side_name(con, ids: list[int], team: dict | None = None) -> str:
+    """名字優先用賽程回應裡的 nameDisplay（明天才出賽的新選手還不在 player 表）；中文名從名單補。"""
+    given = {int(p["id"]): p.get("nameDisplay") for p in (team or {}).get("players") or [] if p.get("id")}
+    rows = []
+    for i in ids:
+        db = con.execute("SELECT COALESCE(name_display, slug, player_id), name_zh FROM player WHERE player_id=?",
+                         (i,)).fetchone()
+        zh_name = db[1] if db else next((r["name_zh"] for r in zh.load_player_table() if r["player_id"] == str(i)), None)
+        rows.append((given.get(i) or (db[0] if db else i), zh_name))
     if len(rows) == 2 and all(r[1] for r in rows):
         return "／".join(r[1] for r in rows)
     return " / ".join(zh.player(str(r[0]), r[1]) for r in rows)
@@ -126,9 +132,10 @@ def _side_name(con, ids: list[int]) -> str:
 
 def line(con, m: dict, info: dict, why: list[str]) -> str:
     ids1, ids2, r1, r2 = info["ids1"], info["ids2"], info["r1"], info["r2"]
+    t1, t2 = m.get("team1"), m.get("team2")
     if info["flip"]:
-        ids1, ids2, r1, r2 = ids2, ids1, r2, r1
-    n1, n2 = _side_name(con, ids1), _side_name(con, ids2)
+        ids1, ids2, r1, r2, t1, t2 = ids2, ids1, r2, r1, t2, t1
+    n1, n2 = _side_name(con, ids1, t1), _side_name(con, ids2, t2)
     rk = lambda r: f"#{r}" if r else "無排名"
     text = (f"{time_label(m)} {zh.event(info['event'])} {zh.round_name(m.get('roundName'))}："
             f"{n1}（{rk(r1)}）vs {n2}（{rk(r2)}）")

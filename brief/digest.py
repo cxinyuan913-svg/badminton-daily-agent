@@ -297,7 +297,8 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
     from brief import nickname
     con.executescript(DIGEST_TABLE + NEWS_TABLE)
     zh.apply_player_names(con)
-    g3 = [m for m in pending_matches(con, today) if m["level"] in grade3.GRADE3]
+    g3 = [m for m in pending_matches(con, today) if m["level"] in grade3.GRADE3
+          and not grade3.quiet_week(con, m["date"])]          # 空檔週的 IC／IS 由 brief.watch 逐站發（23:15）
     since = (today - dt.timedelta(days=MORNING_NEWS_DAYS)).isoformat()
     news = [n for n in pending_news(con, today) if (n["published"] or "")[:10] >= since]
     if llm is not None:

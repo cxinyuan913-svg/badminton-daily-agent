@@ -157,3 +157,66 @@ def test_future_series_never_pushed():
     assert "MAXX North Harbour" not in digest.build(con, dt.date(2026, 10, 1))[0]
     assert digest.morning(con, dt.date(2026, 10, 1))[0] is None
     assert watch.targets(con, dt.date(2026, 9, 30)) == []
+
+
+# ---------------------------------------------------------------- 空檔週 IC／IS 升格（23:15）
+def ic_db(extra=()):
+    con = db()
+    con.execute("UPDATE tournament SET level='IC'")
+    for tid, level, start, end in extra:
+        crawler.upsert_tournament(con, {"tournament_id": tid, "code": f"X{tid}", "name": f"Other {tid} Open 2026",
+                                        "level": level, "status": "normal", "start_date": start, "end_date": end,
+                                        "source_url": ""})
+    con.commit()
+    return con
+
+
+def test_ic_not_sent_in_week_with_super100():
+    con = ic_db([(9001, "S100", "2026-10-01", "2026-10-04")])
+    _, sent, _ = run(con, FakeClient({"2026-09-30": done(DAY), "2026-10-01": SCHED}), NOW)
+    assert not any("North Harbour" in s for s in sent)
+
+
+def test_ic_promoted_in_quiet_week_hides_early_non_tpe():
+    con = ic_db()
+    day = done(DAY)
+    tpe = {p["id"] for p in day[0]["team1"]["players"]}            # 讓第一場有台灣選手（同一人其他場次也要改）
+    for m in day:
+        for side in ("team1", "team2"):
+            for p in (m.get(side) or {}).get("players") or []:
+                if p["id"] in tpe:
+                    p["countryCode"] = "TPE"
+    _, sent, _ = run(con, FakeClient({"2026-09-30": day, "2026-10-01": SCHED}), NOW)
+    assert len(sent) == 1 and sent[0].startswith("**MAXX North Harbour International 2026｜IC｜第 1 天 ")
+    results = [l for l in sent[0].split("__賽果__")[1].split("__")[0].splitlines() if l.startswith("- ")]
+    assert results and all("🇹🇼" in l or "爆冷" in l for l in results)          # 八強以前只列台灣與爆冷
+    assert f"另有 {len(day) - len(results)} 場未列，已存入資料庫" in sent[0]
+    preview_lines = sent[0].split("__明日看點__")[1]
+    import re
+    assert "LU Chia Hung" in preview_lines and not re.search(r"：\d+（|vs \d+（", preview_lines)   # 看點用賽程裡的名字，不是 ID
+
+
+def test_two_ic_same_week_each_own_message():
+    con = ic_db([(9002, "IS", "2026-09-30", "2026-10-04")])
+    _, sent, _ = run(con, FakeClient({"2026-09-30": done(DAY), "2026-10-01": SCHED}), NOW)
+    assert sorted(s.split("｜")[0] for s in sent) == ["**MAXX North Harbour International 2026", "**Other 9002 Open 2026"]
+
+
+def test_week_boundary_sunday_end_monday_start():
+    from brief import grade3
+    con = ic_db([(9003, "S300", "2026-09-22", "2026-09-27"),      # 上週日結束
+                 (9004, "S500", "2026-10-05", "2026-10-11")])     # 下週一開始
+    assert grade3.week_bounds("2026-09-30") == ("2026-09-28", "2026-10-04")
+    assert grade3.quiet_week(con, "2026-09-30") and not grade3.quiet_week(con, "2026-09-27")
+    assert not grade3.quiet_week(con, "2026-10-05")
+    _, sent, _ = run(con, FakeClient({"2026-09-30": done(DAY), "2026-10-01": SCHED}), NOW)
+    assert len(sent) == 1 and "｜IC｜" in sent[0]
+
+
+def test_morning_skips_promoted_ic():
+    from brief import digest
+    con = ic_db()
+    crawler.store_day(con, 5766, done(DAY))
+    con.commit()
+    text = digest.morning(con, dt.date(2026, 10, 1))[0]
+    assert text is None or "IC／IS 精選" not in text

@@ -21,10 +21,11 @@ import argparse
 import datetime as dt
 import sys
 
-from brief import crawler, digest, preview, results, zh
+from brief import crawler, digest, grade3, preview, results, zh
 from brief.crawler import API, Client, connect
 
 GRADE3 = {"IC", "IS", "FS"}
+NEVER = {"FS"}                                  # 永遠不發；IC／IS 只在空檔週升格（23:15）
 SKIP_STATUS = ("cancelled", "postponed")
 FORCE_AT = dt.timedelta(days=1, hours=3)        # 當地隔天 03:00
 FAIL_ALERT = 3
@@ -125,7 +126,9 @@ def stage_message(con, t: dict, local_date: str, day_matches: list[dict], next_s
     d = dt.date.fromisoformat(local_date)
     end = finished_at_taiwan(day_matches)
     when = "保險發送" if forced_unfinished else (f"台灣時間 {end.strftime('%H:%M')} 打完" if end else "已打完")
-    head = f"**{zh.tournament(t['name'])}｜第 {day_no} 天 {zh.round_name(_deepest_round(stage))}**（當地 {d.month}/{d.day}，{when}）"
+    promoted = t.get("level") in grade3.PROMOTE
+    tag = f"｜{t['level']}" if promoted else ""
+    head = f"**{zh.tournament(t['name'])}{tag}｜第 {day_no} 天 {zh.round_name(_deepest_round(stage))}**（當地 {d.month}/{d.day}，{when}）"
 
     body = []
     ties = [m for m in day_matches if m.get("isTeamMatch") and m.get("winner") in (1, 2)]
@@ -135,6 +138,11 @@ def stage_message(con, t: dict, local_date: str, day_matches: list[dict], next_s
         w = c1 if tie["winner"] == 1 else c2
         body.append(f"- {zh.competition(tie.get('eventName'))} {zh.round_name(tie.get('roundName'))}："
                     f"{zh.country(c1)} {s.get('home')}–{s.get('away')} {zh.country(c2)}（{zh.country(w)}勝）")
+    hidden = 0
+    if promoted:            # 空檔週的 IC／IS：八強以前只列中華台北與爆冷，八強起全部列（23:15）
+        shown = [m for m in individual if m["round"] in digest.LATE_ROUNDS or m["upset"]
+                 or m["winner"]["home"] or m["loser"]["home"]]
+        hidden, individual = len(individual) - len(shown), shown
     body += [digest._line(m) for m in sorted(individual, key=digest._sort_key)]
 
     lines = [head]
@@ -145,7 +153,8 @@ def stage_message(con, t: dict, local_date: str, day_matches: list[dict], next_s
         except Exception as e:  # noqa: BLE001
             if errors is not None:
                 errors.append(f"llm: {e!r}")
-    lines += ["", "__賽果__"] + (body or ["（沒有已完成的場次）"])
+    empty = "（八強以前沒有中華台北選手或爆冷場次）" if promoted and hidden else "（沒有已完成的場次）"
+    lines += ["", "__賽果__"] + (body or [empty])
 
     has_preview = False
     if local_date == t["end_date"]:
@@ -156,6 +165,8 @@ def stage_message(con, t: dict, local_date: str, day_matches: list[dict], next_s
         picks = preview.select(con, next_schedule, local_date, tracked_tpe_ids())
         lines += ["", "__明日看點__"] + ([f"- {p}" for p in picks] or ["- （沒有符合選場規則的對戰）"])
         has_preview = True
+    if hidden:
+        lines += ["", f"另有 {hidden} 場未列，已存入資料庫"]
     if forced_unfinished:
         lines += ["", f"未完成：{forced_unfinished} 場（之後打完的併到下一天）"]
     return "\n".join(lines), stage, has_preview
@@ -173,10 +184,10 @@ def targets(con, tw_today: dt.date) -> list[dict]:
     rows = con.execute(
         f"""SELECT tournament_id, code, name, level, start_date, end_date, status, source_url FROM tournament
             WHERE start_date <= ? AND end_date >= ? AND COALESCE(status, '') NOT IN ({",".join("?" * len(SKIP_STATUS))})
-              AND COALESCE(level, '') NOT IN ({",".join("?" * len(GRADE3))}) AND code IS NOT NULL
+              AND COALESCE(level, '') NOT IN ({",".join("?" * len(NEVER))}) AND code IS NOT NULL
             ORDER BY start_date, tournament_id""",
         ((tw_today + dt.timedelta(days=1)).isoformat(), (tw_today - dt.timedelta(days=2)).isoformat(),
-         *SKIP_STATUS, *sorted(GRADE3))).fetchall()
+         *SKIP_STATUS, *sorted(NEVER))).fetchall()
     keys = ["tournament_id", "code", "name", "level", "start_date", "end_date", "status", "source_url"]
     return [dict(zip(keys, r)) for r in rows]
 
@@ -198,6 +209,10 @@ def run(con, client, now_utc: dt.datetime, send, alert=None, llm=None, dry_run: 
         done = {r[0] for r in con.execute("SELECT local_date FROM stage_digest WHERE tournament_id=?", (tid,))}
         days = [d for d in crawler.dates_between(max(t["start_date"], (tw_today - dt.timedelta(days=2)).isoformat()),
                                                  min(t["end_date"], tw_today.isoformat())) if d not in done]
+        if t["level"] in grade3.PROMOTE:
+            days = [d for d in days if grade3.quiet_week(con, d)]    # 有推送層級賽事的週，IC／IS 只在晨報列例外
+            if not days:
+                continue
         try:
             fetched = {d: _fetch(client, t["code"], d) for d in days}
         except Exception as e:  # noqa: BLE001

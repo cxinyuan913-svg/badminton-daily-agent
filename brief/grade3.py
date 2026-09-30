@@ -92,3 +92,27 @@ def podium_line(tournament: str, level: str, matches: list[dict]) -> str | None:
     parts = [f"{names[pid]}{sep(names[pid])}{zh.event(ev)}{st}" for (ev, pid), st in
              sorted(status.items(), key=lambda kv: (ev_order.index(kv[0][0]) if kv[0][0] in ev_order else 9, kv[0][1]))]
     return f"- IC／IS｜{zh.tournament(tournament)}（{zh.level(level)}）：" + "、".join(parts)
+
+
+# ---------------------------------------------------------------- 空檔週（2026-09-30 23:15 決議）
+PROMOTE = {"IC", "IS"}                   # 空檔週可以升格的層級（FS 不收）
+NOT_PUSH_LEVELS = ("IC", "IS", "FS")
+
+
+def week_bounds(day: str) -> tuple[str, str]:
+    """BWF 週：週一到週日。"""
+    import datetime as dt
+    d = dt.date.fromisoformat(day)
+    monday = d - dt.timedelta(days=d.weekday())
+    return monday.isoformat(), (monday + dt.timedelta(days=6)).isoformat()
+
+
+def quiet_week(con, day: str) -> bool:
+    """這一週完全沒有推送層級賽事（賽期與這週有重疊就算有）→ IC／IS 升格，由 brief.watch 逐站發。"""
+    monday, sunday = week_bounds(day)
+    n = con.execute(
+        f"""SELECT COUNT(*) FROM tournament
+            WHERE level IS NOT NULL AND level NOT IN ({",".join("?" * len(NOT_PUSH_LEVELS))})
+              AND COALESCE(status, '') NOT IN ('cancelled', 'postponed')
+              AND start_date <= ? AND end_date >= ?""", (*NOT_PUSH_LEVELS, sunday, monday)).fetchone()[0]
+    return n == 0
