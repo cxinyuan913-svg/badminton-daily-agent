@@ -74,7 +74,8 @@ def test_team_tie_line():
     con = db()
     text, _, ties, _ = digest.build(con, D("2026-05-02"))
     assert [(t["team1"], t["score1"], t["score2"], t["team2"]) for t in ties] == [("CHN", 3, 0, "JPN")]
-    assert "Uber Cup SF：CHN 3–0 JPN（CHN 勝）" in text
+    assert "尤伯盃 四強：中國 3–0 日本（中國勝）" in text
+    assert "__**2026 湯尤盃**__（Grade 1 團體）" in text
 
 
 def test_split_message_respects_limit():
@@ -133,3 +134,27 @@ def test_news_section_recent_only_and_marked():
     assert "<https://bwfbadminton.com/news-single/2026/09/30/poised-to-make-deep-inroads/>" in text
     digest.mark_sent(con, D("2026-09-30"), [], [], items)
     assert digest.build(con, D("2026-09-30"))[3] == []
+
+
+def test_include_sent_for_retesting():
+    con = db()
+    _, matches, _, _ = digest.build(con, D("2026-10-01"))
+    digest.mark_sent(con, D("2026-10-01"), matches, [])
+    assert digest.build(con, D("2026-10-01"))[1] == []
+    assert len(digest.build(con, D("2026-10-01"), include_sent=True)[1]) == len(matches)
+
+
+def test_walkover_is_not_upset_and_has_no_empty_score():
+    con = db()
+    _, matches, _, _ = digest.build(con, D("2026-10-01"))
+    m = matches[0]
+    loser = con.execute("SELECT CASE winner_side WHEN 1 THEN side2_id ELSE side1_id END FROM match WHERE match_id=?",
+                        (m["match_id"],)).fetchone()[0]
+    con.execute("INSERT INTO ranking_snapshot (week_date, event, pairing_id, rank) VALUES ('2026-09-29', ?, ?, 12)",
+                (m["event"], loser))
+    con.execute("UPDATE match SET score_status='Walkover' WHERE match_id=?", (m["match_id"],))
+    con.execute("DELETE FROM game WHERE match_id=?", (m["match_id"],))
+    _, matches, _, _ = digest.build(con, D("2026-10-01"))
+    hit = next(x for x in matches if x["match_id"] == m["match_id"])
+    assert not hit["upset"]
+    assert digest._line(hit).endswith("）（不戰而勝）")

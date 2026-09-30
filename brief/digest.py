@@ -20,15 +20,16 @@ import argparse
 import datetime as dt
 from collections import defaultdict
 
-from brief import discord
+from brief import discord, zh
 from brief.crawler import connect
 from brief.news import NEWS_TABLE
 from brief.rankings import rank_on
 
 LATE_ROUNDS = {"QF", "SF", "Final", "F"}
-ROUND_ORDER = ["Q1", "Q2", "Q3", "R128", "R64", "R32", "R16", "R1", "R2", "R3", "QF", "SF", "Final", "F"]
+ROUND_ORDER = ["Qual. R64", "Qual. R32", "Qual. R16", "Qual. QF", "Q1", "Q2", "Q3", "R128", "R64", "R32", "R16", "R1", "R2", "R3", "QF", "SF", "Final", "F"]
 EVENT_ORDER = ["MS", "WS", "MD", "WD", "XD"]
 HOME_COUNTRY = "TPE"
+NEWS_SOURCE = {"bwf": "BWF", "bwfworldtour": "BWF 世界巡迴賽", "cna": "中央社", "nownews": "NOWnews"}
 NEWS_DAYS = 2              # 新聞只推最近兩天發布的
 LOOKBACK_DAYS = 7         # 只看最近幾天的比賽，避免第一次推送時把十年份全推出去
 # 暫定：敗方有排名，且勝方沒排名或名次至少差 max(UPSET_MIN_GAP, 敗方名次)，也就是勝方名次至少是敗方的兩倍
@@ -56,23 +57,24 @@ def is_upset(winner_rank: int | None, loser_rank: int | None) -> bool:
 
 def _side(con, pairing_id: int) -> dict:
     rows = con.execute(
-        """SELECT pl.player_id, COALESCE(pl.name_display, pl.slug, pl.player_id), pl.country_code
+        """SELECT pl.player_id, COALESCE(pl.name_display, pl.slug, pl.player_id), pl.country_code, pl.name_zh
            FROM pairing p JOIN player pl ON pl.player_id IN (p.player_a_id, p.player_b_id)
            WHERE p.pairing_id=? ORDER BY pl.player_id""", (pairing_id,)).fetchall()
     countries = sorted({r[2] for r in rows if r[2]})
-    return {"name": " / ".join(str(r[1]) for r in rows), "country": "/".join(countries),
+    return {"name": " / ".join(zh.player(str(r[1]), r[3]) for r in rows),
+            "name_en": " / ".join(str(r[1]) for r in rows), "country": "/".join(countries),
             "home": HOME_COUNTRY in countries}
 
 
-def pending_matches(con, today: dt.date) -> list[dict]:
+def pending_matches(con, today: dt.date, include_sent: bool = False) -> list[dict]:
     since = (today - dt.timedelta(days=LOOKBACK_DAYS)).isoformat()
     rows = con.execute(
         """SELECT m.match_id, m.tournament_id, t.name, t.level, m.event, m.round, m.match_date,
                   m.side1_id, m.side2_id, m.winner_side, m.score_status, m.team_tie_id
            FROM match m JOIN tournament t USING (tournament_id)
            LEFT JOIN digest_item d USING (match_id)
-           WHERE d.match_id IS NULL AND m.match_date >= ? AND m.match_date <= ?
-           ORDER BY m.match_date, m.match_id""", (since, today.isoformat())).fetchall()
+           WHERE (d.match_id IS NULL OR ?) AND m.match_date >= ? AND m.match_date <= ?
+           ORDER BY m.match_date, m.match_id""", (include_sent, since, today.isoformat())).fetchall()
     out = []
     for (mid, tid, tname, level, event, rnd, mdate, s1, s2, win, status, tie) in rows:
         w, l = (s1, s2) if win == 1 else (s2, s1)
@@ -84,20 +86,20 @@ def pending_matches(con, today: dt.date) -> list[dict]:
             "match_id": mid, "tournament_id": tid, "tournament": tname, "level": level, "event": event,
             "round": rnd, "date": mdate, "winner": _side(con, w), "loser": _side(con, l),
             "winner_rank": wr, "loser_rank": lr, "score": score, "status": status,
-            "team_tie_id": tie, "upset": is_upset(wr, lr),
+            "team_tie_id": tie, "upset": status != "Walkover" and is_upset(wr, lr),   # 不戰而勝沒有真的比賽
         })
     return out
 
 
-def pending_ties(con, today: dt.date) -> list[dict]:
+def pending_ties(con, today: dt.date, include_sent: bool = False) -> list[dict]:
     since = (today - dt.timedelta(days=LOOKBACK_DAYS)).isoformat()
     rows = con.execute(
         """SELECT tt.team_tie_id, tt.tournament_id, tt.competition, tt.round, tt.match_date,
                   tt.team1_country, tt.team2_country, tt.team1_score, tt.team2_score, tt.winner_side
            FROM team_tie tt LEFT JOIN digest_tie d USING (team_tie_id)
-           WHERE d.team_tie_id IS NULL AND tt.winner_side IS NOT NULL
+           WHERE (d.team_tie_id IS NULL OR ?) AND tt.winner_side IS NOT NULL
              AND tt.match_date >= ? AND tt.match_date <= ?
-           ORDER BY tt.match_date, tt.team_tie_id""", (since, today.isoformat())).fetchall()
+           ORDER BY tt.match_date, tt.team_tie_id""", (include_sent, since, today.isoformat())).fetchall()
     keys = ["team_tie_id", "tournament_id", "competition", "round", "date", "team1", "team2",
             "score1", "score2", "winner_side"]
     return [dict(zip(keys, r)) for r in rows]
@@ -114,9 +116,10 @@ def _line(m: dict) -> str:
         tags.append("⚡爆冷")
     if w["home"] or l["home"]:
         tags.append("🇹🇼")
-    status = "" if m["status"] in (None, "Normal") else f"（{m['status']}）"
-    return (f"- {m['event']} {m['round']}：**{w['name']}**（{w['country']}，{_rank(m['winner_rank'])}）勝 "
-            f"{l['name']}（{l['country']}，{_rank(m['loser_rank'])}） {m['score']}{status}"
+    status = "" if m["status"] in (None, "Normal") else f"（{zh.status(m['status'])}）"
+    return (f"- {zh.event(m['event'])} {zh.round_name(m['round'])}：**{w['name']}**（{zh.country(w['country'])}，"
+            f"{_rank(m['winner_rank'])}）勝 {l['name']}（{zh.country(l['country'])}，{_rank(m['loser_rank'])}）"
+            + (f" {m['score']}" if m["score"] else "") + status
             + (f"  {' '.join(tags)}" if tags else ""))
 
 
@@ -134,7 +137,10 @@ def render(today: dt.date, matches: list[dict], ties: list[dict], news: list[dic
     if news:
         lines += ["", "__**新聞**__（只當資訊來源，引用要改寫並附出處）"]
         for n in news:
-            lines.append(f"- [{n['source']}] {n['title']}（{(n['published'] or '')[:10]}） <{n['url']}>")
+            lines.append(f"- 【{NEWS_SOURCE.get(n['source'], n['source'])}】{n['title']}"
+                         f"（{(n['published'] or '')[:10]}） <{n['url']}>")
+            if n.get("gist"):
+                lines.append(f"  　重點：{n['gist']}")
     return "\n".join(lines)
 
 
@@ -154,12 +160,13 @@ def _render_results(matches: list[dict], ties: list[dict]) -> list[str]:
         ms = by_t.get(tid, [])
         dates = sorted({m["date"] for m in ms} | {t["date"] for t in ties_by_t.get(tid, [])})
         lines.append("")
-        lines.append(f"__**{name}**__" + (f"（{level}）" if level else "") + f"　{dates[0]}" +
+        lines.append(f"__**{zh.tournament(name)}**__" + (f"（{zh.level(level)}）" if level else "") + f"　{dates[0]}" +
                      (f" → {dates[-1]}" if dates[-1] != dates[0] else ""))
         for t in ties_by_t.get(tid, []):
             w = t["team1"] if t["winner_side"] == 1 else t["team2"]
-            lines.append(f"- {t['competition']} {t['round']}：{t['team1']} {t['score1']}–{t['score2']} {t['team2']}"
-                         f"（{w} 勝）")
+            lines.append(f"- {zh.competition(t['competition'])} {zh.round_name(t['round'])}："
+                         f"{zh.country(t['team1'])} {t['score1']}–{t['score2']} {zh.country(t['team2'])}"
+                         f"（{zh.country(w)}勝）")
         individual = [m for m in ms if m["team_tie_id"] is None]
         late = [m for m in individual if m["round"] in LATE_ROUNDS]
         early = [m for m in individual if m["round"] not in LATE_ROUNDS]
@@ -173,27 +180,39 @@ def _render_results(matches: list[dict], ties: list[dict]) -> list[str]:
             counts = defaultdict(int)
             for m in early:
                 counts[m["round"]] += 1
-            summary = "、".join(f"{r} {counts[r]} 場" for r in sorted(counts, key=lambda r: ROUND_ORDER.index(r)
+            summary = "、".join(f"{zh.round_name(r)} {counts[r]} 場" for r in sorted(counts, key=lambda r: ROUND_ORDER.index(r)
                                                                     if r in ROUND_ORDER else -1))
             lines.append(f"- 其他：{summary}" + (f"（未列出 {rest} 場）" if rest else ""))
     return lines
 
 
-def pending_news(con, today: dt.date) -> list[dict]:
+def pending_news(con, today: dt.date, include_sent: bool = False) -> list[dict]:
     """最近 NEWS_DAYS 天、還沒推送過的新聞。"""
     since = (today - dt.timedelta(days=NEWS_DAYS)).isoformat()
     rows = con.execute(
         """SELECT n.url, n.source, n.title, n.published FROM news_item n
            LEFT JOIN digest_news d USING (url)
-           WHERE d.url IS NULL AND substr(n.published, 1, 10) BETWEEN ? AND ?
-           ORDER BY n.published DESC, n.url""", (since, today.isoformat())).fetchall()
+           WHERE (d.url IS NULL OR ?) AND substr(n.published, 1, 10) BETWEEN ? AND ?
+           ORDER BY n.published DESC, n.url""", (include_sent, since, today.isoformat())).fetchall()
     return [dict(zip(("url", "source", "title", "published"), r)) for r in rows]
 
 
-def build(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[str, list[dict], list[dict], list[dict]]:
+def build(con, today: dt.date, llm=None, errors: list | None = None, include_sent: bool = False) -> tuple[str, list[dict], list[dict], list[dict]]:
     """llm 有給就在最上方加「今日重點」；LLM 失敗時照常回傳事實摘要，錯誤放進 errors。"""
     con.executescript(DIGEST_TABLE + NEWS_TABLE)
-    matches, ties, news = pending_matches(con, today), pending_ties(con, today), pending_news(con, today)
+    zh.apply_player_names(con)
+    matches = pending_matches(con, today, include_sent)
+    ties, news = pending_ties(con, today, include_sent), pending_news(con, today, include_sent)
+    if llm is not None:
+        from brief.llm import news_gist
+        for n in news:
+            if n["source"] in ("bwf", "bwfworldtour"):          # 台灣媒體標題本來就是中文
+                try:
+                    n["gist"] = news_gist(llm, n["title"])
+                except Exception as e:  # noqa: BLE001
+                    if errors is not None:
+                        errors.append(f"llm news: {e!r}")
+                    break
     text = render(today, matches, ties, news)
     if llm is not None and (matches or ties):
         from brief.llm import highlight
@@ -222,10 +241,11 @@ def main():
     ap.add_argument("--db", default="brief.db")
     ap.add_argument("--date", help="YYYY-MM-DD，預設台北今天")
     ap.add_argument("--send", action="store_true", help="推送到 Discord 並標記已推送")
+    ap.add_argument("--include-sent", action="store_true", help="包含已推送過的項目（重新測試格式用）")
     a = ap.parse_args()
     today = dt.date.fromisoformat(a.date) if a.date else today_taipei()
     con = connect(a.db)
-    text, matches, ties, news = build(con, today)
+    text, matches, ties, news = build(con, today, include_sent=a.include_sent)
     if not a.send:
         print(text)
         return
