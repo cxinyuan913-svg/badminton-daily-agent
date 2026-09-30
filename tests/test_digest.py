@@ -164,3 +164,8 @@ def test_walkover_is_not_upset_and_has_no_empty_score():
     hit = next(x for x in matches if x["match_id"] == m["match_id"])
     assert not hit["upset"]
     assert digest._line(hit).endswith("）（不戰而勝）")
+
+
+def test_estimated_rank_is_labelled():
+    assert digest._rank(12, "estimate") == "#12（估算）"
+    assert digest._rank(12, "official") == "#12" and digest._rank(None) == "無排名"

@@ -89,13 +89,31 @@ def weeks_missing(con, weeks: list[dict]) -> list[dict]:
     return [w for w in weeks if w["date"][:10] not in have]
 
 
+def rank_lookup(con, pairing: int, event: str, on_date: str) -> tuple[int | None, str | None]:
+    """比賽當天適用的排名與來源：(名次, "official" | "estimate" | None)。
+    先找該日期（含）之前最近一週的官方快照，再看這個組合在那一週的名次（不在表上 = 500 名外，回傳 None）。
+    日期早於官方快照（API 只留約 60 週）時，改查 ranking_estimate（自行重建，只有前 100 名）。"""
+    week = con.execute("SELECT MAX(week_date) FROM ranking_snapshot WHERE event=? AND week_date<=?",
+                       (event, on_date)).fetchone()[0]
+    if week:
+        row = con.execute("SELECT rank FROM ranking_snapshot WHERE week_date=? AND event=? AND pairing_id=?",
+                          (week, event, pairing)).fetchone()
+        return (row[0], "official") if row else (None, None)
+    try:
+        week = con.execute("SELECT MAX(week_date) FROM ranking_estimate WHERE event=? AND week_date<=?",
+                           (event, on_date)).fetchone()[0]
+    except Exception:  # noqa: BLE001 — 還沒建立 ranking_estimate 表
+        return None, None
+    if not week:
+        return None, None
+    row = con.execute("SELECT rank FROM ranking_estimate WHERE week_date=? AND event=? AND pairing_id=?",
+                      (week, event, pairing)).fetchone()
+    return (row[0], "estimate") if row else (None, None)
+
+
 def rank_on(con, pairing: int, event: str, on_date: str):
-    """比賽當天適用的排名：取該日期（含）之前最近一週的快照。"""
-    row = con.execute(
-        """SELECT rank FROM ranking_snapshot
-           WHERE pairing_id=? AND event=? AND week_date<=?
-           ORDER BY week_date DESC LIMIT 1""", (pairing, event, on_date)).fetchone()
-    return row[0] if row else None
+    """只回傳名次（見 rank_lookup）。"""
+    return rank_lookup(con, pairing, event, on_date)[0]
 
 
 def main():

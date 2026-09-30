@@ -24,7 +24,7 @@ from collections import defaultdict
 from brief import discord, zh
 from brief.crawler import connect
 from brief.news import NEWS_TABLE
-from brief.rankings import rank_on
+from brief.rankings import rank_lookup
 
 LATE_ROUNDS = {"QF", "SF", "Final", "F"}
 ROUND_ORDER = ["Qual. R64", "Qual. R32", "Qual. R16", "Qual. QF", "Q1", "Q2", "Q3", "R128", "R64", "R32", "R16", "R1", "R2", "R3", "QF", "SF", "Final", "F"]
@@ -87,11 +87,11 @@ def pending_matches(con, today: dt.date, include_sent: bool = False) -> list[dic
         games = con.execute("SELECT side1_points, side2_points FROM game WHERE match_id=? ORDER BY game_no",
                             (mid,)).fetchall()
         score = " ".join(f"{a}-{b}" if win == 1 else f"{b}-{a}" for a, b in games)   # 勝方在前
-        wr, lr = rank_on(con, w, event, mdate), rank_on(con, l, event, mdate)
+        (wr, wsrc), (lr, lsrc) = rank_lookup(con, w, event, mdate), rank_lookup(con, l, event, mdate)
         out.append({
             "match_id": mid, "tournament_id": tid, "tournament": tname, "level": level, "event": event,
             "round": rnd, "date": mdate, "winner": _side(con, w), "loser": _side(con, l),
-            "winner_rank": wr, "loser_rank": lr, "score": score, "status": status,
+            "winner_rank": wr, "loser_rank": lr, "winner_rank_src": wsrc, "loser_rank_src": lsrc, "score": score, "status": status,
             "team_tie_id": tie, "loser_seed": loser_seed,
             "upset": None if status == "Walkover" else upset_level(wr, lr, loser_seed),   # 不戰而勝沒有真的比賽
         })
@@ -112,8 +112,10 @@ def pending_ties(con, today: dt.date, include_sent: bool = False) -> list[dict]:
     return [dict(zip(keys, r)) for r in rows]
 
 
-def _rank(r):
-    return f"#{r}" if r else "無排名"
+def _rank(r, src=None):
+    if not r:
+        return "無排名"
+    return f"#{r}（估算）" if src == "estimate" else f"#{r}"
 
 
 def _line(m: dict) -> str:
@@ -125,7 +127,7 @@ def _line(m: dict) -> str:
         tags.append("🇹🇼")
     status = "" if m["status"] in (None, "Normal") else f"（{zh.status(m['status'])}）"
     return (f"- {zh.event(m['event'])} {zh.round_name(m['round'])}：**{w['name']}**（{zh.country(w['country'])}，"
-            f"{_rank(m['winner_rank'])}）勝 {l['name']}（{zh.country(l['country'])}，{_rank(m['loser_rank'])}）"
+            f"{_rank(m['winner_rank'], m.get('winner_rank_src'))}）勝 {l['name']}（{zh.country(l['country'])}，{_rank(m['loser_rank'], m.get('loser_rank_src'))}）"
             + (f" {m['score']}" if m["score"] else "") + status
             + (f"  {' '.join(tags)}" if tags else ""))
 

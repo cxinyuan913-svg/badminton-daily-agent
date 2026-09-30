@@ -55,3 +55,26 @@ def test_ranking_player_then_match_keeps_first_seen():
                                 "countryCode": "THA", "slug": "kunlavut-vitidsarn"}, "2026-07-22")
     row = con.execute("SELECT name_display, first_seen FROM player WHERE player_id=64032").fetchone()
     assert row == ("Kunlavut VITIDSARN", "2026-07-22")
+
+
+def test_rank_lookup_dropped_out_is_not_old_rank():
+    """組合在最新一週掉出排名時，不能回傳好幾週前的舊名次（2026-09-30 修正）。"""
+    con = db()
+    rows = FIX["ms"]["results"]["data"]
+    rankings.store_rows(con, "2026-09-22", "MS", [rows[0]])
+    rankings.store_rows(con, "2026-09-29", "MS", [rows[1]])            # rows[0] 這週不在表上
+    pid = crawler.pairing_id(con, [int(rows[0]["player1_id"])])
+    assert rankings.rank_lookup(con, pid, "MS", "2026-09-25") == (rows[0]["rank"], "official")
+    assert rankings.rank_lookup(con, pid, "MS", "2026-09-30") == (None, None)
+
+
+def test_rank_lookup_falls_back_to_estimate_before_official_weeks():
+    from brief import ranking_estimate
+    con = db()
+    rankings.store_rows(con, "2026-09-29", "MS", FIX["ms"]["results"]["data"][:1])
+    con.executescript(ranking_estimate.ESTIMATE_TABLE)
+    pid = crawler.pairing_id(con, [64032])
+    con.execute("INSERT INTO ranking_estimate VALUES ('2019-09-03', 'MS', ?, 7, 50000, 10, 'computed')", (pid,))
+    assert rankings.rank_lookup(con, pid, "MS", "2019-09-10") == (7, "estimate")
+    assert rankings.rank_lookup(con, pid, "MS", "2019-08-01") == (None, None)       # 更早沒有估算
+    assert rankings.rank_on(con, pid, "MS", "2019-09-10") == 7
