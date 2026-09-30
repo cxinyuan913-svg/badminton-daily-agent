@@ -190,10 +190,20 @@ def pending_news(con, today: dt.date) -> list[dict]:
     return [dict(zip(("url", "source", "title", "published"), r)) for r in rows]
 
 
-def build(con, today: dt.date) -> tuple[str, list[dict], list[dict], list[dict]]:
+def build(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[str, list[dict], list[dict], list[dict]]:
+    """llm 有給就在最上方加「今日重點」；LLM 失敗時照常回傳事實摘要，錯誤放進 errors。"""
     con.executescript(DIGEST_TABLE + NEWS_TABLE)
     matches, ties, news = pending_matches(con, today), pending_ties(con, today), pending_news(con, today)
-    return render(today, matches, ties, news), matches, ties, news
+    text = render(today, matches, ties, news)
+    if llm is not None and (matches or ties):
+        from brief.llm import highlight
+        try:
+            head, _, body = text.partition("\n")
+            text = f"{head}\n{highlight(llm, body)}\n\n{body}"
+        except Exception as e:  # noqa: BLE001
+            if errors is not None:
+                errors.append(f"llm: {e!r}")
+    return text, matches, ties, news
 
 
 def mark_sent(con, today: dt.date, matches: list[dict], ties: list[dict], news: list[dict] = ()) -> None:

@@ -5,6 +5,7 @@ description = "每日收集國際羽球賽果與新聞，記住選手生涯，�
 requires-python = ">=3.11"
 dependencies = [
     "requests>=2.31",
+    "anthropic>=1.0",
 ]
 
 [project.optional-dependencies]

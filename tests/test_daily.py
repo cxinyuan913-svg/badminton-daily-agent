@@ -128,7 +128,8 @@ def test_one_failing_step_does_not_stop_the_rest():
 
 
 def test_publish_marks_sent_and_alerts_on_errors(monkeypatch):
-    from brief import discord
+    from brief import discord, llm
+    monkeypatch.setattr(llm, "available", lambda: False)      # 測試不呼叫真的 API
     sent = []
     monkeypatch.setattr(discord, "webhook", lambda name, *a: name)
     monkeypatch.setattr(discord, "send", lambda url, text, **k: sent.append((url, text)) or 1)
@@ -145,7 +146,8 @@ def test_publish_marks_sent_and_alerts_on_errors(monkeypatch):
 
 
 def test_publish_failure_does_not_mark_sent(monkeypatch):
-    from brief import discord
+    from brief import discord, llm
+    monkeypatch.setattr(llm, "available", lambda: False)
 
     def no_webhook(name, *a):
         raise RuntimeError(f"沒有設定 {name}")
