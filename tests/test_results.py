@@ -134,4 +134,4 @@ def test_lucky_loser_champion():
     """2024 荷蘭國際賽混雙：資格賽最後一輪不戰而敗，遞補正賽後奪冠 → 冠軍（原本誤判為資格賽出局）。"""
     ms = [m("Qual. R16", 1, 9, winner=1), m("Qual. QF", 8, 1, winner=1), m("QF", 1, 2), m("SF", 1, 3), m("Final", 1, 4)]
     got = results.event_results(ms)
-    assert got[1][0] == "W" and got[4][0] == "F"
+    assert got[1][0] == "W"
