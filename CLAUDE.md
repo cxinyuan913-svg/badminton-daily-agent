@@ -48,7 +48,7 @@ python -m brief.backfill run --db data/brief.db       # 十年回補（可中斷
 | 項目 | 決議 |
 |---|---|
 | 項目 | 五項全收：MS、WS、MD、WD、XD |
-| 賽事層級 | 成人國際賽（對應 `brief/calendar.py` 的 `CATEGORY_LEVEL`）：Grade 1（奧運、世錦賽、湯尤盃、蘇迪曼盃）、Grade 2（World Tour 全部）、Grade 3 的 International Challenge 與 International Series、洲際個人錦標賽、綜合運動會（亞運、大英國協運動會）、**洲際團體錦標賽**（`CONT_TEAM`）、**世大運**（`FISU`，個人與團體賽依規章 §7.1／7.2 計分）。**Future Series 只存不推**，用於排名重建。不收青少年、元老賽、身障賽。大英國協運動會不在 V6.0 計分清單，**不計分**（2026-09-30 22:35／22:45） |
+| 賽事層級 | 成人國際賽（對應 `brief/calendar.py` 的 `CATEGORY_LEVEL`）：Grade 1（奧運、世錦賽、湯尤盃、蘇迪曼盃）、Grade 2（World Tour 全部）、Grade 3 的 International Challenge 與 International Series、洲際個人錦標賽、綜合運動會（亞運、大英國協運動會）、**洲際團體錦標賽**（`CONT_TEAM`）、**世大運**（`FISU`，個人與團體賽依規章 §7.1／7.2 計分）。**不收 Future Series**（23:10 取消 FS 回補）。不收青少年、元老賽、身障賽。大英國協運動會不在 V6.0 計分清單，**不計分**（2026-09-30 22:35／22:45） |
 | 賽果來源 | BWF 官網與其 JSON API，Grade 1–3 共用同一支爬蟲 |
 | 選手主鍵 | BWF 選手 ID；雙打記在「組合」上，組合連到兩位選手 |
 | LLM | 雲端 API，`brief/llm.py` 包一層介面。**依用途選模型**：例行（今日重點、新聞重點、暱稱擷取）`claude-sonnet-5-5`，重要（賽前分析、影片草稿、驗證差異分析）`claude-opus-5-5`；可用 `.env` 的 `LLM_MODEL_ROUTINE`／`LLM_MODEL_HEAVY` 覆寫。每次呼叫記錄用途、模型、token、估計費用到 `llm_call`（2026-09-30） |
@@ -59,7 +59,7 @@ python -m brief.backfill run --db data/brief.db       # 十年回補（可中斷
 | 今日重點評語 | 「逆轉」「三局大戰」這類可由比分驗證的詞可以用；**「爆冷／冷門」只能用在 `upset_level` 判定的場次**，事實檢查會擋下違反的輸出（`llm.unlicensed_upsets`）（2026-09-30 22:45） |
 | 日報語言 | 推到 Discord 的日報一律繁體中文（台灣用語）：項目、輪次、狀態、國家、常見賽事名稱轉中文（`brief/zh.py`）；比分與數字不變。選手名字**不音譯**，只用 `brief/player_zh.csv` 人工確認過的中文名，格式「中文（英文）」，其餘保留英文（2026-09-30） |
 | 日報推送範圍 | **推送**：Grade 1（奧運、世錦賽、湯尤盃、蘇迪曼盃）、年終總決賽、Super 1000／750／500／300／100、洲際個人錦標賽（亞錦賽等）、綜合運動會（亞運等）。**IC／IS 照常抓、照常存，不推**，只推明確規則的例外（`brief/grade3.py`），每則一行理由＋該選手當天最後一場（22:45）：① 選手曾在 Super 750 以上或 Grade 1 打進八強 ② 官方排名曾進前 30 名 ③ 中華台北選手拿到**冠軍、亞軍、季軍**（四強敗者），一站一行，賽事進行中先推「確定至少季軍／亞軍」、決賽後隔天更新。日報結尾列「今天另有 IC／IS 共 N 場，已存入資料庫」。例外不交給 LLM 判斷（2026-09-30） |
-| 排名規則來源 | BWF Statutes 5.3.3.1 **V6.0**（2026-04-26）與 5.3.3.4，放在 `docs/regulations/`（不進版控，**不要去 extranet.bwf.sport 抓**）。程式只引用條號。Super 1000 分級（13500／12700／12000）以官方排名前後週變化反推，存 `config/s1000_grade.csv`；反推不出的標「推定」（2026-09-30 22:35／22:45） |
+| 世界排名來源 | **官方歷史排名**：`player/ranking/publication/weeks` 取週次、`vue-rankingtable` 取每週前 100 名，2017-01 起存進 `ranking_snapshot`；日報的排名一律用官方資料。自行重建（`ranking_estimate`、`validate`、`docs/ranking-validation.md`）**收尾不再加功能**，保留作驗證與方法展示。規章 PDF 在 `docs/regulations/` 備查（不進版控）（2026-09-30 23:10） |
 | 賽果推送時機 | **每站在當地當天最後一場打完後單獨發一則**（`brief/watch.py`，工作排程器每 30 分鐘）：標題（第 N 天、最深輪次、台灣時間幾點打完）、今日重點（LLM routine＋事實檢查）、當天全部賽果、明日看點（決賽日改列本站冠軍）。當地隔天 03:00 仍沒打完就保險發送並列「未完成：N 場」。明日賽程未公布時，之後另發一則看點（只發一次、最晚第一場開打前）。06:00 改為**晨報**：最近 24 小時新聞＋IC／IS 精選＋週一暱稱週報＋漏發提醒，全都沒有就不發（2026-09-30） |
 | 明日看點 | 選場規則（`brief/preview.py`，理由由規則產生，**不用 LLM**）：① 中華台北選手 ② 雙方都在世界前 10 ③ 過去 12 個月交手且上次是決賽／四強 ④ 交手懸殊但最近弱勢方贏 ⑤ 追蹤中的台灣選手對上今年贏過他的人。最多 8 場，台灣選手優先，依台灣時間排序；時間寫「14:30（台灣）」「約 HH:MM 後，接第 N 場」「不早於…」「時間未定」。交手戰績只用資料庫（2026-09-30） |
 | 暱稱 | 由系統從新聞自動收集（`brief/nickname.py`），Raymond 不手填。規則（XY配、小X、X神）＋ LLM（必須附原文證據）找候選；同篇出現全名且 ≥ 2 個來源或累積 ≥ 3 次才自動採用。採用的暱稱只用於新聞篩選，**日報提到選手不用暱稱**。每週一日報最後列本週新增與待確認的暱稱，Raymond 回覆確認或否決（2026-09-30） |
@@ -82,7 +82,8 @@ Raymond 在 claude.ai 做調查、討論、決策與視覺化；在這裡（Clau
 
 ## 工作規則
 
-- **爬蟲禮貌**：每次請求至少間隔 2 秒（`REQUEST_GAP_SEC`），遵守 robots.txt。tournamentsoftware 的 robots.txt 禁止程式抓取，不要用；Google 新聞 RSS 也被擋，不要用；聯合新聞網的 robots.txt 禁止 Claude / ClaudeBot / GPTBot，不要用
+- **爬蟲禮貌**：每次請求至少間隔 2 秒（`REQUEST_GAP_SEC`），遵守 robots.txt。
+  - **例外**：資料 API 主機 `extranet-lv.bwfbadminton.com` 的 robots.txt 是 `Disallow: /`（2026-09-30 Claude Code 發現；P0 當時只查了主站）。**Raymond 確認有授權或判斷可以抓（2026-09-30）**，所以照常使用，仍維持 2 秒間隔與低請求量。`extranet.bwf.sport` 不在此例外，不要抓tournamentsoftware 的 robots.txt 禁止程式抓取，不要用；Google 新聞 RSS 也被擋，不要用；聯合新聞網的 robots.txt 禁止 Claude / ClaudeBot / GPTBot，不要用
 - **事實正確優先**：草稿裡每個比分、名字、數字都要能回資料庫查證。不確定的句子標出來給 Raymond 確認，不要自動放行
 - **冪等**：爬蟲重跑只更新、不重複寫入。新增寫入邏輯要附重跑測試
 - **測試資料用真實回應**：新 API 或新欄位，先存一份真實回應到 `tests/fixtures/`，再寫解析
