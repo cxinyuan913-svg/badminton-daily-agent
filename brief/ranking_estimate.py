@@ -66,12 +66,18 @@ def rank_list(scores: dict[int, tuple[int, int]], top_n: int = TOP_N) -> list[tu
 
 
 class Estimator:
-    """把某項目的全部成績載入記憶體，依日期快速取 52 週視窗。"""
+    """把某項目的全部成績載入記憶體，依日期快速取 52 週視窗。
+    rows：(result_date, pairing_id, points[, is_team[, expires[, group]]])
+      is_team：團體賽 52 週內只取最好的一次（§7.2）
+      expires：同一站下一屆結束的日期；之後的週次不再計入（V6.0 §2.2「到下一屆舉辦或 52 週，以先到者為準」）
+      group：洲際錦標賽／洲際綜合運動會個人賽的（層級, 洲），52 週內每組只計最新一次（§9.1.3、§9.1.4）"""
 
     def __init__(self, rows: list[tuple]):
-        # rows: (result_date, pairing_id, points[, is_team])；團體賽 52 週內只取最好的一次（規章 7.2）
-        self.rows = sorted((dt.date.fromisoformat(r[0]), r[1], r[2] or 0, bool(r[3]) if len(r) > 3 else False)
-                           for r in rows)
+        def norm(r):
+            r = tuple(r) + (None,) * (6 - len(r))
+            return (dt.date.fromisoformat(r[0]), r[1], r[2] or 0, bool(r[3]),
+                    dt.date.fromisoformat(r[4]) if r[4] else None, r[5])
+        self.rows = sorted((norm(r) for r in rows), key=lambda r: (r[0], r[1]))
         self.dates = [r[0] for r in self.rows]
 
     def scores(self, week: dt.date) -> dict[int, tuple[int, int]]:
@@ -79,22 +85,53 @@ class Estimator:
         hi = bisect.bisect_left(self.dates, week)          # 基準日當天結束的不算
         per: dict[int, list[int]] = defaultdict(list)
         team: dict[int, int] = {}
-        for _, pid, pts, is_team in self.rows[lo:hi]:
+        latest: dict[tuple, tuple] = {}
+        for date, pid, pts, is_team, expires, group in self.rows[lo:hi]:
+            if expires is not None and week > expires:
+                continue                                   # 下一屆已經舉辦，上一屆的成績失效
             if is_team:
                 team[pid] = max(team.get(pid, 0), pts)
+            elif group:
+                if (pid, group) not in latest or latest[(pid, group)][0] <= date:
+                    latest[(pid, group)] = (date, pts)     # 同一洲只計最新一次
             else:
                 per[pid].append(pts)
+        for (pid, _), (_, pts) in latest.items():
+            per[pid].append(pts)
         for pid, pts in team.items():
             per[pid].append(pts)
         return {pid: (sum(sorted(p, reverse=True)[:BEST_OF]), len(p)) for pid, p in per.items()}
 
 
+def tournament_meta(con) -> dict[int, tuple[str | None, tuple | None]]:
+    """{tournament_id: (下一屆結束日, 洲際分組)}。
+    下一屆：同一站（series_key）、同一層級、下一次開打的賽事；只在 V6.0（2024 第 17 週後舉辦的下一屆）套用 §2.2。"""
+    from brief import ranking_points as rp
+    rows = con.execute("SELECT tournament_id, name, level, start_date, end_date FROM tournament "
+                       "WHERE start_date IS NOT NULL AND COALESCE(status, '') NOT IN ('cancelled', 'postponed') "
+                       "ORDER BY start_date").fetchall()
+    by_series: dict[tuple, list] = defaultdict(list)
+    for tid, name, level, start, end in rows:
+        by_series[(rp.series_key(name), level)].append((start, end, tid))
+    meta = {}
+    for tid, name, level, start, end in rows:
+        series = by_series[(rp.series_key(name), level)]
+        nxt = next((e for s, e, t in series if s > start), None)
+        if nxt and nxt < rp.VERSIONS[-1][0].isoformat():
+            nxt = None
+        group = (level, rp.continent(name)) if level in ("CONT_IND", "MULTI") and rp.continent(name) else None
+        meta[tid] = (nxt, group)
+    return meta
+
+
 def compute(con, weeks: list[dt.date], events=("MS", "WS", "MD", "WD", "XD")) -> int:
     con.executescript(ESTIMATE_TABLE)
+    meta = tournament_meta(con)
     n = 0
     for event in events:
-        est = Estimator(con.execute("SELECT result_date, pairing_id, points, round_reached = 'TEAM' FROM tournament_result "
-                                    "WHERE event=?", (event,)).fetchall())
+        est = Estimator([(d, pid, pts, team, *meta.get(tid, (None, None))) for d, pid, pts, team, tid in con.execute(
+            "SELECT result_date, pairing_id, points, round_reached = 'TEAM', tournament_id FROM tournament_result "
+            "WHERE event=?", (event,))])
         frozen_list = None
         for week in weeks:
             if FREEZE_START <= week <= FREEZE_END:

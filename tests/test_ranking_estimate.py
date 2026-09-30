@@ -53,3 +53,28 @@ def test_compute_top100_frozen_and_idempotent():
     frozen = con.execute("SELECT pairing_id, points FROM ranking_estimate WHERE week_date='2020-06-02' AND rank=1").fetchone()
     assert frozen == (1, 9999)
     assert "2021-03-02" not in by_week                                  # 解凍後，52 週外的成績已過期
+
+
+def test_points_expire_when_next_edition_held():
+    """V6.0 §2.2：成績留到同一站下一屆舉辦，或 52 週，以先到者為準。"""
+    rows = [("2025-07-27", 1, 13500, False, "2026-07-12"), ("2026-07-12", 1, 7400, False, None)]
+    est = re_.Estimator(rows)
+    assert est.scores(D(2026, 7, 7))[1] == (13500, 1)
+    assert est.scores(D(2026, 7, 14))[1] == (7400, 1)                 # 下一屆提前在 52 週內舉辦，舊的立刻失效
+
+
+def test_one_continental_championship_per_continent():
+    """§9.1.3：52 週內每一洲只計最新一次洲際錦標賽。"""
+    g = ("CONT_IND", "asia")
+    rows = [("2025-10-01", 1, 9200, False, None, g), ("2026-04-12", 1, 6420, False, None, g),
+            ("2026-04-12", 1, 5040, False, None, ("CONT_IND", "europe"))]
+    assert re_.Estimator(rows).scores(D(2026, 5, 5))[1] == (6420 + 5040, 2)
+
+
+def test_series_key_and_s1000_grade_lookup():
+    from brief import ranking_points as rp
+    assert rp.series_key("KAPAL API Indonesia Open 2025") == rp.series_key("POLYTRON Indonesia Open 2026") == "indonesia open"
+    grades = {("china open", 2026): "13500", ("malaysia open", 2026): "12700"}
+    assert rp.s1000_level("VICTOR China Open 2026", D(2026, 7, 21), grades) == "S1000"
+    assert rp.s1000_level("PETRONAS Malaysia Open 2027", D(2027, 1, 5), grades) == "S1000_12700"   # 沿用最近一年
+    assert rp.s1000_level("Some New Open 2026", D(2026, 5, 1), grades) == "S1000"                  # 查不到採最高級

@@ -19,7 +19,11 @@ Super 1000 各站屬於哪一級。
 """
 from __future__ import annotations
 
+import csv
 import datetime as dt
+import re
+from functools import lru_cache
+from pathlib import Path
 
 POSITIONS = ["W", "F", "SF", "QF", "R16", "R32", "R64", "R128", "R256", "R512", "R1024"]
 WTF_GROUP = {"G3": 3, "G4": 4}      # 年終總決賽小組第 3、第 4（§4.2.8：5–6、7–8 名）
@@ -105,6 +109,8 @@ def effective_level(level: str | None, tournament_name: str, on: dt.date) -> str
     if level == "G1_EVENT" and "superseries finals" in tournament_name.lower():
         return "SSP"                            # 舊制年終總決賽與 Superseries Premier 同一列（GCR 6.3）
     level = LEVEL_ALIAS.get(level, level)
+    if level == "S1000" and version(on)[0] == "V2024W17":
+        return s1000_level(tournament_name, on, _cached_grades())
     if level in ("CONT_IND", "MULTI"):
         c = continent(tournament_name)
         rules = CONTINENT_LEVEL[version(on)[0]]
@@ -139,3 +145,44 @@ def points(on: dt.date, level: str | None, position: str, tournament_name: str =
     if i < len(row):
         return row[i]
     return 0
+
+
+# ---------------------------------------------------------------- 同一賽事的不同屆次
+_SPONSOR_OR_YEAR = re.compile(r"\b(?:19|20)\d{2}\b|\([^)]*\)|\b\d+(?:st|nd|rd|th)\b|\b[IVXLC]+\b")
+
+
+def series_key(name: str) -> str:
+    """賽事的「同一站」鍵：去掉年份、括號、屆次與全大寫的贊助商字（VICTOR、PETRONAS、HSBC…）。
+    例：「VICTOR China Open 2026」「VICTOR China Open 2025」→「china open」。用於 §2.2 與 Super 1000 分級。"""
+    s = _SPONSOR_OR_YEAR.sub(" ", name)
+    words = [w for w in re.split(r"[\s\-–]+", s) if w and not (w.isupper() and len(w) >= 2) and w.lower() != "badminton"]
+    return " ".join(w.lower() for w in words)
+
+
+# ---------------------------------------------------------------- Super 1000 分級（V6.0 §6.3）
+S1000_GRADE_CSV = Path(__file__).resolve().parent.parent / "config" / "s1000_grade.csv"
+S1000_LEVEL = {"13500": "S1000", "12700": "S1000_12700", "12000": "L2_BASE"}
+
+
+def s1000_grades(path: Path = S1000_GRADE_CSV) -> dict[tuple[str, int], str]:
+    """{(series_key, 年): 分級}；檔案由 brief/s1000_grade.py 以官方排名反推產生。"""
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8-sig") as f:
+        return {(series_key(r["name"]), int(r["year"])): r["grade"] for r in csv.DictReader(f)}
+
+
+def s1000_level(name: str, on: dt.date, grades: dict | None = None) -> str:
+    """2024 第 17 週起 Super 1000 依加碼獎金分三級；查不到用同一站最近一年的結果，再查不到用 13500。"""
+    grades = s1000_grades() if grades is None else grades
+    key = series_key(name)
+    exact = grades.get((key, on.year))
+    if exact is None:
+        years = sorted((y for (k, y) in grades if k == key), key=lambda y: abs(y - on.year))
+        exact = grades.get((key, years[0])) if years else None
+    return S1000_LEVEL.get(exact or "13500", "S1000")
+
+
+@lru_cache(maxsize=1)
+def _cached_grades() -> dict:
+    return s1000_grades()
