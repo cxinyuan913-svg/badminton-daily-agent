@@ -303,10 +303,18 @@ def main():
     ap.add_argument("--date", help="YYYY-MM-DD，預設台北今天")
     ap.add_argument("--send", action="store_true", help="推送到 Discord 並標記已推送")
     ap.add_argument("--include-sent", action="store_true", help="包含已推送過的項目（重新測試格式用）")
+    ap.add_argument("--llm", action="store_true", help="用例行模型加上「今日重點」與新聞重點")
     a = ap.parse_args()
     today = dt.date.fromisoformat(a.date) if a.date else today_taipei()
     con = connect(a.db)
-    text, matches, ties, news = build(con, today, include_sent=a.include_sent)
+    model = None
+    if a.llm:
+        from brief import llm
+        model = llm.AnthropicLLM("routine", con=con)
+    errors: list[str] = []
+    text, matches, ties, news = build(con, today, llm=model, errors=errors, include_sent=a.include_sent)
+    for e in errors:
+        print("錯誤：", e, file=__import__("sys").stderr)
     if not a.send:
         print(text)
         return

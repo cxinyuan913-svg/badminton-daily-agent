@@ -43,8 +43,10 @@ HIGHLIGHT_SYSTEM = """你是羽球日報的編輯助理，讀者是台灣的羽�
 - 只能使用摘要裡出現的事實：選手名字、國家、比分、排名、輪次一律照抄，不可推測或補充背景
 - 選手名字照摘要的寫法：摘要是「中文（英文）」就寫「中文（英文）」；摘要只有英文就只寫英文，絕對不要自行翻譯或音譯成中文
 - 優先寫：爆冷、中華台北選手、決賽與四強
+- 摘要的比分是勝方在前；句子的主詞是敗方時，比分要倒過來寫成主詞的角度（例如「周天成以 10-21 11-21 不敵…」）
+- 摘要裡沒有的賽事、項目、比分一律不要提（例如摘要沒有團體賽，就不要寫團體賽）
 - 摘要裡沒有賽果時，只寫一句「今天沒有新的賽果。」
-- 只輸出重點段落本身，不要標題、不要列點"""
+- 先在心裡逐句核對，再輸出；只輸出一段最終文字，不要標題、不要列點、不要解釋或更正"""
 
 NEWS_SYSTEM = """把使用者提供的羽球新聞英文標題，用繁體中文、台灣用語寫成一句重點（30 字以內）。
 只能根據標題本身，不可補充標題沒有的內容。選手名字保留英文，不要翻譯或音譯。只輸出那一句。"""
@@ -113,7 +115,10 @@ def available() -> bool:
 
 
 # ---------------------------------------------------------------- 事實檢查
-NUMBER = re.compile(r"\d+(?:-\d+)*")
+NUMBER = re.compile(r"\d+")
+SCORE = re.compile(r"(\d{1,2})\s*(?:[-–—:：]|比)\s*(\d{1,2})(?!\d)")
+# 模型把「自我更正」也寫出來時（2026-09-30 實測），整段不採用
+META = re.compile(r"等一下|更正|修正後|我寫錯|寫錯了|以下是|抱歉")
 LATIN_NAME = re.compile(r"[A-Z][A-Za-z'.-]+(?: [A-Z][A-Za-z'.-]+)*")
 IGNORE_LATIN = {"MS", "WS", "MD", "WD", "XD", "QF", "SF", "Final", "IC", "IS", "BWF", "TPE"}
 
@@ -131,14 +136,18 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
     名字：英文要出現在原始資料；「中文（英文）」的中文要在對照表裡、且對應到同一個英文；
     對照表裡的中文名出現在輸出，也要出現在原始資料。"""
     zh_names = _zh_table() if zh_names is None else zh_names
-    # 數字要整個比對（否則「5」會在「21-15」裡被找到）；比分也拆成單局，LLM 可能寫成「21 比 15」
-    numbers = set()
-    for token in NUMBER.findall(source):
-        numbers.add(token)
-        numbers.update(token.split("-"))
+    # 比分整組比對：「21-15」「21 比 15」「3–2」都要在原始資料有同一組（正反順序皆可，敗方角度會倒過來寫）。
+    # 2026-09-30 實測：LLM 捏造「印尼 3–2 中國」，拆成單獨數字比對會被 3、2 矇混過去
+    scores = {tuple(m) for m in SCORE.findall(source)}
+    scores |= {(b, a) for a, b in scores}
     missing = []
-    for token in NUMBER.findall(text):
-        if not (token in numbers or all(part in numbers for part in token.split("-"))) and token not in missing:
+    for a, b in SCORE.findall(text):
+        if (a, b) not in scores and f"{a}-{b}" not in missing:
+            missing.append(f"{a}-{b}")
+    # 其餘數字要整個比對（否則「5」會在「21-15」裡被找到）
+    numbers = set(NUMBER.findall(SCORE.sub(" ", source))) | {x for pair in scores for x in pair}
+    for token in NUMBER.findall(SCORE.sub(" ", text)):
+        if token not in numbers and token not in missing:
             missing.append(token)
     for token in LATIN_NAME.findall(text):
         if token in IGNORE_LATIN or token in source:
@@ -164,7 +173,9 @@ def highlight(llm: LLM, digest_text: str) -> str:
     """回傳要放在摘要最上方的段落；有查不到的內容就附上待確認清單。"""
     if hasattr(llm, "task"):
         llm.task = "highlight"
-    text = llm.complete(HIGHLIGHT_SYSTEM, digest_text)
+    text = llm.complete(HIGHLIGHT_SYSTEM, digest_text).strip()
+    if "\n\n" in text or META.search(text):
+        raise ValueError(f"今日重點格式異常，未採用：{text[:80]}…")
     missing = unverified(text, digest_text)
     lines = [f"**今日重點**（AI 整理，請審稿）\n{text}"]
     if missing:

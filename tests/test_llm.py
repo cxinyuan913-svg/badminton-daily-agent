@@ -71,3 +71,29 @@ def test_usage_logged_with_cost():
     llm.log_call(con, "heavy", None, "some-unknown-model", 10, 10)
     rows = con.execute("SELECT purpose, task, model, cost_usd FROM llm_call ORDER BY call_id").fetchall()
     assert rows == [("routine", "highlight", "claude-sonnet-5-5", 3.0), ("heavy", None, "some-unknown-model", None)]
+
+
+# 2026-09-30 實跑 claude-sonnet-5-5 的真實輸出（節錄），當成回歸測試
+REAL_SOURCE = ("- 男單 八強：**Alwi FARHAN**（印尼，#10）勝 周天成（CHOU Tien Chen）（中華台北，#5） 21-10 21-11\n"
+               "- 混雙 四強：**WEI Ya Xin / JIANG Zhen Bang**（中國，#3）勝 Nicole Gonzales CHAN / YE Hong Wei（中華台北，#9） 21-13 21-9")
+
+
+def test_fabricated_team_score_is_flagged():
+    out = "周天成（CHOU Tien Chen）八強以 10-21 11-21 不敵 Alwi FARHAN。團體賽方面，男團決賽印尼 3–2 中國，女團決賽中國 3–0 日本。"
+    missing = llm.unverified(out, REAL_SOURCE, {"周天成": "CHOU Tien Chen"})
+    assert missing == ["3-2", "3-0"]                                       # 10-21 11-21 是敗方角度，正確
+
+
+def test_score_written_as_bi_and_standalone_digits():
+    assert llm.unverified("混雙四強以 13 比 21、9 比 21 落敗", REAL_SOURCE, {}) == []
+    assert llm.unverified("決勝局 21:19 收下", REAL_SOURCE, {}) == ["21-19"]
+    assert llm.unverified("世界第 10 名的 Alwi FARHAN", REAL_SOURCE, {}) == []
+
+
+def test_self_correction_output_is_rejected():
+    class Rambling:
+        def complete(self, system, user):
+            return "周天成八強止步。\n\n等一下，上面周天成那句我寫錯了，以下是修正後的完整版本：\n\n周天成八強止步。"
+    import pytest
+    with pytest.raises(ValueError, match="格式異常"):
+        llm.highlight(Rambling(), REAL_SOURCE)
