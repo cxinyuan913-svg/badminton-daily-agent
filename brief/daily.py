@@ -119,6 +119,8 @@ def run(con, client: Client, today: dt.date, lookback: int = LOOKBACK_DAYS, verb
     try:
         _, news_errors = news.collect(client, con)
         errors += news_errors
+        from brief import llm, nickname
+        nickname.scan_new(con, today, llm.AnthropicLLM("routine", con=con) if llm.available() else None)
     except Exception as e:  # noqa: BLE001
         errors.append(f"news: {e!r}")
 

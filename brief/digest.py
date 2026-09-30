@@ -231,7 +231,8 @@ def build(con, today: dt.date, llm=None, errors: list | None = None, include_sen
     pushed = [m for m in matches if m["level"] not in grade3.GRADE3]
     g3_lines, g3_shown = grade3_section(con, [m for m in matches if m["level"] in grade3.GRADE3])
     g3_hidden = sum(1 for m in matches if m["level"] in grade3.GRADE3) - g3_shown
-    text = render(today, pushed, ties, news, g3_lines, g3_hidden)
+    from brief import nickname
+    text = render(today, pushed, ties, news, g3_lines, g3_hidden) + "\n".join([""] + nickname.weekly_lines(con, today))
     if llm is not None and (pushed or ties or g3_lines):
         from brief.llm import highlight
         try:
