@@ -68,16 +68,23 @@ def rank_list(scores: dict[int, tuple[int, int]], top_n: int = TOP_N) -> list[tu
 class Estimator:
     """把某項目的全部成績載入記憶體，依日期快速取 52 週視窗。"""
 
-    def __init__(self, rows: list[tuple[str, int, int]]):
-        # rows: (result_date, pairing_id, points)
-        self.rows = sorted((dt.date.fromisoformat(d), pid, pts or 0) for d, pid, pts in rows)
+    def __init__(self, rows: list[tuple]):
+        # rows: (result_date, pairing_id, points[, is_team])；團體賽 52 週內只取最好的一次（規章 7.2）
+        self.rows = sorted((dt.date.fromisoformat(r[0]), r[1], r[2] or 0, bool(r[3]) if len(r) > 3 else False)
+                           for r in rows)
         self.dates = [r[0] for r in self.rows]
 
     def scores(self, week: dt.date) -> dict[int, tuple[int, int]]:
         lo = bisect.bisect_right(self.dates, week - WINDOW)
         hi = bisect.bisect_left(self.dates, week)          # 基準日當天結束的不算
         per: dict[int, list[int]] = defaultdict(list)
-        for _, pid, pts in self.rows[lo:hi]:
+        team: dict[int, int] = {}
+        for _, pid, pts, is_team in self.rows[lo:hi]:
+            if is_team:
+                team[pid] = max(team.get(pid, 0), pts)
+            else:
+                per[pid].append(pts)
+        for pid, pts in team.items():
             per[pid].append(pts)
         return {pid: (sum(sorted(p, reverse=True)[:BEST_OF]), len(p)) for pid, p in per.items()}
 
@@ -86,8 +93,8 @@ def compute(con, weeks: list[dt.date], events=("MS", "WS", "MD", "WD", "XD")) ->
     con.executescript(ESTIMATE_TABLE)
     n = 0
     for event in events:
-        est = Estimator(con.execute("SELECT result_date, pairing_id, points FROM tournament_result WHERE event=?",
-                                    (event,)).fetchall())
+        est = Estimator(con.execute("SELECT result_date, pairing_id, points, round_reached = 'TEAM' FROM tournament_result "
+                                    "WHERE event=?", (event,)).fetchall())
         frozen_list = None
         for week in weeks:
             if FREEZE_START <= week <= FREEZE_END:

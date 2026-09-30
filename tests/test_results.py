@@ -1,4 +1,5 @@
 """每站成績測試：規則用人造籤表，寫入與冪等用真實 fixture。"""
+import datetime as dt
 import json
 from pathlib import Path
 
@@ -111,3 +112,26 @@ def test_result_date_is_tournament_last_day():
                     "VALUES (?, 1, 'MS', ?, ?, ?, ?, 1)", (mid, rnd, d, a, b))
     results.compute(con)
     assert {r[0] for r in con.execute("SELECT result_date FROM tournament_result")} == {"2026-01-03"}   # 四強出局者也用整站最後一天
+
+
+def test_team_match_points_rules():
+    """規章 7.2：贏 = 平均 + 對手積分/100；輸 = 平均；平均 = 積分 / min(站數, 10)；沒有排名另有規則。"""
+    assert results.team_match_points((84000, 14), (50000, 10), won=True) == 8400 + 500
+    assert results.team_match_points((84000, 14), (50000, 10), won=False) == 8400
+    assert results.team_match_points((30000, 6), None, won=True) == 5000
+    assert results.team_match_points(None, (50000, 10), won=True) == 501
+    assert results.team_match_points(None, None, won=True) == 2
+    assert results.team_match_points(None, (50000, 10), won=False) == 0
+
+
+def test_estimator_keeps_only_best_team_result():
+    from brief import ranking_estimate
+    rows = [("2026-03-01", 1, 5000, False), ("2026-05-03", 1, 9000, True), ("2025-10-10", 1, 8000, True)]
+    assert ranking_estimate.Estimator(rows).scores(dt.date(2026, 9, 29))[1] == (14000, 2)   # 兩次團體賽只算 9000 那次
+
+
+def test_lucky_loser_champion():
+    """2024 荷蘭國際賽混雙：資格賽最後一輪不戰而敗，遞補正賽後奪冠 → 冠軍（原本誤判為資格賽出局）。"""
+    ms = [m("Qual. R16", 1, 9, winner=1), m("Qual. QF", 8, 1, winner=1), m("QF", 1, 2), m("SF", 1, 3), m("Final", 1, 4)]
+    got = results.event_results(ms)
+    assert got[1][0] == "W" and got[4][0] == "F"

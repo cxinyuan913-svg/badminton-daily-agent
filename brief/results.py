@@ -118,6 +118,8 @@ def event_results(matches: list[dict], level: str | None = None, finished: bool 
     for pid, ms in played.items():
         last_date = max(m["match_date"] for m in ms)
         losses = [m for m in ms if (m["side1"] == pid) != (m["winner_side"] == 1)]
+        if losses and not any(m["round"] in MAIN_ROUNDS for m in losses) and any(m["round"] in MAIN_ROUNDS for m in ms):
+            losses = []                               # 資格賽輸了、以 lucky loser 進正賽且正賽沒輸（例：2024 荷蘭國際賽混雙冠軍）
         if not losses:
             final = [m for m in ms if MAIN_ROUNDS.get(m["round"]) == 2]
             if final:
@@ -183,7 +185,7 @@ def compute(con, tournament_id: int | None = None) -> int:
                 (pid, tid, event, pos, pts, version, last))
             n += 1
     con.commit()
-    return n
+    return n + compute_team(con, tournament_id)
 
 
 def main():
@@ -196,3 +198,68 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------- 團體賽（規章 7.x）
+TEAM_LEVELS = ("G1_TEAM", "MULTI_TEAM")
+TEAM_POSITION = "TEAM"
+
+
+def _standing(con, pairing: int, event: str, before: str) -> tuple[float, int] | None:
+    """比賽前最近一週的（積分, 計入站數）：先查官方快照，沒有再查估算。"""
+    for table in ("ranking_snapshot", "ranking_estimate"):
+        try:
+            row = con.execute(f"""SELECT points, tournaments FROM {table} WHERE pairing_id=? AND event=? AND week_date =
+                                  (SELECT MAX(week_date) FROM {table} WHERE event=? AND week_date < ?)""",
+                              (pairing, event, event, before)).fetchone()
+        except Exception:  # noqa: BLE001 — 估算表還不存在
+            row = None
+        if row and row[0]:
+            return float(row[0]), int(row[1] or 1)
+        has_week = con.execute(f"SELECT 1 FROM sqlite_master WHERE name=?", (table,)).fetchone() and \
+            con.execute(f"SELECT 1 FROM {table} WHERE event=? AND week_date < ? LIMIT 1", (event, before)).fetchone()
+        if has_week and table == "ranking_snapshot":
+            return None                      # 官方快照涵蓋這段時間，查不到就是沒有排名
+    return None
+
+
+def team_match_points(own: tuple[float, int] | None, opp: tuple[float, int] | None, won: bool) -> float:
+    """規章 7.2：贏 = 平均 + 對手總積分 / 100；輸 = 平均；平均 = 積分 / min(站數, 10)。
+    沒有排名：贏 = 1 + 對手 / 100（對手也沒排名 = 2）；輸 = 0。"""
+    opp_pts = opp[0] if opp else 0.0
+    if own is None:
+        if not won:
+            return 0.0
+        return 2.0 if opp is None else 1.0 + opp_pts / 100
+    avg = own[0] / min(own[1], 10)
+    return avg + (opp_pts / 100 if won else 0.0)
+
+
+def compute_team(con, tournament_id: int | None = None) -> int:
+    """團體賽每個組合在一站的成績 = 該站單場最高分（實測與官方排名吻合，見 docs/ranking-validation.md）。"""
+    con.executescript(RESULT_TABLE)
+    where, args = ("AND m.tournament_id = ?", (tournament_id,)) if tournament_id else ("", ())
+    rows = con.execute(
+        f"""SELECT m.tournament_id, t.start_date, m.event, m.side1_id, m.side2_id, m.winner_side, m.match_date
+            FROM match m JOIN tournament t USING (tournament_id)
+            WHERE m.team_tie_id IS NOT NULL AND m.winner_side IN (1, 2)
+              AND t.level IN ({",".join("?" * len(TEAM_LEVELS))}) {where}""", (*TEAM_LEVELS, *args)).fetchall()
+    best: dict[tuple, float] = {}
+    last_day: dict[int, str] = {}
+    start_of: dict[int, str] = {}
+    for tid, start, event, s1, s2, win, mdate in rows:
+        last_day[tid] = max(last_day.get(tid, ""), mdate)
+        start_of[tid] = start
+        for me, opp, won in ((s1, s2, win == 1), (s2, s1, win == 2)):
+            v = team_match_points(_standing(con, me, event, start), _standing(con, opp, event, start), won)
+            key = (me, tid, event)
+            best[key] = max(best.get(key, 0.0), v)
+    for (pid, tid, event), v in best.items():
+        con.execute(
+            """INSERT INTO tournament_result (pairing_id, tournament_id, event, round_reached, points, rule_version, result_date)
+               VALUES (?,?,?,?,?,?,?)
+               ON CONFLICT(pairing_id, tournament_id, event) DO UPDATE SET
+                 round_reached=excluded.round_reached, points=excluded.points, result_date=excluded.result_date""",
+            (pid, tid, event, TEAM_POSITION, round(v), rp.version(dt.date.fromisoformat(start_of[tid]))[0], last_day[tid]))
+    con.commit()
+    return len(best)
