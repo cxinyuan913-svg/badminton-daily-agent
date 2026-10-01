@@ -155,7 +155,9 @@ def load_player_table(path: Path | None = None) -> list[dict]:
     return [{**r, "track": r.get("track", "Y")} for r in rows if not r["player_id"].startswith("#")]
 
 
-def apply_player_names(con, path: Path = PLAYER_ZH_CSV) -> int:
+def apply_player_names(con, path: Path | None = None) -> int:
+    """path 預設跟 load_player_table 一樣：有正式名單 config/players_zh.csv 就讀它（2026-10-01 修正：
+    原本預設寫死舊的 5 人暫用表，名單換成 77 人後資料庫只寫入了 5 位）。"""
     """把對照表寫進 player.name_zh。只更新已存在的選手；回傳更新筆數。"""
     n = 0
     for r in load_player_table(path):

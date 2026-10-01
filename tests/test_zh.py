@@ -103,3 +103,15 @@ def test_official_list_and_doubles_display():
     mixed = crawler.pairing_id(con, [96514, 1])
     assert digest._side(con, both)["name"] == "王齊麟／李哲輝"
     assert digest._side(con, mixed)["name"] == "Viktor AXELSEN / 王齊麟（WANG Chi-Lin）"
+
+
+def test_apply_player_names_uses_official_list():
+    """2026-10-01：apply_player_names 曾預設讀舊的 5 人表，正式名單 77 人只寫入 5 位。"""
+    con = crawler.connect(":memory:")
+    rows = zh.load_player_table()
+    assert len(rows) >= 77
+    for r in rows:
+        con.execute("INSERT INTO player (player_id) VALUES (?)", (int(r["player_id"]),))
+    assert zh.apply_player_names(con) == len(rows)
+    got = dict(con.execute("SELECT player_id, name_zh FROM player"))
+    assert got[62713] == "詹又蓁" and got[92913] == "邱相榤" and got[96725] == "林湘緹" and got[69009] == "林芝昀"
