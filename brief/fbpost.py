@@ -25,8 +25,11 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "data" / "posts"
 TRIVIA_RULES = ROOT / "config" / "trivia_rules.md"
 EFFORTS = ("low", "medium")         # 寫手 Opus 的推理強度：low 不過才試 medium（notes 23:15）
-BODY_RANGE = (150, 400)
-BODY_RANGE_TAIWAN = (150, 500)      # notes 20:20（Raymond 選 A）：大賽台灣選手多，戰報放寬到 500 字
+# 字數（notes 21:10）：故事貼文、台灣戰報 500–1,800；冷知識 300–1,200。上限是「可以寫到」，素材不夠就短
+BODY_RANGE = (500, 1800)
+BODY_RANGE_TRIVIA = (300, 1200)
+TRIVIA_KINDS = {"history", "rivalry", "rules", "ranking"}
+POST_MAX_TOKENS = 12000             # 長文＋推理，輸出上限依字數調高（21:10）
 MAX_EMOJI = 5
 EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿⭐⬆⬇↔-⇿]")
 
@@ -41,10 +44,11 @@ SYSTEM = """你是台灣羽球粉專的小編，審稿人是前職業選手 Raym
 - 開頭標籤依「語氣」：新聞語氣用【賽事名】（例【亞運羽球】）；故事語氣用【羽球故事】或【○○故事】（準則 R6）
 - FB 不支援 Markdown：不要用 **粗體**、# 標題、條列符號、表格、Unicode 花體字；強調只用開頭【】、段落空行、少量表情符號
 - 正文最後一行固定是「🏸 Raymond 的羽球筆記」（簽名，hashtag 不放在正文裡）
-- **數字預算（準則 R7，程式會數）：全篇最多 5 個、每一段最多 1 個**。一串局分（19-21 21-13 21-18）算 1 個、「9 勝 0 負」算 1 個、
-  年份與【】裡的不算；排名、分鐘數、局分都算。同一段想放第二個數字時，改用文字（「排名四十多名」「打了快兩個小時」）或拆成兩段
-- 正文 150–400 字（台灣戰報可到 500 字；不含 hashtag），短段落（每段 1–3 句，段落之間空一行），表情符號整則最多 5 個
-- **正文字數（不含空白）硬上限 400 字（台灣戰報 500 字），超過會被退回**；台灣選手很多時，挑最重要的 3–4 組寫，其餘一句帶過
+- **數字預算（準則 R7，程式會數）：全篇最多 5 個**，一段盡量只放 1 個。一串局分（19-21 21-13 21-18）算 1 個、「9 勝 0 負」算 1 個、
+  年份與【】裡的不算；排名、分鐘數、局分都算。其他數字改用文字（「排名四十多名」「打了快兩個小時」）
+- 字數（不含 hashtag、不含空白）：故事貼文與台灣戰報 500–1,800 字；冷知識 300–1,200 字。上限是「可以寫到」，**素材不夠就短，不准灌水、換角度重講**
+- 短段落（每段 1–3 句，段落之間空一行），表情符號整則最多 5 個；長文的段落要多元：脈絡、轉折、所以呢
+- 可以留一段「教練觀點」的位置給 Raymond：在 coach_slot 寫「建議放在哪一段之後、可以談什麼」，**不要代寫他的觀點**
 - 結尾一個互動問句
 - hashtag 3–5 個：#羽球 加上相關選手或賽事（中文，不能有空格；外國選手沒有中文名就不要做成 hashtag）
 硬性規則：
@@ -56,7 +60,8 @@ SYSTEM = """你是台灣羽球粉專的小編，審稿人是前職業選手 Raym
 - 事實清單以外的背景可以寫，但每句句尾加「⚠️推測」、語氣用「可能、大約」，並列進 todo；正文盡量少用推測
 - 事實清單有「新聞」的，把標題與網址放進 first_comment（建議放在第一則留言），不要塞在正文
 只輸出 JSON：{"body": "貼文正文（不含 hashtag）", "hashtags": ["#羽球", "…"], "image": "建議配圖：版型＋要填的欄位",
-"first_comment": ["新聞標題 網址"], "todo": [{"claim": "推測內容", "basis": "依據", "how": "建議怎麼查"}]}"""
+"first_comment": ["新聞標題 網址"], "coach_slot": "教練觀點建議放在哪裡、可以談什麼（一句）",
+"todo": [{"claim": "推測內容", "basis": "依據", "how": "建議怎麼查"}]}"""
 
 
 # ---------------------------------------------------------------- 選題
@@ -270,7 +275,7 @@ def recent_rivalry(con, d: dt.date) -> list[str]:
 
 # ---------------------------------------------------------------- 產生與檢查
 def body_range(kind: str) -> tuple[int, int]:
-    return BODY_RANGE_TAIWAN if kind == "taiwan" else BODY_RANGE
+    return BODY_RANGE_TRIVIA if kind in TRIVIA_KINDS else BODY_RANGE
 
 
 def system_prompt() -> str:
@@ -300,14 +305,11 @@ def count_numbers(text: str) -> int:
 
 
 def check_form(body: str, gap: int | None) -> list[str]:
-    """R5、R6、R7 的固定檢查（不靠模型判斷）。"""
+    """R5、R6、R7 的固定檢查（不靠模型判斷）。R7 只固定檢查全篇 ≤ 5 個數字；「每段最多 1 個」交給編輯參考（notes 10-02 05:55）。"""
     problems = []
     total = count_numbers(body)
     if total > NUMBER_BUDGET:
         problems.append(f"數字 {total} 個，超過 {NUMBER_BUDGET} 個（R7：只留沒有它故事就不成立的數字，其他改用文字描述）")
-    crowded = [para[:20] for para in re.split(r"\n\s*\n", body) if count_numbers(para) > 1]
-    if crowded:
-        problems.append("一段最多 1 個數字（R7），超過的段落：" + "、".join(f"「{c}…」" for c in crowded[:3]))
     lines = [l for l in body.strip().splitlines() if l.strip()]
     if not lines or lines[-1].strip() != SIGNATURE:
         problems.append(f"正文最後一行要是簽名「{SIGNATURE}」")
@@ -365,11 +367,32 @@ def check(out: dict, facts: list[str], kind: str = "story", gap: int | None = No
     return problems
 
 
-def _examples_fb() -> str:
+def _examples_fb(con=None) -> str:
+    """範例檔不動；載入時把未 confirmed 的外國選手中文名換回英文（confirmed 的異寫換成 confirmed 寫法）。
+    2026-10-01 dry-run：模型照抄範例裡的「安洗瑩」「山口茜」（都還不是 confirmed）。"""
     try:
-        return EXAMPLES_FB.read_text(encoding="utf-8")
+        text = EXAMPLES_FB.read_text(encoding="utf-8")
     except FileNotFoundError:
         return ""
+    return sanitize_names(text, con)
+
+
+def name_replacements(con=None) -> dict[str, str]:
+    """{範例裡可能出現的中文名: 應該寫成的名字}：候選譯名 → 英文；已知異寫 → confirmed 中文（沒有就英文）。"""
+    from brief.llm import KNOWN_VARIANT_EN, _foreign_rows
+    rows = _foreign_rows(con)
+    confirmed_by_en = {en: zh_ for zh_, en, st in rows if st == "confirmed"}
+    out = {zh_: en for zh_, en, st in rows if st != "confirmed" and zh_ not in confirmed_by_en.values()}
+    for zh_, en in KNOWN_VARIANT_EN.items():
+        out[zh_] = confirmed_by_en.get(en, en)
+    return out
+
+
+def sanitize_names(text: str, con=None) -> str:
+    for zh_, repl in sorted(name_replacements(con).items(), key=lambda kv: -len(kv[0])):
+        text = text.replace(zh_, repl)
+    # 「Leo Rolly CARNANDO／Daniel MARTHIN（Leo Rolly CARNANDO／Daniel MARTHIN）」這種換完重複的括號去掉
+    return re.sub(r"([A-Za-z][^（）\n]{2,80}?)（\1）", r"\1", text)
 
 
 def post_text(out: dict) -> str:
@@ -385,7 +408,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
                  f"距離故事最新一場比賽 {gap if gap is not None else '很多'} 天 → 故事語氣（範例 3 的寫法，開頭【羽球故事】或【○○故事】，"
                  "從人物或關係切入、照時間順序講，最新那場只是其中一段）")
     user = (f"貼文類型：{KIND_LABEL[kind]}\n語氣：{tone_text}\n\n範例（只看寫法與語氣；範例裡的名字與數字不能用；"
-            "**範例裡外國選手的中文名是暫用的，不准照用**——名字一律照事實清單：事實清單寫英文就寫英文）：\n{_examples_fb()}"
+            "**範例裡外國選手的中文名是暫用的，不准照用**——名字一律照事實清單：事實清單寫英文就寫英文）：\n{_examples_fb(con)}"
             f"\n\n事實清單：\n" + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(facts)))
     if hasattr(llm, "task"):
         llm.task = "fbpost"
@@ -445,6 +468,8 @@ def render(today: str, kind: str, out: dict) -> str:
         notes += [f"編輯意見 {x['rule']}：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in ed["final"]]
     for name in out.get("_missing_zh") or []:
         notes.append(f"這位台灣選手沒有中文名，請提供：{name}")
+    if out.get("coach_slot"):
+        notes.append(f"教練觀點（你自己寫）：{out['coach_slot']}")
     if out.get("todo"):
         notes.append("待查清單：" + "；".join(f"{x.get('claim', '')}（依據：{x.get('basis', '')}；怎麼查：{x.get('how', '')}）"
                                          for x in out["todo"]))
@@ -465,10 +490,10 @@ def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bo
         return {"status": "skipped_budget", "kind": kind}
     # notes 23:15：粉專所有類型都用 Opus；先 low，不過再試 medium（status.md 回報）。編輯維持 Sonnet low
     gap = info.get("gap")
-    editor = make_llm() if make_llm else script.make_script_llm("routine", con, effort="low")
+    editor = make_llm() if make_llm else script.make_script_llm("heavy", con, effort="low")      # 編輯：Opus low（05:55）
     out, problems, used = None, [], None
     for effort in EFFORTS:
-        llm = make_llm() if make_llm else script.make_script_llm("heavy", con, effort=effort)
+        llm = make_llm() if make_llm else script.make_script_llm("heavy", con, effort=effort, max_tokens=POST_MAX_TOKENS)
         out, problems = generate(llm, kind, facts, con, today, gap, editor)
         used = effort
         if out is not None:

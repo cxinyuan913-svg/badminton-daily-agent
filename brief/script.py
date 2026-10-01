@@ -246,10 +246,10 @@ def _parse(raw: str) -> dict:
         return {}
 
 
-def make_script_llm(purpose: str, con, effort: str | None = None, model: str | None = None):
+def make_script_llm(purpose: str, con, effort: str | None = None, model: str | None = None, max_tokens: int | None = None):
     from brief import llm as llm_mod
     return llm_mod.AnthropicLLM(purpose, con=con, effort=effort or SCRIPT_EFFORT[purpose],
-                                max_tokens=SCRIPT_MAX_TOKENS, model=model)
+                                max_tokens=max_tokens or SCRIPT_MAX_TOKENS, model=model)
 
 
 def daily_budget() -> float:
@@ -389,7 +389,7 @@ def _story_main(con, t: dict, day: str, title: str, make_llm, send, alert) -> tu
     for i, c in enumerate(picks, 1):
         facts = story.materials(con, t, day, c, cands, daym, allm)
         model = make_llm("heavy") if make_llm else make_script_llm("heavy", con, effort=story.STORY_EFFORT)
-        editor = make_llm("editor") if make_llm else make_script_llm("routine", con, effort="low")   # 編輯：Sonnet low
+        editor = make_llm("editor") if make_llm else make_script_llm("heavy", con, effort="low")     # 編輯：Opus low（10-02 05:55）
         out, problems = story.generate(model, facts, con, {"tournament_id": t["tournament_id"], "day": day}, editor=editor)
         head = f"故事 {i}｜{c['kind']}"
         if out is None:

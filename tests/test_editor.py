@@ -105,12 +105,15 @@ def test_trivia_rules_only_checked(tmp_path):
     assert real == [1, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 
-def test_taiwan_report_allows_500():
-    body = "昨天台灣選手對外國選手 7 勝 2 負。" * 26                  # 約 450 字
+def test_post_length_ranges_2110():
+    """notes 21:10：故事貼文、台灣戰報 500–1,800 字；冷知識 300–1,200 字。"""
+    assert fbpost.body_range("taiwan") == (500, 1800) and fbpost.body_range("story") == (500, 1800)
+    assert fbpost.body_range("history") == (300, 1200) and fbpost.body_range("rules") == (300, 1200)
+    body = "昨天台灣選手對外國選手 7 勝 2 負。" + "這一組在場上一直找不到節奏，但最後一局咬得很緊。" * 18   # 約 430 字
     tags = ["#羽球", "#亞運", "#周天成"]
     facts = ["昨天台灣選手對外國選手 7 勝 2 負（共 9 場；台灣內戰另計）"]
     length = lambda kind: [p for p in fbpost.check({"body": body, "hashtags": tags}, facts, kind, gap=1) if "字，不在" in p]
-    assert not length("taiwan") and length("story")
+    assert length("taiwan") and not length("history")            # 430 字：戰報太短、冷知識可以
 
 
 def test_fb_form_rules_r5_r6():
@@ -152,7 +155,7 @@ def test_r7_number_budget():
     ok = "【羽球故事】2026 亞運，排名四十多名的組合。\n\n決賽第三局 21-18 收下。\n\n" + sig
     assert not [p for p in fbpost.check_form(ok, gap=2) if "數字" in p]
     crowded = "【羽球故事】世界 #46 打敗世界第 1。\n\n" + sig
-    assert any("一段最多 1 個" in p for p in fbpost.check_form(crowded, gap=2))
+    assert not any("一段" in p for p in fbpost.check_form(crowded, gap=2))   # 05:55 C：每段的數字交給編輯判斷
     many = "【羽球故事】開頭。\n\n" + "\n\n".join(f"第 {i} 段" for i in range(1, 8)) + "\n\n" + sig
     assert any("超過 5 個" in p for p in fbpost.check_form(many, gap=2))
 
@@ -202,3 +205,11 @@ def test_r11_recent_news_matches_names(tmp_path):
     got = story.recent_news(con, ["周天成（CHOU Tien Chen）"], "2026-10-01")
     assert len(got) == 1 and "周天成亞運賽後受訪（cna，2026-09-28）" in got[0] and "膝蓋" in got[0]
     assert story.recent_news(con, ["林俊易"], "2026-10-01") == []
+
+
+def test_examples_sanitized_names():
+    """05:55 A：範例檔不動，載入時未 confirmed 的外國選手中文名換回英文。"""
+    text = fbpost.sanitize_names("印尼的卡納多／馬汀（Leo Rolly CARNANDO／Daniel MARTHIN），決賽贏過坤拉武特與白荷娜。")
+    assert "卡納多" not in text and "馬汀" not in text and "白荷娜" not in text
+    assert "Leo Rolly CARNANDO／Daniel MARTHIN（Leo Rolly CARNANDO／Daniel MARTHIN）" not in text   # 重複括號去掉
+    assert "BAEK Ha Na" in text

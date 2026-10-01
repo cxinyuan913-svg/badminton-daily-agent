@@ -222,7 +222,23 @@ def third_place_word(text: str) -> bool:
 
 
 # 試寫時出現過的暫定譯名（台灣媒體的寫法是昆拉武特、法漢、卡爾南多、馬丁）
-KNOWN_VARIANTS = {"坤拉武特", "法罕", "卡納多", "馬汀"}
+KNOWN_VARIANT_EN = {"坤拉武特": "Kunlavut VITIDSARN", "法罕": "Alwi FARHAN", "卡納多": "Leo Rolly CARNANDO", "馬汀": "Daniel MARTHIN",
+                    "白荷娜": "BAEK Ha Na", "金元浩": "KIM Won Ho", "徐承宰": "SEO Seung Jae"}   # 台灣媒體查不到或還不是 confirmed（2026-10-01）
+KNOWN_VARIANTS = set(KNOWN_VARIANT_EN)
+
+
+def _foreign_rows(con=None) -> list[tuple[str, str, str]]:
+    """譯名表 (name_zh, name_en, status)；沒有表就空。"""
+    try:
+        import sqlite3
+        if con is None:
+            db = ENV_FILE.parent / "data" / "brief.db"
+            if not db.exists():
+                return []
+            con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        return con.execute("SELECT name_zh, name_en, status FROM foreign_name").fetchall()
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def _foreign_variants() -> set[str]:
