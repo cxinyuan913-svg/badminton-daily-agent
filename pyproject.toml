@@ -7,6 +7,7 @@ dependencies = [
     "requests>=2.31",
     "anthropic>=1.0",
     "pypinyin>=0.50",
+    "pypdf>=5",                 # 中華羽協甲組名單 PDF（台灣歷史選手中文名比對）
 ]
 
 [project.optional-dependencies]

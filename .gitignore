@@ -21,3 +21,6 @@ venv/
 
 # 規章 PDF（Raymond 手動下載，BWF 版權；程式只引用條號）
 docs/regulations/*.pdf
+
+# 中華羽協甲組名單 PDF（notes 10-02 05:55：不進版控）
+config/ctba/*.pdf
