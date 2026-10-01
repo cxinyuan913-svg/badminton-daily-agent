@@ -1,6 +1,6 @@
 #!/bin/sh
 # 主機（Linux）排程入口：同一時間只跑一個本專案的工作（flock），輸出附加到 data/logs/<工作>.log
-#   run_job.sh watch | daily | backup
+#   run_job.sh watch | daily | backup | fbpost
 set -eu
 cd "$(dirname "$0")/.."
 mkdir -p data/logs
@@ -10,6 +10,7 @@ case "$job" in
   watch)  cmd=".venv/bin/python -m brief.watch --db data/brief.db" ;;
   daily)  cmd=".venv/bin/python -m brief.daily --db data/brief.db --send" ;;
   backup) cmd=".venv/bin/python scripts/backup_db.py data/brief.db data/backup 7" ;;
+  fbpost) cmd=".venv/bin/python -m brief.fbpost --db data/brief.db" ;;
   *) echo "unknown job: $job" >&2; exit 2 ;;
 esac
 log="data/logs/$job.log"

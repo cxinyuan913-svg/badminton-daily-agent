@@ -137,7 +137,8 @@ def available() -> bool:
 
 # ---------------------------------------------------------------- 事實檢查
 NUMBER = re.compile(r"\d+")
-SCORE = re.compile(r"(\d{1,2})\s*(?:[-–—:：]|比)\s*(\d{1,2})(?!\d)")
+# 前面不能是數字或連字號：日期「2026-10-01」原本會被讀成比分 26-10、10-01，讓 26、10 變成「查得到的數字」（2026-10-01 修正）
+SCORE = re.compile(r"(?<![\d\-–—])(\d{1,2})\s*(?:[-–—:：]|比)\s*(\d{1,2})(?![\d\-–—])")
 # 模型把「自我更正」也寫出來時（2026-09-30 實測），整段不採用
 META = re.compile(r"等一下|更正|修正後|我寫錯|寫錯了|以下是|抱歉")
 LATIN_NAME = re.compile(r"[A-Z][A-Za-z'.-]+(?: [A-Z][A-Za-z'.-]+)*")
@@ -180,6 +181,7 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
             missing.append(f"{a}-{b}")
     # 其餘數字要整個比對（否則「5」會在「21-15」裡被找到）
     numbers = set(NUMBER.findall(SCORE.sub(" ", source))) | {x for pair in scores for x in pair}
+    numbers |= {str(int(x)) for x in numbers}           # 「2026-10-01」的 01 = 「10 月 1 日」的 1
     for token in NUMBER.findall(SCORE.sub(" ", text)):
         if token not in numbers and token not in missing:
             missing.append(token)
@@ -189,11 +191,20 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
         if token not in missing:
             missing.append(token)
     for name_zh, name_en in CJK_PAIR.findall(text):
+        # 「男單林俊易（LIN Chun-Yi）」會抓到「單林俊易」：結尾是表上的名字、英文對得上就算對
+        # 括號裡可能接國家或排名：「邱品蒨（CHIU Pin-Chian，世界 #17）」
+        en = re.split(r"[，,]", name_en)[0].strip()
+        if any(name_zh.endswith(z) and e == en for z, e in zh_names.items()):
+            continue
         if zh_names.get(name_zh) != name_en:
             missing.append(f"{name_zh}（{name_en}）對照表不符")
     for name_zh in zh_names:
         if name_zh in text and name_zh not in source and name_zh not in missing:
             missing.append(name_zh)
+    # 有中文名的選手只寫英文 = 同一人兩種寫法（2026-10-01 粉專試跑：「LIN Chun-Yi」應寫「林俊易」）
+    for name_zh, name_en in zh_names.items():
+        if name_en and name_en in text and name_zh not in text and name_zh in source:
+            missing.append(f"{name_en}（應寫中文名{name_zh}）")
     # 外國選手的其他中文寫法（譯名表的候選、試寫出現過的暫定譯名）：同一人只能有一種寫法（notes 15:40）
     for name_zh in _foreign_variants():
         if name_zh in text and name_zh not in source and name_zh not in missing and f"{name_zh}（譯名不一致）" not in missing:

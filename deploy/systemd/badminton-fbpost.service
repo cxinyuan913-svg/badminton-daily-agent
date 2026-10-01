@@ -1,0 +1,11 @@
+[Unit]
+Description=badminton-daily-agent fbpost：粉專貼文草稿（台北 07:00 = UTC 23:00；FBPOST=1 才推）
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/badminton-daily-agent
+ExecStart=/bin/sh /root/badminton-daily-agent/scripts/run_job.sh fbpost
+# 與教練工具共用 1 GB 主機：限制記憶體、降低優先順序
+MemoryMax=400M
+Nice=10
+TimeoutStartSec=1h

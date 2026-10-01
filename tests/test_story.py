@@ -43,3 +43,53 @@ def test_record_written_as_score_is_allowed():
     src = "TAN Ning / LIU Sheng Shu對洪恩慈／謝沛珊 8 戰全勝，局數 16 勝 0 負；從 2025 丹麥公開賽四強起 9 勝 0 負"
     assert unverified("局數 0 比 16，最近 9-0", src, {}) == []
     assert unverified("局數 0 比 15", src, {})                           # 對不上的照擋
+
+
+def test_cjk_pair_with_event_prefix_and_comeback_tag():
+    """粉專試跑：「男單林俊易（LIN Chun-Yi）」不該被當成對照表不符；三局先輸第一局的比賽事實要寫明逆轉。"""
+    from brief.llm import unverified
+    from brief import storylines as sl
+    src = "男單 決賽：林俊易（LIN Chun-Yi）（中華台北）勝 Yushi TANAKA（日本），比分 11-21 21-17 21-14"
+    assert unverified("男單林俊易（LIN Chun-Yi）11-21 21-17 21-14 奪冠", src, {"林俊易": "LIN Chun-Yi"}) == []
+    assert unverified("男單林俊易（LIN Dan）奪冠", src, {"林俊易": "LIN Chun-Yi"})
+    side = lambda n: {"name": n, "country": "TPE", "pairing_id": 1, "home": True}
+    m = {"event": "MS", "round": "Final", "winner": side("A"), "loser": side("B"), "winner_rank": None, "loser_rank": None,
+         "score": "11-21 21-17 21-14"}
+    assert "先輸第一局逆轉" in sl.match_fact(m)
+    assert "逆轉" not in sl.match_fact({**m, "score": "21-11 17-21 21-14"})
+
+
+def test_cjk_pair_with_rank_inside_parentheses():
+    from brief.llm import unverified
+    src = "女單 64 強：邱品蒨（CHIU Pin-Chian）（中華台北，世界 #17）勝 X（馬來西亞，世界 #28），比分 21-13 21-13"
+    assert unverified("女單邱品蒨（CHIU Pin-Chian，世界 #17）21-13 21-13 晉級", src, {"邱品蒨": "CHIU Pin-Chian"}) == []
+
+
+def test_english_only_name_when_chinese_exists():
+    from brief.llm import unverified
+    src = "男單 決賽：林俊易（LIN Chun-Yi）（中華台北）勝 Yushi TANAKA（日本），比分 11-21 21-17 21-14"
+    assert "LIN Chun-Yi（應寫中文名林俊易）" in unverified("LIN Chun-Yi 奪冠", src, {"林俊易": "LIN Chun-Yi"})
+    assert unverified("林俊易（LIN Chun-Yi）奪冠", src, {"林俊易": "LIN Chun-Yi"}) == []
+
+
+def test_fbpost_hashtag_without_space():
+    from brief import fbpost
+    body = "從 2025 丹麥公開賽四強起，AN Se Young 對 Akane YAMAGUCHI 9 勝 0 負。" * 4
+    facts = ["AN Se Young對Akane YAMAGUCHI；從 2025 丹麥公開賽四強起 9 勝 0 負"]
+    bad = fbpost.check({"body": body, "hashtags": ["#羽球", "#AN Se Young", "#亞運"]}, facts)
+    assert any("空格" in p for p in bad)
+    assert not fbpost.check({"body": body, "hashtags": ["#羽球", "#安洗瑩", "#亞運"]}, facts)
+
+
+def test_dates_are_not_scores():
+    """日期「2026-10-01」不能被讀成比分 26-10，讓自算的 26 名混過去（粉專試跑：68−42=26）。"""
+    from brief.llm import SCORE, unverified
+    assert SCORE.findall("今天是 2026-10-01") == []
+    assert SCORE.findall("比分 19-21 21-13，21 比 18") == [("19", "21"), ("21", "13"), ("21", "18")]
+    src = "今天是 2026-10-01；女單決賽：A（世界 #68）勝 B（世界 #42），比分 22-20 15-21 21-14"
+    assert "26" in unverified("排名比對手低 26 名", src, {})
+
+
+def test_leading_zero_numbers():
+    from brief.llm import unverified
+    assert unverified("10 月 1 日", "今天是 2026-10-01", {}) == []

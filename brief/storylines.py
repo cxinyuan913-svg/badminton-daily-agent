@@ -69,6 +69,9 @@ def side_text(side: dict, rank: str | None = None) -> str:
 def match_fact(m: dict) -> str:
     w, l = m["winner"], m["loser"]
     tag = f"，規則判定{m['upset']}" if m.get("upset") else ""
+    g = games(m["score"])
+    if len(g) == 3 and g[0][0] < g[0][1]:
+        tag += "，先輸第一局逆轉"           # 比分看得出來的事實寫明，「逆轉」才有依據（2026-10-01 粉專試跑）
     return (f"{EVENT_ZH.get(m['event'], m['event'])} {zh.round_name(m['round'])}："
             f"{side_text(w, _rk(m['winner_rank'], m.get('winner_rank_src')))}勝 "
             f"{side_text(l, _rk(m['loser_rank'], m.get('loser_rank_src')))}，比分 {m['score']}{tag}")
