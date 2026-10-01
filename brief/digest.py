@@ -30,7 +30,8 @@ LATE_ROUNDS = {"QF", "SF", "Final", "F"}
 ROUND_ORDER = ["Qual. R64", "Qual. R32", "Qual. R16", "Qual. QF", "Q1", "Q2", "Q3", "R128", "R64", "R32", "R16", "R1", "R2", "R3", "QF", "SF", "Final", "F"]
 EVENT_ORDER = ["MS", "WS", "MD", "WD", "XD"]
 HOME_COUNTRY = "TPE"
-NEWS_SOURCE = {"bwf": "BWF", "bwfworldtour": "BWF 世界巡迴賽", "cna": "中央社", "nownews": "NOWnews"}
+NEWS_SOURCE = {"bwf": "BWF", "bwfworldtour": "BWF 世界巡迴賽", "cna": "中央社", "nownews": "NOWnews",
+               "ettoday": "ETtoday", "pts": "公視", "tsna": "TSNA"}
 NEWS_DAYS = 2              # 新聞只推最近兩天發布的
 LOOKBACK_DAYS = 7         # 只看最近幾天的比賽，避免第一次推送時把十年份全推出去
 # (門檻, 標籤)：種子的世界排名在門檻以內，輸給門檻以外（或無排名）的選手。由嚴到寬比對
@@ -308,16 +309,8 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
           and not grade3.late_day(con, m["tournament_id"], m["date"])]   # 四強日、決賽日也由 watch 發（21:05）
     since = (today - dt.timedelta(days=MORNING_NEWS_DAYS)).isoformat()
     news = [n for n in pending_news(con, today) if (n["published"] or "")[:10] >= since]
-    if llm is not None:
-        from brief.llm import news_gist
-        for n in news:
-            if n["source"] in ("bwf", "bwfworldtour"):
-                try:
-                    n["gist"] = news_gist(llm, n["title"])
-                except Exception as e:  # noqa: BLE001
-                    if errors is not None:
-                        errors.append(f"llm news: {e!r}")
-                    break
+    from brief import news_summary                     # notes 06:20 第 1 點：每則 2–3 句中文摘要，同一事件合併
+    groups = news_summary.summarize(con, llm, news, errors) if news else []
     g3_lines, g3_shown = grade3_section(con, g3, podium_on_final_only=True)
     from brief.foreign_names import weekly_lines as foreign_weekly
     weekly = nickname.weekly_lines(con, today) + foreign_weekly(con, today)   # 週一：暱稱＋本週新增譯名
@@ -336,11 +329,12 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
         lines += ["", f"另有 IC／IS 共 {len(g3) - g3_shown} 場，已存入資料庫。"]
     if news:
         lines += ["", "__**新聞**__（只當資訊來源，引用要改寫並附出處）"]
-        for n in news:
-            lines.append(f"- 【{NEWS_SOURCE.get(n['source'], n['source'])}】{n['title']}"
-                         f"（{(n['published'] or '')[:10]}） <{n['url']}>")
-            if n.get("gist"):
-                lines.append(f"  　重點：{n['gist']}")
+        for g in groups:
+            first = g["items"][0]
+            srcs = "、".join(dict.fromkeys(NEWS_SOURCE.get(n["source"], n["source"]) for n in g["items"]))
+            lines.append(f"- **{first['title']}**｜{srcs}｜{(first['published'] or '')[:10]}")
+            lines.append(f"  　{g['summary']}" if g["summary"] else "  　（只有標題：內文沒抓到或摘要沒通過事實檢查）")
+            lines.append("  　" + " ".join(f"<{n['url']}>" for n in g["items"]))
     lines += weekly
     return "\n".join(lines), g3, news
 

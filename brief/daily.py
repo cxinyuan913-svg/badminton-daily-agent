@@ -121,6 +121,8 @@ def run(con, client: Client, today: dt.date, lookback: int = LOOKBACK_DAYS, verb
         errors += news_errors
         from brief import foreign_names, llm, nickname
         foreign_names.scan_new(con, client)               # 台灣媒體內文 → 外國選手譯名（交接單 003）
+        from brief import news_summary                   # 晨報摘要要用的內文（BWF 也抓；notes 06:20）
+        news_summary.fetch_texts(con, client, (today - dt.timedelta(days=2)).isoformat())
         nickname.scan_new(con, today, llm.AnthropicLLM("routine", con=con) if llm.available() else None)
     except Exception as e:  # noqa: BLE001
         errors.append(f"news: {e!r}")
