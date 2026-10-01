@@ -33,6 +33,24 @@ EXAMPLES = ROOT / "tests" / "fixtures" / "script_styles"
 DAILY_STORY_MIN = 6.0         # 每日單一故事的分數門檻：低於就不產生（寧缺勿濫）
 VOICE_RANGE = (120, 320)      # 30 秒約 120 字；素材不夠就短，不湊秒數（notes 15:40）
 DAILY_COST_ALERT = 0.5      # US$／天（notes 10:20）
+# 腳本的推理強度與輸出上限（notes 15:20）：一份腳本＋3 標題實際約 1,000 token，high 的內部推理是主要費用
+SCRIPT_EFFORT = {"heavy": "medium", "routine": "low"}
+SCRIPT_MAX_TOKENS = 4000
+DEFAULT_DAILY_BUDGET = 1.0  # US$／台北時間一天；.env 的 LLM_DAILY_BUDGET_USD 覆寫
+
+CHECK_TABLE = """
+CREATE TABLE IF NOT EXISTS script_check (
+    checked_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    tournament_id   INTEGER,
+    local_date      TEXT,
+    style           TEXT NOT NULL,
+    model           TEXT,
+    effort          TEXT,
+    attempt         INTEGER NOT NULL,             -- 1 = 第一次、2 = 重試
+    passed          INTEGER NOT NULL,
+    problems        TEXT                          -- 不通過的原因（哪個數字或名字對不上）
+);
+"""
 QUICK_TPE_ROUNDS = {"R16", "QF", "SF", "Final", "F"}   # 快報的台灣段落：16 強起被淘汰的那場（主場賽事台灣選手很多）
 
 STYLES = {
@@ -227,7 +245,53 @@ def _parse(raw: str) -> dict:
         return {}
 
 
-def generate(llm, style: str, facts: list[str], flags: dict) -> tuple[dict | None, list[str]]:
+def make_script_llm(purpose: str, con, effort: str | None = None, model: str | None = None):
+    from brief import llm as llm_mod
+    return llm_mod.AnthropicLLM(purpose, con=con, effort=effort or SCRIPT_EFFORT[purpose],
+                                max_tokens=SCRIPT_MAX_TOKENS, model=model)
+
+
+def daily_budget() -> float:
+    try:
+        return float(_env("LLM_DAILY_BUDGET_USD") or DEFAULT_DAILY_BUDGET)
+    except ValueError:
+        return DEFAULT_DAILY_BUDGET
+
+
+def taipei_today() -> str:
+    return (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=8)).date().isoformat()
+
+
+def over_budget(con, today: str | None = None) -> bool:
+    """台北時間今天的 LLM 總費用（日報＋腳本）超過預算 → 腳本一律跳過（notes 15:20）。"""
+    from brief.llm import spent_taipei_day
+    return con is not None and spent_taipei_day(con, today or taipei_today()) > daily_budget()
+
+
+def budget_alert(con, alert, today: str) -> None:
+    """超過預算的告警每天只發一次。"""
+    if con is None or alert is None:
+        return
+    con.execute("CREATE TABLE IF NOT EXISTS budget_alert (day TEXT PRIMARY KEY)")
+    if con.execute("INSERT OR IGNORE INTO budget_alert (day) VALUES (?)", (today,)).rowcount:
+        con.commit()
+        from brief.llm import spent_taipei_day
+        alert(f"**LLM 每日預算**：台北 {today} 已花 US${spent_taipei_day(con, today):.2f}，超過 US${daily_budget():.2f}，"
+              "今天的腳本全部跳過（日報、今日重點照跑）")
+
+
+def log_check(con, ctx: dict | None, style: str, llm, attempt: int, problems: list[str]) -> None:
+    if con is None:
+        return
+    con.executescript(CHECK_TABLE)
+    ctx = ctx or {}
+    con.execute("INSERT INTO script_check (tournament_id, local_date, style, model, effort, attempt, passed, problems) "
+                "VALUES (?,?,?,?,?,?,?,?)", (ctx.get("tournament_id"), ctx.get("day"), style, getattr(llm, "model", None),
+                                             getattr(llm, "effort", None), attempt, int(not problems), "；".join(problems) or None))
+    con.commit()
+
+
+def generate(llm, style: str, facts: list[str], flags: dict, con=None, ctx: dict | None = None) -> tuple[dict | None, list[str]]:
     label, example, _, _ = STYLES[style]
     ex = (EXAMPLES / example).read_text(encoding="utf-8") if example else "（這種風格沒有範例，照說明寫）"
     user = (f"風格：{label}。{STYLE_GUIDE[style]}\n\n範例（只看格式與語氣）：\n{ex}\n\n事實清單：\n"
@@ -239,6 +303,7 @@ def generate(llm, style: str, facts: list[str], flags: dict) -> tuple[dict | Non
         prompt = user if not problems else user + "\n\n上一版沒有通過檢查，請修正：" + "；".join(problems)
         out = _parse(llm.complete(SYSTEM, prompt))
         problems = check(out, facts, flags)
+        log_check(con, ctx, style, llm, attempt + 1, problems)
         if not problems:
             return out, []
     return None, problems
@@ -273,14 +338,19 @@ def run_for_day(con, t: dict, day: str, deepest_round: str | None = None, next_p
     send = send if send is not None else script_sender()
     title = f"{zh.tournament(t['name'])}｜{day}"
     results, md = {}, [f"# 影片腳本草稿｜{title}", ""]
+    today = taipei_today()
     for style in styles:
+        if over_budget(con, today):
+            results[style] = {"status": "skipped_budget"}
+            budget_alert(con, alert, today)
+            continue
         label, _, purpose, flag = STYLES[style]
         f = facts_for(con, t, day, style, next_preview)
         if f is None:
             results[style] = {"status": "skipped"}
             continue
-        model = make_llm(purpose) if make_llm else llm_mod.AnthropicLLM(purpose, con=con)
-        out, problems = generate(model, style, f["facts"], f["flags"])
+        model = make_llm(purpose) if make_llm else make_script_llm(purpose, con)
+        out, problems = generate(model, style, f["facts"], f["flags"], con, {"tournament_id": t["tournament_id"], "day": day})
         if out is None:
             results[style] = {"status": "failed", "problems": problems}
             md += [f"### {label}", "", f"（未通過事實檢查：{'；'.join(problems)}）", ""]
@@ -303,8 +373,12 @@ def run_weekly(con, make_llm=None, send=None, alert=None, week: str | None = Non
     f = weekly_facts(con, week)
     if f is None:
         return {"status": "skipped"}
-    model = make_llm("heavy") if make_llm else llm_mod.AnthropicLLM("heavy", con=con)
-    out, problems = generate(model, "weekly_rank", f["facts"], f["flags"])
+    today = taipei_today()
+    if over_budget(con, today):
+        budget_alert(con, alert, today)
+        return {"status": "skipped_budget"}
+    model = make_llm("heavy") if make_llm else make_script_llm("heavy", con)
+    out, problems = generate(model, "weekly_rank", f["facts"], f["flags"], con, {"day": f["week"]})
     title = f"世界排名 {f['week']}"
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUT_DIR / f"{f['week']}_ranking.md"

@@ -217,3 +217,27 @@ def test_foreign_name_variants_and_medals_in_highlight():
     assert not [m for m in unverified("昆拉武特 21-12 21-16 奪冠", src, {}) if "譯名" in m]
     assert medal_misuse("昆拉武特拿下金牌", src) and not medal_misuse("昆拉武特拿下冠軍", src)
     assert not medal_misuse("拿下金牌", "男單冠軍（金牌）：昆拉武特（泰國）")
+
+
+def test_daily_budget_skips_scripts_and_alerts_once(monkeypatch):
+    """notes 15:20：台北時間一天累計超過 LLM_DAILY_BUDGET_USD → 腳本跳過、告警只發一次。"""
+    import sqlite3
+    from brief.llm import CALL_TABLE, spent_taipei_day
+    con = sqlite3.connect(":memory:")
+    con.executescript(CALL_TABLE)
+    # 台北 10-01 = UTC 09-30 16:00 ～ 10-01 16:00
+    con.executemany("INSERT INTO llm_call (called_at, purpose, task, model, input_tokens, output_tokens, cost_usd) VALUES (?,?,?,?,?,?,?)",
+                    [("2026-09-30 15:59:59", "heavy", "script_quick", "m", 1, 1, 5.0),     # 台北 09-30
+                     ("2026-09-30 16:00:00", "routine", "highlight", "m", 1, 1, 0.6),
+                     ("2026-10-01 15:00:00", "heavy", "script_story", "m", 1, 1, 0.5)])
+    assert spent_taipei_day(con, "2026-10-01") == pytest.approx(1.1)
+    monkeypatch.setattr(script, "_env", lambda k: "1.0" if k == "LLM_DAILY_BUDGET_USD" else None)
+    assert script.over_budget(con, "2026-10-01") and not script.over_budget(con, "2026-10-02")
+    alerts = []
+    script.budget_alert(con, alerts.append, "2026-10-01")
+    script.budget_alert(con, alerts.append, "2026-10-01")
+    assert len(alerts) == 1 and "超過 US$1.00" in alerts[0]
+    monkeypatch.setattr(script, "taipei_today", lambda: "2026-10-01")
+    t = {"tournament_id": 1, "name": "x", "level": "S300", "start_date": "2026-10-01", "end_date": "2026-10-01"}
+    res = script.run_for_day(con, t, "2026-10-01", "Final", make_llm=lambda p: None, send=lambda x: None, styles=["story"])
+    assert res["styles"]["story"]["status"] == "skipped_budget"

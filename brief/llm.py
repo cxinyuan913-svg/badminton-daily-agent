@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS llm_call (
     model           TEXT NOT NULL,                -- 實際回應的模型（fallback 時可能不同）
     input_tokens    INTEGER NOT NULL,
     output_tokens   INTEGER NOT NULL,
-    cost_usd        REAL                          -- 依 PRICE 估算；未知模型為 NULL
+    cost_usd        REAL,                         -- 依 PRICE 估算；未知模型為 NULL
+    effort          TEXT                          -- low / medium / high（推理強度，影響輸出 token）
 );
 """
 
@@ -77,35 +78,54 @@ def cost(model: str, input_tokens: int, output_tokens: int) -> float | None:
     return None if price is None else (input_tokens * price[0] + output_tokens * price[1]) / 1_000_000
 
 
-def log_call(con, purpose: str, task: str | None, model: str, input_tokens: int, output_tokens: int) -> None:
+def log_call(con, purpose: str, task: str | None, model: str, input_tokens: int, output_tokens: int,
+             effort: str | None = None) -> None:
     con.executescript(CALL_TABLE)
-    con.execute("INSERT INTO llm_call (purpose, task, model, input_tokens, output_tokens, cost_usd) VALUES (?,?,?,?,?,?)",
-                (purpose, task, model, input_tokens, output_tokens, cost(model, input_tokens, output_tokens)))
+    if "effort" not in {r[1] for r in con.execute("PRAGMA table_info(llm_call)")}:
+        con.execute("ALTER TABLE llm_call ADD COLUMN effort TEXT")
+    con.execute("INSERT INTO llm_call (purpose, task, model, input_tokens, output_tokens, cost_usd, effort) VALUES (?,?,?,?,?,?,?)",
+                (purpose, task, model, input_tokens, output_tokens, cost(model, input_tokens, output_tokens), effort))
     con.commit()
+
+
+def spent_taipei_day(con, day: str) -> float:
+    """台北時間某一天（YYYY-MM-DD）的 LLM 費用；llm_call.called_at 是 UTC。"""
+    import datetime as dt
+    start = dt.datetime.fromisoformat(day) - dt.timedelta(hours=8)
+    end = start + dt.timedelta(days=1)
+    try:
+        return con.execute("SELECT COALESCE(SUM(cost_usd), 0) FROM llm_call WHERE called_at >= ? AND called_at < ?",
+                           (start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"))).fetchone()[0]
+    except Exception:  # noqa: BLE001 — 還沒有 llm_call 表
+        return 0.0
 
 
 class AnthropicLLM:
     """purpose 決定模型；con 有給就記錄每次呼叫的用量。task 是呼叫端設定的標籤（記錄用）。"""
 
-    def __init__(self, purpose: str = "routine", con=None, api_key: str | None = None):
+    def __init__(self, purpose: str = "routine", con=None, api_key: str | None = None,
+                 effort: str | None = None, max_tokens: int = 16000, model: str | None = None):
         import anthropic
         self.client = anthropic.Anthropic(api_key=api_key or _env("ANTHROPIC_API_KEY"))
-        self.purpose, self.model, self.con, self.task = purpose, model_for(purpose), con, None
+        self.purpose, self.model, self.con, self.task = purpose, model or model_for(purpose), con, None
+        self.effort, self.max_tokens = effort or EFFORT[purpose], max_tokens
+        self.last_usage = None
 
     def complete(self, system: str, user: str) -> str:
         # 伺服器端 fallback：安全分類器拒答時，由 API 自動改用其他模型完成同一個請求
         response = self.client.beta.messages.create(
             model=self.model,
-            max_tokens=16000,
+            max_tokens=self.max_tokens,
             system=system,
-            output_config={"effort": EFFORT[self.purpose]},
+            output_config={"effort": self.effort},
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
             messages=[{"role": "user", "content": user}],
         )
         if self.con is not None:
             log_call(self.con, self.purpose, self.task, response.model,
-                     response.usage.input_tokens, response.usage.output_tokens)
+                     response.usage.input_tokens, response.usage.output_tokens, self.effort)
+        self.last_usage = (response.usage.input_tokens, response.usage.output_tokens, response.stop_reason)
         if response.stop_reason == "refusal":
             raise RuntimeError(f"LLM 拒答：{getattr(response.stop_details, 'category', None)}")
         return "".join(b.text for b in response.content if b.type == "text").strip()
