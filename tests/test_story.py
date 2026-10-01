@@ -74,7 +74,7 @@ def test_english_only_name_when_chinese_exists():
 
 def test_fbpost_hashtag_without_space():
     from brief import fbpost
-    body = "從 2025 丹麥公開賽四強起，AN Se Young 對 Akane YAMAGUCHI 9 勝 0 負。" * 4
+    body = "【羽球故事】" + "從 2025 丹麥公開賽四強起，AN Se Young 對 Akane YAMAGUCHI 9 勝 0 負。" * 4 + "\n\n" + fbpost.SIGNATURE
     facts = ["AN Se Young對Akane YAMAGUCHI；從 2025 丹麥公開賽四強起 9 勝 0 負"]
     bad = fbpost.check({"body": body, "hashtags": ["#羽球", "#AN Se Young", "#亞運"]}, facts)
     assert any("空格" in p for p in bad)

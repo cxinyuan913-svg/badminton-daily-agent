@@ -227,7 +227,7 @@ def script_text(out: dict) -> str:
     return "\n".join(lines)
 
 
-def edit(editor, out: dict, con=None, ctx: dict | None = None) -> list[dict]:
+def edit(editor, out: dict, con=None, ctx: dict | None = None, text: str | None = None, context: str = "") -> list[dict]:
     """編輯檢查（LLM-as-judge）：回傳不通過的條目 [{rule, quote, comment}]；編輯本身出錯時當作通過（不擋稿）。"""
     from brief import script
     if editor is None:
@@ -237,7 +237,8 @@ def edit(editor, out: dict, con=None, ctx: dict | None = None) -> list[dict]:
     g = guidelines()
     ids = guideline_ids(g)
     try:
-        res = _json(editor.complete(EDITOR_SYSTEM, f"審稿準則：\n{g}\n\n腳本：\n{script_text(out)}"))
+        res = _json(editor.complete(EDITOR_SYSTEM, f"審稿準則：\n{g}\n\n" + (f"補充：{context}\n\n" if context else "")
+                                    + f"稿子：\n{text if text is not None else script_text(out)}"))
     except Exception:  # noqa: BLE001
         return []
     bad = [x for x in res.get("items") or [] if x.get("pass") is False and x.get("rule") in ids]

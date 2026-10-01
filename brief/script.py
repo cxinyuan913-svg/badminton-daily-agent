@@ -269,16 +269,16 @@ def over_budget(con, today: str | None = None) -> bool:
     return con is not None and spent_taipei_day(con, today or taipei_today()) > daily_budget()
 
 
-def budget_alert(con, alert, today: str) -> None:
-    """超過預算的告警每天只發一次。"""
+def budget_alert(con, alert, today: str, who: str = "腳本") -> None:
+    """超過預算的告警：每個工作（腳本、粉專貼文）每天各發一次。"""
     if con is None or alert is None:
         return
-    con.execute("CREATE TABLE IF NOT EXISTS budget_alert (day TEXT PRIMARY KEY)")
-    if con.execute("INSERT OR IGNORE INTO budget_alert (day) VALUES (?)", (today,)).rowcount:
+    con.execute("CREATE TABLE IF NOT EXISTS budget_alerts (day TEXT NOT NULL, who TEXT NOT NULL, PRIMARY KEY (day, who))")
+    if con.execute("INSERT OR IGNORE INTO budget_alerts (day, who) VALUES (?, ?)", (today, who)).rowcount:
         con.commit()
         from brief.llm import spent_taipei_day
         alert(f"**LLM 每日預算**：台北 {today} 已花 US${spent_taipei_day(con, today):.2f}，超過 US${daily_budget():.2f}，"
-              "今天的腳本全部跳過（日報、今日重點照跑）")
+              f"今天的{who}跳過（日報、今日重點照跑）")
 
 
 def log_check(con, ctx: dict | None, style: str, llm, attempt: int, problems: list[str]) -> None:

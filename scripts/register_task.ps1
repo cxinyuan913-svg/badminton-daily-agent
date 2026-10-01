@@ -16,6 +16,6 @@ $every30 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterva
 Register-ScheduledTask -TaskName "badminton-watch" -Action $watch -Trigger $every30 `
     -Settings $settings -Description "羽球日報：每站當地當天打完就發" -Force
 
-$fbpost = New-ScheduledTaskAction -Execute "$root\scriptsun_fbpost.cmd" -WorkingDirectory $root
+$fbpost = New-ScheduledTaskAction -Execute "$root\scripts\run_fbpost.cmd" -WorkingDirectory $root
 Register-ScheduledTask -TaskName "badminton-fbpost" -Action $fbpost -Trigger (New-ScheduledTaskTrigger -Daily -At 7:00am) `
     -Settings $settings -Description "羽球日報：粉專貼文草稿" -Force

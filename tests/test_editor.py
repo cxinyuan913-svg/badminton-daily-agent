@@ -101,12 +101,44 @@ def test_trivia_rules_only_checked(tmp_path):
     rules = fbpost.load_trivia_rules(p)
     assert [(r["no"], r["checked"]) for r in rules] == [(1, False), (2, True)]
     assert [r["no"] for r in fbpost.checked_rules(p)] == [2]
-    assert fbpost.checked_rules() == []                          # 目前 config/trivia_rules.md 全是 [ ]
+    real = [r["no"] for r in fbpost.checked_rules()]             # notes 21:00b：Raymond 勾 1、4–12，2、3 不用
+    assert real == [1, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
 
 def test_taiwan_report_allows_500():
     body = "昨天台灣選手對外國選手 7 勝 2 負。" * 26                  # 約 450 字
     tags = ["#羽球", "#亞運", "#周天成"]
     facts = ["昨天台灣選手對外國選手 7 勝 2 負（共 9 場；台灣內戰另計）"]
-    assert not [p for p in fbpost.check({"body": body, "hashtags": tags}, facts, "taiwan") if "正文" in p]
-    assert [p for p in fbpost.check({"body": body, "hashtags": tags}, facts, "story") if "正文" in p]
+    length = lambda kind: [p for p in fbpost.check({"body": body, "hashtags": tags}, facts, kind, gap=1) if "字，不在" in p]
+    assert not length("taiwan") and length("story")
+
+
+def test_fb_form_rules_r5_r6():
+    """R5：簽名、不用 Markdown／花體字；R6：超過 1 天要故事語氣。"""
+    sig = fbpost.SIGNATURE
+    news = "【亞運羽球】洪恩慈／謝沛珊又碰上世界第一。\n\n" + sig
+    assert fbpost.check_form(news, gap=1) == []
+    assert any("故事語氣" in p for p in fbpost.check_form(news, gap=3))
+    assert fbpost.check_form("【羽球故事】她們和世界第一的 8 次交手。\n\n" + sig, gap=3) == []
+    assert any("簽名" in p for p in fbpost.check_form("【羽球故事】沒有簽名", gap=3))
+    assert any("Markdown" in p for p in fbpost.check_form("【羽球故事】**粗體**\n\n" + sig, gap=3))
+    assert any("花體" in p for p in fbpost.check_form("【羽球故事】\U0001D400\U0001D401\n\n" + sig, gap=3))
+    assert fbpost.tone_for(None) == "story" and fbpost.tone_for(0) == "news"
+
+
+def test_missing_tpe_chinese_name_listed():
+    facts = ["3 年前的今天（2023-10-01），2023 高雄大師賽 女單 決賽：LIANG Ting Yu（中華台北，世界 #68）勝 Riko GUNJI（日本），比分 22-20",
+             "男單 決賽：林俊易（LIN Chun-Yi）（中華台北，世界 #24）勝 Yushi TANAKA（日本），比分 11-21 21-17 21-14"]
+    assert fbpost.missing_tpe_zh(facts) == ["LIANG Ting Yu"]
+
+
+def test_budget_alert_per_job():
+    """同一天腳本已經告警過，粉專被擋也要告警（notes 21:00）。"""
+    import sqlite3
+    from brief import script
+    con = sqlite3.connect(":memory:")
+    alerts = []
+    script.budget_alert(con, alerts.append, "2026-10-02")
+    script.budget_alert(con, alerts.append, "2026-10-02", who="粉專貼文")
+    script.budget_alert(con, alerts.append, "2026-10-02", who="粉專貼文")
+    assert len(alerts) == 2 and "粉專貼文" in alerts[1]
