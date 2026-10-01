@@ -5,10 +5,14 @@
   - BWF World Tour https://bwfworldtour.bwfbadminton.com/news/      同上；標題沒有 title 屬性時用圖片 alt
   - 中央社體育   https://www.cna.com.tw/list/aspt.aspx               網址 ID 前 8 碼是日期；robots 標示 ai-input=yes
   - NOWnews 運動 https://www.nownews.com/cat/sport/                  aria-label + <time datetime>
-台灣媒體列表混了所有運動，用關鍵字篩出羽球。
+  - ETtoday 運動雲 https://sports.ettoday.net/news-list/新聞/最新新聞  <h3><a title> + <span class="date">（2026-10-01 加）
+  - 公視新聞 即時 https://news.pts.org.tw/dailynews                   <h2 title> + <time datetime>（沒有體育分類，2026-10-01 加）
+  - TSNA 台灣運動好事 https://www.tsna.com/all                        <a title> + <span class="time">（2026-10-01 加）
+台灣媒體列表混了所有運動，用關鍵字篩出羽球（各站的「羽球分類頁」不存在或不準，見 docs/data-sources.md）。
+收集頻率：brief.watch 每 30 分鐘一次（notes 16:00；列表只放最新幾十則，一天一次會漏）。
 
-不用的來源：聯合新聞網（robots.txt 禁止 Claude / ClaudeBot / GPTBot）、
-NOWnews 標籤頁（403）、Google 新聞 RSS（robots.txt 擋下）。
+不用的來源：聯合新聞網、自由時報體育、Yahoo 奇摩運動、運動視界（robots.txt 禁止 ClaudeBot 等 AI 爬蟲）、
+NOWnews 標籤頁（403）、Google 新聞 RSS（robots.txt 擋下）、中華民國羽球協會最新消息（停在 2024 年）。
 
 新聞只當資訊來源：草稿要改寫並附出處，不可整段轉貼。
 
@@ -27,7 +31,11 @@ SOURCES = {
     "bwfworldtour": "https://bwfworldtour.bwfbadminton.com/news/",
     "cna": "https://www.cna.com.tw/list/aspt.aspx",
     "nownews": "https://www.nownews.com/cat/sport/",
+    "ettoday": "https://sports.ettoday.net/news-list/%E6%96%B0%E8%81%9E/%E6%9C%80%E6%96%B0%E6%96%B0%E8%81%9E",
+    "pts": "https://news.pts.org.tw/dailynews",
+    "tsna": "https://www.tsna.com/all",
 }
+TAIWAN = ("cna", "nownews", "ettoday", "pts", "tsna")
 # 台灣媒體的羽球篩選：基本詞 + 追蹤中的選手 + 退休但新聞仍以羽球為主的選手 + 已採用的暱稱
 BASE_KEYWORDS = ["羽球", "羽毛球", "羽賽", "BWF", "湯姆斯盃", "尤伯盃", "蘇迪曼盃", "湯盃", "尤盃"]
 # 正式名單 config/players_zh.csv 出現前的暫用選手（2026-09-30）；李洋已退休、現任運動部部長，新聞多為政策，不列
@@ -116,10 +124,55 @@ def parse_nownews(page: str) -> list[dict]:
     return list(out.values())
 
 
+def _items(page: str, anchor: re.Pattern, when: re.Pattern) -> list[tuple[tuple, tuple | None]]:
+    """把列表頁切成一則一則（從這個標題到下一個標題），日期只在同一則裡找，避免抓到下一則的日期。"""
+    hits = list(anchor.finditer(page))
+    out = []
+    for k, m in enumerate(hits):
+        end = hits[k + 1].start() if k + 1 < len(hits) else len(page)
+        w = when.search(page, m.end(), end)
+        out.append((m.groups(), w.groups() if w else None))
+    return out
+
+
+ET_ITEM = re.compile(r'<h3><a href="(https://sports\.ettoday\.net/news/\d+)"[^>]*title="([^"]+)"')
+ET_TIME = re.compile(r'<span class="date">(\d{4}-\d{2}-\d{2})')
+PTS_ITEM = re.compile(r'<h2 title="([^"]+)">\s*<a\s+href="(https://news\.pts\.org\.tw/article/\d+)"')
+PTS_TIME = re.compile(r'<time datetime="(\d{4}-\d{2}-\d{2})')
+TSNA_ITEM = re.compile(r'<a href="(/article/\d+)" title="([^"]+)" class="card-info">')
+TSNA_TIME = re.compile(r'<span class="time">(\d{4})年(\d{2})月(\d{2})日')
+
+
+def parse_ettoday(page: str) -> list[dict]:
+    out = {}
+    for (url, title), w in _items(page, ET_ITEM, ET_TIME):
+        out.setdefault(url, {"url": url, "source": "ettoday", "title": _clean(title), "published": w[0] if w else None})
+    return list(out.values())
+
+
+def parse_pts(page: str) -> list[dict]:
+    out = {}
+    for (title, url), w in _items(page, PTS_ITEM, PTS_TIME):
+        out.setdefault(url, {"url": url, "source": "pts", "title": _clean(title), "published": w[0] if w else None})
+    return list(out.values())
+
+
+def parse_tsna(page: str) -> list[dict]:
+    out = {}
+    for (path, title), w in _items(page, TSNA_ITEM, TSNA_TIME):
+        url = f"https://www.tsna.com{path}"
+        out.setdefault(url, {"url": url, "source": "tsna", "title": _clean(title),
+                             "published": "-".join(w) if w else None})
+    return list(out.values())
+
+
+TAIWAN_PARSERS = {"cna": parse_cna, "nownews": parse_nownews, "ettoday": parse_ettoday, "pts": parse_pts, "tsna": parse_tsna}
+
+
 def parse(source: str, page: str, pattern: re.Pattern | None = None) -> list[dict]:
     if source in ("bwf", "bwfworldtour"):
         return parse_bwf(page, source)
-    rows = parse_cna(page) if source == "cna" else parse_nownews(page)
+    rows = TAIWAN_PARSERS[source](page)
     return [r for r in rows if (pattern or BADMINTON).search(r["title"])]
 
 

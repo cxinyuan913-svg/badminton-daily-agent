@@ -22,8 +22,10 @@ from pathlib import Path
 from brief.crawler import Client, connect
 
 CSV_PATH = Path(__file__).resolve().parent.parent / "config" / "players_zh_foreign.csv"
-SOURCES = {"www.cna.com.tw": "cna", "www.nownews.com": "nownews"}
-PRIORITY = ["cna", "nownews"]                          # 譯名衝突時以中央社為準
+# 台灣媒體（皆已確認 robots.txt 允許；notes 16:00 新增 ETtoday、公視、TSNA）
+SOURCES = {"www.cna.com.tw": "cna", "www.nownews.com": "nownews", "sports.ettoday.net": "ettoday",
+           "news.pts.org.tw": "pts", "www.tsna.com": "tsna"}
+PRIORITY = ["cna", "pts", "nownews", "ettoday", "tsna"]   # 譯名衝突時以中央社為準
 
 TABLE = """
 CREATE TABLE IF NOT EXISTS foreign_article (
@@ -243,7 +245,8 @@ def scan_new(con, client: Client, limit: int = 20) -> int:
     con.executescript(TABLE)
     try:
         urls = [u for (u,) in con.execute(
-            "SELECT url FROM news_item WHERE source IN ('cna', 'nownews') AND url NOT IN (SELECT url FROM foreign_article) "
+            "SELECT url FROM news_item WHERE source IN ('cna', 'nownews', 'ettoday', 'pts', 'tsna') "
+            "AND url NOT IN (SELECT url FROM foreign_article) "
             "ORDER BY published DESC LIMIT ?", (limit,))]
     except Exception:  # noqa: BLE001 — 還沒有 news_item
         return 0

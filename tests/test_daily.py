@@ -53,7 +53,8 @@ def test_cancelled_and_untracked_are_skipped():
 
 
 NEWS_PAGES = {"bwf": "bwf_news_2026-09-30.html", "bwfworldtour": "bwfworldtour_news_2026-09-30.html",
-              "cna": "cna_aspt_2026-09-30.html", "nownews": "nownews_sport_2026-09-30.html"}
+              "cna": "cna_aspt_2026-09-30.html", "nownews": "nownews_sport_2026-09-30.html",
+              "ettoday": "news_ettoday_2026-10-01.html", "pts": "news_pts_2026-10-01.html", "tsna": "news_tsna_2026-10-01.html"}
 
 
 class FakeResponse:

@@ -250,7 +250,20 @@ def run(con, client, now_utc: dt.datetime, send, alert=None, llm=None, dry_run: 
             sent.append({"tournament_id": tid, "local_date": day, "forced": forced, "text": text})
         previews += _pending_previews(con, client, t, now_utc, send, dry_run)
     con.commit()
+    if not dry_run:
+        errors += _news(con, client)
     return {"sent": sent, "previews": previews, "errors": errors}
+
+
+def _news(con, client) -> list[str]:
+    """新聞列表每 30 分鐘收一次（notes 16:00）：每來源 1 個請求，已收過的網址跳過；新的台灣羽球新聞抓內文存起來。"""
+    from brief import foreign_names, news
+    try:
+        _, errs = news.collect(client, con)
+        foreign_names.scan_new(con, client, limit=5)
+        return errs
+    except Exception as e:  # noqa: BLE001
+        return [f"news: {e!r}"]
 
 
 def _scripts(con, t: dict, day: str, stage: list[dict], nxt, alert, errors: list) -> None:

@@ -84,6 +84,10 @@ Grade 1、2、3 用的是同一套元件與 API。
 | www.tournamentsoftware.com | robots.txt 禁止 `/tournament/`、`/sport/`、`/player/` 等路徑；BWF 賽事會轉回管理員登入頁 |
 | Google 新聞 RSS | robots.txt 擋下 |
 | 聯合新聞網 | robots.txt 明確禁止 `Claude`、`ClaudeBot`、`GPTBot`（2026-09-30），尊重其意願不抓取 |
+| 自由時報體育 `sports.ltn.com.tw` | robots.txt 對 `ClaudeBot`、`anthropic-ai`、`GPTBot` 等 `Disallow: /`（2026-10-01） |
+| Yahoo 奇摩運動 `tw.sports.yahoo.com` | robots.txt 對 `ClaudeBot`、`Claude-Web`、`anthropic-ai` 等 `Disallow: /`（2026-10-01） |
+| 運動視界 `www.sportsv.net` | robots.txt 對 `ClaudeBot`、`GPTBot` `Disallow: /`（2026-10-01） |
+| 中華民國羽球協會最新消息 `www.ctb.org.tw/news-list.asp` | 沒有 robots.txt（404，不限制），但最新一則停在 2024 年（`news-info.asp?id=496`），暫不收（2026-10-01） |
 | 截圖 + OCR | 本質上仍是自動存取；會讀錯比分、拿不到選手 ID |
 
 ## 補充與校對
@@ -100,8 +104,11 @@ Grade 1、2、3 用的是同一套元件與 API。
 | BWF World Tour | `https://bwfworldtour.bwfbadminton.com/news/` | 同上；沒有 title 屬性時用圖片 alt | 只有 World Tour 賽事，9/30 時最新一則是 9/7 |
 | 中央社體育 | `https://www.cna.com.tw/list/aspt.aspx` | 網址 ID 前 8 碼是日期 | robots.txt 標示 `ai-input=yes, ai-train=no`：可當 AI 輸入、不可訓練 |
 | NOWnews 運動 | `https://www.nownews.com/cat/sport/` | `aria-label` + `<time datetime>` | 標籤頁 `/tag/羽球` 回 403，改用分類頁 |
+| ETtoday 運動雲 | `https://sports.ettoday.net/news-list/新聞/最新新聞` | `<h3><a title>` + `<span class="date">` | robots.txt 只擋留言頁；`/sport-category/羽球` 存在但內容是各種運動，不準（2026-10-01） |
+| 公視新聞 即時 | `https://news.pts.org.tw/dailynews` | `<h2 title>` + `<time datetime>` | robots.txt 擋 `/search*`、`/api/`；沒有體育分類（category 1–13 都不是），用即時列表（2026-10-01） |
+| TSNA 台灣運動好事 | `https://www.tsna.com/all` | `<a title class="card-info">` + `<span class="time">` | robots.txt 擋 `/search`；列表一頁約 8 則（2026-10-01） |
 
 - 台灣媒體列表混了所有運動，用關鍵字（羽球、湯尤盃、主要台灣選手名）篩選；選手名單請 Raymond 補充（`news.BADMINTON`）
-- 兩站列表各只有 20–30 則，大型綜合賽事期間幾小時就被擠掉，每日跑一次可能漏；之後視需要改為一天多次或翻頁
-- 只存標題、網址、日期；內文與向量化在 P2
+- 列表各只有 8–30 則，大型綜合賽事期間幾小時就被擠掉：**2026-10-01 起跟 `brief.watch` 每 30 分鐘收一次**（每來源 1 個請求，已收過的網址跳過；notes 16:00）
+- 符合關鍵字的台灣媒體文章抓內文存進 `foreign_article`（譯名表、暱稱、交接單 005 的場上爭議用），只存不外流；推送時只給標題＋連結＋自己寫的一句重點
 - 搜尋：改用正式搜尋 API，配額與費用待查

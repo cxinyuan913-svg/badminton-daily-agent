@@ -74,3 +74,17 @@ def test_official_player_table_format(tmp_path):
                  "組合,,A / B,,,MD 10,Y,\n", encoding="utf-8")
     rows = zh.load_player_table(f)
     assert rows == [{"player_id": "34810", "name_zh": "周天成", "name_en": "CHOU Tien Chen", "track": "Y"}]
+
+
+def test_new_taiwan_sources_parse_real_pages():
+    """notes 16:00 新來源（2026-10-01 真實列表頁）：每則都要有網址、標題、日期；非羽球被關鍵字濾掉。"""
+    import re
+    from pathlib import Path
+    fx = Path(__file__).parent / "fixtures"
+    for src, n in (("ettoday", 9), ("pts", 14), ("tsna", 8)):
+        page = (fx / f"news_{src}_2026-10-01.html").read_text(encoding="utf-8")
+        rows = news.parse(src, page, re.compile("."))
+        assert len(rows) == n and all(r["published"] == "2026-10-01" and r["title"] and r["url"].startswith("https://") for r in rows)
+        assert news.parse(src, page) == []                     # 這三頁當時沒有羽球新聞
+    pts = (fx / "news_pts_2026-10-01.html").read_text(encoding="utf-8")
+    assert [r["title"][:6] for r in news.parse("pts", pts, re.compile("網球"))] == ["搶十大戰上演"]
