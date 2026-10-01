@@ -193,44 +193,126 @@ CREATE TABLE IF NOT EXISTS news_run (
     run_at          TEXT NOT NULL DEFAULT (datetime('now')),
     source          TEXT NOT NULL,
     parsed          INTEGER,                      -- 列表頁解析出幾則（不管是不是羽球）
-    matched         INTEGER,                      -- 符合關鍵字幾則
+    matched         INTEGER,                      -- 符合關鍵字幾則（台灣媒體：標題＋全文）
     added           INTEGER,                      -- 新寫入幾則
-    error           TEXT
+    error           TEXT,
+    fetched         INTEGER                       -- 這次抓了幾篇內文（台灣媒體，notes 06:25 D）
+);
+CREATE TABLE IF NOT EXISTS news_seen (
+    url             TEXT PRIMARY KEY,             -- 列表頁看過、抓過內文的文章（同一網址只抓一次）
+    source          TEXT NOT NULL,
+    title           TEXT,
+    seen_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    badminton       INTEGER NOT NULL              -- 1 = 通過篩選（標題＋全文）
 );
 """
+MAX_FETCH_PER_RUN = 15                            # 每來源每次最多抓幾篇內文（第一次上線列表有 20 則左右）
+SPORT_WORDS = ("羽球", "羽毛球")
+
+
+def is_badminton(title: str, text: str, names: list[str]) -> bool:
+    """notes 06:25 D：標題＋全文出現「羽球／羽毛球」至少 1 次，或選手名（追蹤中的台灣選手、外國選手譯名、暱稱）合計至少 2 次。
+    全文只順帶提到一次選手名的綜合報導不算。"""
+    blob = (title or "") + "\n" + (text or "")
+    if any(w in blob for w in SPORT_WORDS):
+        return True
+    return sum(blob.count(n) for n in names) >= 2
+
+
+def player_names(con) -> list[str]:
+    """篩選用的選手名：追蹤中台灣選手、外國選手 confirmed 譯名、已確認暱稱。"""
+    from brief import zh
+    names = [r["name_zh"] for r in zh.load_player_table() if r.get("track", "Y") == "Y" and r["name_zh"]] + list(KEEP_AFTER_RETIRE)
+    if con is not None:
+        for sql in ("SELECT name_zh FROM foreign_name WHERE status='confirmed'",
+                    "SELECT nickname FROM nickname WHERE status IN ('auto', 'confirmed')"):
+            try:
+                names += [r[0] for r in con.execute(sql) if r[0]]
+            except Exception:  # noqa: BLE001
+                pass
+    return sorted({n for n in names if len(n) >= 2})
+
+
+def _migrate_run(con) -> None:
+    con.executescript(RUN_TABLE)
+    if "fetched" not in {r[1] for r in con.execute("PRAGMA table_info(news_run)")}:
+        con.execute("ALTER TABLE news_run ADD COLUMN fetched INTEGER")
+
+
+def check_articles(con, client, source: str, rows: list[dict], names: list[str], limit: int = MAX_FETCH_PER_RUN) -> tuple[list[dict], int]:
+    """列表上沒看過的每一則都抓一次內文，用標題＋全文判斷是不是羽球；通過的存內文（foreign_article）並回傳。"""
+    from brief import foreign_names
+    con.executescript(foreign_names.TABLE)
+    seen = {u for (u,) in con.execute(f"SELECT url FROM news_seen WHERE url IN ({','.join('?' * len(rows))})",
+                                       [r["url"] for r in rows])} if rows else set()
+    passed, fetched = [], 0
+    for r in rows:
+        if r["url"] in seen or fetched >= limit:
+            continue
+        fetched += 1
+        try:                                              # 一篇抓不到不影響其他篇；下次還會再試（沒記進 news_seen）
+            resp = client.get(r["url"])
+        except Exception:  # noqa: BLE001
+            continue
+        if resp is None:
+            continue
+        text = foreign_names.page_text(resp.text)
+        ok = is_badminton(r["title"], text, names)
+        con.execute("INSERT OR REPLACE INTO news_seen (url, source, title, badminton) VALUES (?,?,?,?)",
+                    (r["url"], source, r["title"], int(ok)))
+        if ok:
+            con.execute("INSERT OR REPLACE INTO foreign_article (url, source, text) VALUES (?, ?, ?)", (r["url"], source, text))
+            if source in foreign_names.SOURCES.values():
+                try:
+                    foreign_names.scan_text(con, text, r["url"], source)     # 順便擷取譯名（失敗不影響收新聞）
+                except Exception:  # noqa: BLE001
+                    pass
+            passed.append(r)
+    con.commit()
+    return passed, fetched
 ZERO_ALERT_HOURS = 24                             # 某來源連續 24 小時整頁解析 0 則 → 告警（notes 06:20 第 2 點）
 ANY = re.compile(".")
 
 
-def collect(client: Client, con, sources=SOURCES) -> tuple[int, list[str]]:
-    """回傳（新增筆數, 錯誤）。單一來源失敗不影響其他來源。每次每個來源記一筆 news_run（解析幾則、符合幾則、新增幾則、錯誤）。"""
-    con.executescript(RUN_TABLE)
+def collect(client: Client, con, sources=SOURCES, full_text: bool = True) -> tuple[int, list[str]]:
+    """回傳（新增筆數, 錯誤）。單一來源失敗不影響其他來源。每次每個來源記一筆 news_run。
+    台灣媒體（notes 06:25 D）：標題有關鍵字的照收；其餘列表上的每一則新文章都抓一次內文，用標題＋全文判斷。"""
+    _migrate_run(con)
     added, errors = 0, []
     pattern = keyword_pattern(keywords(con))
+    names = player_names(con)
     for source, url in sources.items():
-        parsed = matched = new = None
+        parsed = matched = new = fetched = None
         err = None
         try:
             r = client.get(url)
             if r is None:
                 raise ValueError("404")
             rows = parse(source, r.text, pattern)
-            parsed = len(rows) if source in ("bwf", "bwfworldtour") else len(parse(source, r.text, ANY))
+            if source in ("bwf", "bwfworldtour"):
+                parsed = len(rows)
+            else:
+                every = parse(source, r.text, ANY)
+                parsed = len(every)
+                if full_text:
+                    by_title = {x["url"] for x in rows}
+                    extra, fetched = check_articles(con, client, source, [x for x in every if x["url"] not in by_title], names)
+                    rows = rows + extra
             matched = len(rows)
             new = store(con, rows)
             added += new
         except Exception as e:  # noqa: BLE001
             err = repr(e)
             errors.append(f"news {source}: {e!r}")
-        con.execute("INSERT INTO news_run (source, parsed, matched, added, error) VALUES (?,?,?,?,?)",
-                    (source, parsed, matched, new, err))
+        con.execute("INSERT INTO news_run (source, parsed, matched, added, error, fetched) VALUES (?,?,?,?,?,?)",
+                    (source, parsed, matched, new, err, fetched))
     con.commit()
     return added, errors
 
 
 def zero_sources(con, hours: int = ZERO_ALERT_HOURS) -> list[str]:
     """過去 hours 小時每一次都整頁解析 0 則（或出錯）的來源；至少要有 3 次紀錄才算，避免剛上線就告警。"""
-    con.executescript(RUN_TABLE)
+    _migrate_run(con)
     rows = con.execute("""SELECT source, COUNT(*), MAX(COALESCE(parsed, 0)) FROM news_run
                           WHERE run_at >= datetime('now', ?) GROUP BY source""", (f"-{hours} hours",)).fetchall()
     return [src for src, n, best in rows if n >= 3 and best == 0]
