@@ -176,6 +176,8 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
 
 
 UPSET_WORD = re.compile(r"爆冷|冷門")
+EVENT_WORD = re.compile(r"男單|女單|男雙|女雙|混雙")
+FINAL_WORD = re.compile(r"決賽|冠軍|封后|封王|奪冠|奪金|金牌")
 RANK_REF = re.compile(r"(?:世界第|世界排名第|#)\s*(\d+)")
 SENTENCE = re.compile(r"[^。；;！!？?\n]+")
 
@@ -195,6 +197,11 @@ def unlicensed_upsets(text: str, source: str, zh_names: dict[str, str] | None = 
         # 只用排名指稱（「世界第 71 爆冷擊敗世界第 5」）：兩個排名都要在同一行爆冷場次（2026-10-01 試寫誤擋）
         ranks = RANK_REF.findall(sent)
         if len(ranks) >= 2 and any(all(re.search(rf"#{r}(?!\d)", line) for r in ranks) for line in upset_lines):
+            continue
+        # 「項目＋決賽／冠軍」（「台北公開賽女雙爆冷封后」）：該項目的決賽是規則判定的爆冷就放行（notes 13:35，Raymond 選 B）
+        events = EVENT_WORD.findall(sent)
+        if events and FINAL_WORD.search(sent) and all(
+                any(line.startswith(f"{ev} 決賽") for line in upset_lines) for ev in events):
             continue
         bad.append(sent.strip())
     return bad

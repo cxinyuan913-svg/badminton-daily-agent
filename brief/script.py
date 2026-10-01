@@ -5,7 +5,7 @@
   八強起的比賽日 daily_taiwan、daily_story、daily_quick（只講當天的輪次）
   更早的比賽日   daily_taiwan、daily_story
   每週二         weekly_rank 排名更新
-模型：決賽日與排名更新用 heavy（opus），每日用 routine（sonnet）；每次呼叫記入 llm_call（task = script_<風格>）。
+模型：決賽日 1 快報、2 單一故事與排名更新用 heavy（opus），3 台灣視角、4 數據型與每日用 routine（sonnet）；每次呼叫記入 llm_call（task = script_<風格>）。
 開關（.env，預設全關，關著就不產生、不花錢）：SCRIPT_FINAL／SCRIPT_DAILY／SCRIPT_WEEKLY
   1    產生、寫檔（data/scripts/，不進版控），推到腳本專用頻道 DISCORD_WEBHOOK_SCRIPTS（notes 10:25；不推日報頻道）
   dry  只產生、寫檔，不推
@@ -37,8 +37,8 @@ QUICK_TPE_ROUNDS = {"R16", "QF", "SF", "Final", "F"}   # 快報的台灣段落�
 STYLES = {
     "quick": ("快報型", "quick.md", "heavy", "SCRIPT_FINAL"),
     "story": ("單一故事型", "story.md", "heavy", "SCRIPT_FINAL"),
-    "taiwan": ("台灣視角型", "taiwan.md", "heavy", "SCRIPT_FINAL"),
-    "numbers": ("數據型（觀察中）", "numbers.md", "heavy", "SCRIPT_FINAL"),
+    "taiwan": ("台灣視角型", "taiwan.md", "routine", "SCRIPT_FINAL"),       # notes 13:35（A）：3、4 改 routine
+    "numbers": ("數據型（觀察中）", "numbers.md", "routine", "SCRIPT_FINAL"),
     "daily_taiwan": ("台灣視角（每日）", "taiwan.md", "routine", "SCRIPT_DAILY"),
     "daily_story": ("單一故事（每日）", "story.md", "routine", "SCRIPT_DAILY"),
     "daily_quick": ("快報（當天輪次）", "quick.md", "routine", "SCRIPT_DAILY"),

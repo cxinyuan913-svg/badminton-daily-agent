@@ -185,3 +185,15 @@ def test_rank_label_only_official():
     assert sl._rk(None, "outside100") == "百名外"
     m = sl.official_only({"winner_rank": 3, "winner_rank_src": "estimate", "loser_rank": 9, "loser_rank_src": "official"})
     assert m["winner_rank"] is None and m["loser_rank"] == 9
+
+
+def test_upset_by_event_final():
+    """notes 13:35（B）：「項目＋決賽／冠軍」且該項目決賽是規則判定的爆冷 → 放行；否則照擋。"""
+    from brief.llm import unlicensed_upsets
+    src = ("女雙 決賽：Sumire NAKADE / Miyu TAKAHASHI（日本，世界 #71）勝 THINAAH Muralitharan / Pearly TAN（馬來西亞，世界 #5），比分 21-16 21-18，規則判定爆冷\n"
+           "男單 決賽：Yudai OKIMOTO（日本，世界 #26）勝 YOO Tae Bin（韓國，世界 #73），比分 21-15 21-18\n"
+           "男單 四強：YOO Tae Bin（韓國，世界 #73）勝 林俊易（中華台北，世界 #12），比分 21-19 21-19，規則判定爆冷")
+    assert unlicensed_upsets("台北公開賽女雙爆冷封后。", src, {}) == []
+    assert unlicensed_upsets("男單決賽爆冷。", src, {})                    # 男單決賽不是爆冷（爆冷在四強）
+    assert unlicensed_upsets("台北公開賽爆冷封后。", src, {})              # 沒寫項目
+    assert unlicensed_upsets("女雙八強爆冷。", src, {})                    # 有項目，但不是決賽／冠軍
