@@ -1,0 +1,66 @@
+{
+ "sentences": [
+  {
+   "url": "https://www.cna.com.tw/news/aspt/202605160226.aspx",
+   "source": "cna",
+   "text": "世界排名第6的周天成，本週征戰世界羽球聯盟（BWF）泰國公開賽，並榮膺男單第4種子，順利打進4強後，與世界排名第2的地主名將昆拉武特（Kunlavut Vitidsarn）正面交鋒；過去雙方7度交手，周天成手握5勝2負優勢，且處於近期對戰3連勝"
+  },
+  {
+   "url": "https://www.cna.com.tw/news/aspt/202609270115.aspx",
+   "source": "cna",
+   "text": "世界排名第5的周天成，賽前對戰世界第10的法漢（Alwi Farhan）有著3勝1敗的優勢，最近一次對戰是在8月羽球世錦賽，當時周天成直落2過關"
+  },
+  {
+   "url": "https://www.nownews.com/news/6877974",
+   "source": "nownews",
+   "text": "李詩灃首局在21：21平手後連丟兩分，以21：23惜敗；第二局雖以21：15強勢扳平，但在決勝局後半段持續被對手法漢（Alwi Farhan）壓制，最終以16：21落敗，讓印尼隊追回一分"
+  },
+  {
+   "url": "https://www.nownews.com/news/6877974",
+   "source": "nownews",
+   "text": "第四點男雙，何濟霆與劉毅迎戰卡爾南多（Leo Rolly Carnando）與馬丁（Daniel Marthin）"
+  },
+  {
+   "url": "https://www.nownews.com/news/6878558",
+   "source": "nownews",
+   "text": "▲台灣羽球一哥周天成在密集賽程得考驗下，於男單8強賽直落二不敵印尼小將法漢（Alwi Farhan）"
+  },
+  {
+   "url": "https://www.nownews.com/news/6879143",
+   "source": "nownews",
+   "text": "▲2026年名古屋亞運羽球賽事迎來男單金牌戰，泰國名將昆拉武特（Kunlavut Vitidsarn）以21：12、21：16直落二擊敗新加坡好手駱建佑（Loh Kean Yew），勇奪本屆亞運男單金牌"
+  }
+ ],
+ "players": [
+  [
+   34810,
+   "CHOU Tien Chen",
+   "TPE"
+  ],
+  [
+   58089,
+   "Alwi FARHAN",
+   "INA"
+  ],
+  [
+   64032,
+   "Kunlavut VITIDSARN",
+   "THA"
+  ],
+  [
+   68633,
+   "Leo Rolly CARNANDO",
+   "INA"
+  ],
+  [
+   76115,
+   "LOH Kean Yew",
+   "SGP"
+  ],
+  [
+   84786,
+   "Daniel MARTHIN",
+   "INA"
+  ]
+ ]
+}

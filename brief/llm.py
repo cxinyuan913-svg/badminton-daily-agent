@@ -128,8 +128,19 @@ CJK_PAIR = re.compile(r"([一-鿿]{2,4})（([A-Za-z][^）]*)）")
 
 
 def _zh_table() -> dict[str, str]:
+    """台灣選手中文名＋外國選手 confirmed 譯名：輸出裡出現的這些名字都必須在原始資料裡。"""
     from brief.zh import load_player_table
-    return {r["name_zh"]: r["name_en"] for r in load_player_table()}
+    names = {r["name_zh"]: r["name_en"] for r in load_player_table()}
+    try:
+        import sqlite3
+        from brief.discord import ENV_FILE
+        db = ENV_FILE.parent / "data" / "brief.db"
+        if db.exists():
+            con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+            names.update(dict(con.execute("SELECT name_zh, name_en FROM foreign_name WHERE status='confirmed'")))
+    except Exception:  # noqa: BLE001 — 沒有譯名表時只用台灣名單
+        pass
+    return names
 
 
 def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -> list[str]:

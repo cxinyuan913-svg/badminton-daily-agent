@@ -66,10 +66,13 @@ def _side(con, pairing_id: int) -> dict:
            WHERE p.pairing_id=? ORDER BY pl.player_id""", (pairing_id,)).fetchall()
     countries = sorted({r[2] for r in rows if r[2]})
     # 2026-09-30：單打「周天成（CHOU Tien Chen）」；雙打兩人都有中文名時寫「王齊麟／李哲輝」，否則逐人寫
-    if len(rows) == 2 and all(r[3] for r in rows):
-        name = "／".join(r[3] for r in rows)
+    # 2026-10-01（交接單 003）：外國選手有 confirmed 譯名時寫譯名（國家另外顯示），沒有就用英文
+    from brief.foreign_names import confirmed_names
+    foreign = confirmed_names(con)
+    if len(rows) == 2 and all(r[3] or foreign.get(r[0]) for r in rows):
+        name = "／".join(r[3] or foreign[r[0]] for r in rows)
     else:
-        name = " / ".join(zh.player(str(r[1]), r[3]) for r in rows)
+        name = " / ".join(foreign[r[0]] if not r[3] and r[0] in foreign else zh.player(str(r[1]), r[3]) for r in rows)
     return {"pairing_id": pairing_id, "name": name,
             "name_en": " / ".join(str(r[1]) for r in rows), "country": "/".join(countries),
             "home": HOME_COUNTRY in countries,
@@ -315,7 +318,8 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
                         errors.append(f"llm news: {e!r}")
                     break
     g3_lines, g3_shown = grade3_section(con, g3, podium_on_final_only=True)
-    weekly = nickname.weekly_lines(con, today)
+    from brief.foreign_names import weekly_lines as foreign_weekly
+    weekly = nickname.weekly_lines(con, today) + foreign_weekly(con, today)   # 週一：暱稱＋本週新增譯名
     notes = reminders(con, today)
     if not (news or g3_lines or weekly or notes):
         return None, g3, news
