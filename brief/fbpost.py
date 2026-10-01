@@ -40,6 +40,8 @@ SYSTEM = """你是台灣羽球粉專的小編，審稿人是前職業選手 Raym
 - 開頭標籤依「語氣」：新聞語氣用【賽事名】（例【亞運羽球】）；故事語氣用【羽球故事】或【○○故事】（準則 R6）
 - FB 不支援 Markdown：不要用 **粗體**、# 標題、條列符號、表格、Unicode 花體字；強調只用開頭【】、段落空行、少量表情符號
 - 正文最後一行固定是「🏸 Raymond 的羽球筆記」（簽名，hashtag 不放在正文裡）
+- **數字預算（準則 R7，程式會數）：全篇最多 5 個、每一段最多 1 個**。一串局分（19-21 21-13 21-18）算 1 個、「9 勝 0 負」算 1 個、
+  年份與【】裡的不算；排名、分鐘數、局分都算。同一段想放第二個數字時，改用文字（「排名四十多名」「打了快兩個小時」）或拆成兩段
 - 正文 150–400 字（台灣戰報可到 500 字；不含 hashtag），短段落（每段 1–3 句，段落之間空一行），表情符號整則最多 5 個
 - **正文字數（不含空白）硬上限 400 字（台灣戰報 500 字），超過會被退回**；台灣選手很多時，挑最重要的 3–4 組寫，其餘一句帶過
 - 結尾一個互動問句
@@ -229,7 +231,7 @@ def recent_rivalry(con, d: dt.date) -> list[str]:
     """最近 3 個月內有交手的宿敵／宰制候選，取分數最高的一則。"""
     since = (d - dt.timedelta(days=90)).isoformat()
     from brief import digest
-    best, best_date = None, None
+    best, best_date, best_m = None, None, None
     rows = con.execute(
         """SELECT m.match_id, m.tournament_id FROM match m JOIN tournament t USING (tournament_id)
            WHERE m.match_date BETWEEN ? AND ? AND m.round IN ('Final', 'F', 'SF') AND m.winner_side IN (1, 2)
@@ -239,9 +241,13 @@ def recent_rivalry(con, d: dt.date) -> list[str]:
         m = sl.official_only(digest.stage_matches(con, tid, [mid])[0])
         for c in sl.candidates_for_match(con, m):
             if c["kind"] in ("rivalry", "domination") and (best is None or c["score"] > best["score"]):
-                best, best_date = c, m["date"]
+                best, best_date, best_m = c, m["date"], m
+    if not best:
+        return []
+    careers = [f for side in ("winner", "loser")                      # 準則 R8：生涯素材
+               for f in sl.career(con, best_m[side]["pairing_id"], best_m["event"], best_m[side]["name"], best_m["date"])]
     return ([f"今天是 {d.isoformat()}，沒有比賽；最近 3 個月交手過的宿敵／宰制故事（最近一次交手 {best_date}）："]
-            + best["facts"]) if best else []
+            + best["facts"] + ["【生涯】"] + careers)
 
 
 # ---------------------------------------------------------------- 產生與檢查
@@ -260,9 +266,30 @@ def tone_for(gap: int | None) -> str:
     return "news" if gap is not None and gap <= 1 else "story"
 
 
+NUMBER_BUDGET = 5          # 準則 R7：一篇最多 4–5 個數字、一段最多 1 個
+SCORE_RUN = re.compile(r"\d{1,2}\s*(?:[-–—:：]|比)\s*\d{1,2}(?:[\s、，,]*\d{1,2}\s*(?:[-–—:：]|比)\s*\d{1,2})*")
+RECORD = re.compile(r"\d+\s*勝\s*\d+\s*負")
+YEAR = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
+
+
+def count_numbers(text: str) -> int:
+    """R7 的數字：排名、比分、分鐘數都算；一串局分（19-21 21-13 21-18）算 1 個；年份、【】裡的不算。"""
+    text = re.sub(r"【[^】]*】", "", text).replace(SIGNATURE, "")
+    n = len(SCORE_RUN.findall(text)) + len(RECORD.findall(text))   # 「9 勝 0 負」也算 1 個
+    text = RECORD.sub(" ", SCORE_RUN.sub(" ", text))
+    text = YEAR.sub(" ", text)
+    return n + len(re.findall(r"\d+(?:\.\d+)?", text))
+
+
 def check_form(body: str, gap: int | None) -> list[str]:
-    """R5、R6 的固定檢查（不靠模型判斷）。"""
+    """R5、R6、R7 的固定檢查（不靠模型判斷）。"""
     problems = []
+    total = count_numbers(body)
+    if total > NUMBER_BUDGET:
+        problems.append(f"數字 {total} 個，超過 {NUMBER_BUDGET} 個（R7：只留沒有它故事就不成立的數字，其他改用文字描述）")
+    crowded = [para[:20] for para in re.split(r"\n\s*\n", body) if count_numbers(para) > 1]
+    if crowded:
+        problems.append("一段最多 1 個數字（R7），超過的段落：" + "、".join(f"「{c}…」" for c in crowded[:3]))
     lines = [l for l in body.strip().splitlines() if l.strip()]
     if not lines or lines[-1].strip() != SIGNATURE:
         problems.append(f"正文最後一行要是簽名「{SIGNATURE}」")
@@ -336,7 +363,8 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
     tone_text = (f"距離故事最新一場比賽 {gap} 天 → 新聞語氣（範例 1、2 的寫法）" if tone == "news" else
                  f"距離故事最新一場比賽 {gap if gap is not None else '很多'} 天 → 故事語氣（範例 3 的寫法，開頭【羽球故事】或【○○故事】，"
                  "從人物或關係切入、照時間順序講，最新那場只是其中一段）")
-    user = (f"貼文類型：{KIND_LABEL[kind]}\n語氣：{tone_text}\n\n範例（只看寫法與語氣；範例裡的名字與數字不能用）：\n{_examples_fb()}"
+    user = (f"貼文類型：{KIND_LABEL[kind]}\n語氣：{tone_text}\n\n範例（只看寫法與語氣；範例裡的名字與數字不能用；"
+            "**範例裡外國選手的中文名是暫用的，不准照用**——名字一律照事實清單：事實清單寫英文就寫英文）：\n{_examples_fb()}"
             f"\n\n事實清單：\n" + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(facts)))
     if hasattr(llm, "task"):
         llm.task = "fbpost"

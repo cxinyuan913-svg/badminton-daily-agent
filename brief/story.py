@@ -161,6 +161,11 @@ def materials(con, t: dict, day: str, c: dict, cands: list[dict], daym: list[dic
     # 同一場的其他候選（例：完全宰制＋卡在同一輪）併進同一個故事
     same = [f for o in cands if o is not c and o["facts"][0] == c["facts"][0] for f in o["facts"][1:]]
     facts = head + ["【故事】"] + c["facts"] + same + seed_facts(con, c, daym)
+    # 準則 R8：故事主角的生涯（最高排名、目前排名、大賽冠亞軍）；沒查生涯不准寫黑馬／新星／回勇
+    m = next((x for x in (allm or daym) if sl.match_fact(x) == c["facts"][0]), None)
+    if m is not None:
+        facts += ["【生涯】"] + [f for side in ("winner", "loser")
+                                 for f in sl.career(con, m[side]["pairing_id"], m["event"], m[side]["name"], m["date"])]
     facts += (["【冷知識素材】"] + trivia) if trivia else []
     facts += (["【賽果背景素材】"] + back) if back else []
     facts += (["【新聞】"] + news) if (news := news_controversy(con, names)) else []

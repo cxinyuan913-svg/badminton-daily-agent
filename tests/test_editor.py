@@ -142,3 +142,16 @@ def test_budget_alert_per_job():
     script.budget_alert(con, alerts.append, "2026-10-02", who="粉專貼文")
     script.budget_alert(con, alerts.append, "2026-10-02", who="粉專貼文")
     assert len(alerts) == 2 and "粉專貼文" in alerts[1]
+
+
+def test_r7_number_budget():
+    """R7：比分一串算 1 個、年份與【】不算；一篇最多 5 個、一段最多 1 個。"""
+    assert fbpost.count_numbers("【2026 亞運】決賽 19-21 21-13 21-18 逆轉") == 1
+    assert fbpost.count_numbers("世界 #46 打敗世界第 1，打了 111 分鐘") == 3
+    sig = fbpost.SIGNATURE
+    ok = "【羽球故事】2026 亞運，排名四十多名的組合。\n\n決賽第三局 21-18 收下。\n\n" + sig
+    assert not [p for p in fbpost.check_form(ok, gap=2) if "數字" in p]
+    crowded = "【羽球故事】世界 #46 打敗世界第 1。\n\n" + sig
+    assert any("一段最多 1 個" in p for p in fbpost.check_form(crowded, gap=2))
+    many = "【羽球故事】開頭。\n\n" + "\n\n".join(f"第 {i} 段" for i in range(1, 8)) + "\n\n" + sig
+    assert any("超過 5 個" in p for p in fbpost.check_form(many, gap=2))

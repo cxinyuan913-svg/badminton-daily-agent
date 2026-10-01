@@ -62,3 +62,21 @@ def test_candidates_only_use_database_facts():
     cs = sl.story_candidates(con, t, allm, allm)
     assert {c["kind"] for c in cs} >= {"rivalry", "stuck_round", "record"}
     assert all("估算" not in f for c in cs for f in c["facts"])
+
+
+@needs_db
+def test_career_facts_carnando_marthin():
+    """notes 21:15／R8：印尼男雙生涯最高世界第 9，是重返不是黑馬。"""
+    from brief import story, zh
+    from brief.crawler import connect
+    con = connect(str(DB))
+    zh.apply_player_names(con)
+    t = _t(con, 5874)
+    allm = sl.tournament_matches(con, 5874, t["end_date"])
+    sf = [m for m in allm if m["event"] == "MD" and m["round"] == "SF" and m["loser_rank"] == 1][0]
+    text = "\n".join(sl.career(con, sf["winner"]["pairing_id"], "MD", sf["winner"]["name"], sf["date"]))
+    assert "生涯最高官方排名：世界第 9" in text and "比生涯最高低 37 名" in text and "冠軍 4 次" in text
+    assert "2022 2022" not in text                                   # 年份不重複
+    cands, daym, allm = story.day_candidates(con, t, "2026-09-29")
+    facts = story.materials(con, t, "2026-09-29", story.pick(cands)[0], cands, daym, allm)
+    assert "【生涯】" in facts and any("生涯最高官方排名" in f for f in facts)

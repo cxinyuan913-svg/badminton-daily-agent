@@ -312,6 +312,41 @@ def turning_reasons(con, m: dict, ms: list[dict], k: int, wn: str, ln: str) -> l
     return out
 
 
+CAREER_LEVELS = ("G1_IND", "G1_EVENT", "WTF", "S1000", "S750", "S500", "MULTI", "CONT_IND", "SSP", "SS", "GPG")
+
+
+def career(con, pairing_id: int, event: str, name: str, upto: str) -> list[str]:
+    """生涯素材（notes 21:15／準則 R8：沒查生涯不准下名氣判斷）：官方排名的生涯最高（與那一週）、比賽當週排名與落差、
+    資料庫內的冠軍與決賽（級別＋年份）。官方排名從 2017 年起（2019-01-15 前不完整），所以寫明「官方排名資料範圍內」。"""
+    out = []
+    best = con.execute("SELECT MIN(rank) FROM ranking_snapshot WHERE pairing_id=? AND event=? AND week_date<=?",
+                       (pairing_id, event, upto)).fetchone()[0]
+    if best:
+        first = con.execute("SELECT MIN(week_date) FROM ranking_snapshot WHERE pairing_id=? AND event=? AND rank=? AND week_date<=?",
+                            (pairing_id, event, best, upto)).fetchone()[0]
+        line = f"{name}生涯最高官方排名：世界第 {best}（{first[:7]} 首次達到，官方排名資料範圍內）"
+        now = con.execute("""SELECT rank, week_date FROM ranking_snapshot WHERE pairing_id=? AND event=? AND week_date<=?
+                             ORDER BY week_date DESC LIMIT 1""", (pairing_id, event, upto)).fetchone()
+        if now and now[0] != best:
+            line += f"；{now[1]} 這週是第 {now[0]}，比生涯最高低 {now[0] - best} 名"
+        out.append(line)
+    rows = con.execute(
+        f"""SELECT r.round_reached, t.name, t.level, substr(r.result_date, 1, 4) FROM tournament_result r JOIN tournament t USING (tournament_id)
+            WHERE r.pairing_id=? AND r.event=? AND r.round_reached IN ('W', 'F') AND r.result_date < ?
+              AND t.level IN ({",".join("?" * len(CAREER_LEVELS))}) ORDER BY r.result_date""",
+        (pairing_id, event, upto, *CAREER_LEVELS)).fetchall()
+    label = lambda n, y: zh.tournament(n) if y in zh.tournament(n) else f"{y} {zh.tournament(n)}"
+    wins = [label(n, y) for pos, n, lv, y in rows if pos == "W"]
+    finals = [label(n, y) for pos, n, lv, y in rows if pos == "F"]
+    if wins or finals:
+        out.append(f"{name}在 Super 500 以上與綜合賽的成績（資料庫 2017 年以來，這站以前）：冠軍 {len(wins)} 次"
+                   + (f"（{'、'.join(wins[-4:])}）" if wins else "") + f"、亞軍 {len(finals)} 次"
+                   + (f"（{'、'.join(finals[-3:])}）" if finals else ""))
+    else:
+        out.append(f"{name}在 Super 500 以上與綜合賽沒有打進過決賽（資料庫 2017 年以來，這站以前）")
+    return out
+
+
 def candidates_for_match(con, m: dict) -> list[dict]:
     """一場比賽可以延伸的故事候選：rivalry、domination、revenge、stuck_round、retired。
     a = 這場的勝方、b = 敗方；所有 facts 都能回資料庫查。"""
