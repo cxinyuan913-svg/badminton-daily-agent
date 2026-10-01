@@ -320,6 +320,11 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
     g3_lines, g3_shown = grade3_section(con, g3, podium_on_final_only=True)
     from brief.foreign_names import weekly_lines as foreign_weekly
     weekly = nickname.weekly_lines(con, today) + foreign_weekly(con, today)   # 週一：暱稱＋本週新增譯名
+    if today.weekday() == 0:
+        from brief import script
+        spent = script.cost_since(con, (today - dt.timedelta(days=7)).isoformat(), today.isoformat())
+        if spent:
+            weekly.append(f"上週腳本費用 US${spent:.2f}")
     notes = reminders(con, today)
     if not (news or g3_lines or weekly or notes):
         return None, g3, news

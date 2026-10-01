@@ -153,6 +153,17 @@ def publish(con, today: dt.date, res: dict) -> list[str]:
             digest.mark_sent(con, today, g3, [], news_rows)
     except Exception as e:  # noqa: BLE001
         errors.append(f"digest: {e!r}")
+    try:
+        from brief import script
+        alert = lambda text: discord.send(discord.webhook("DISCORD_WEBHOOK_ALERTS"), text)
+        if res.get("ranking_rows") and script.enabled("SCRIPT_WEEKLY"):
+            script.run_weekly(con, alert=alert)          # 新一週排名存好之後（notes 10:20）
+        y = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1)).date().isoformat()
+        spent = script.cost_since(con, y, (dt.date.fromisoformat(y) + dt.timedelta(days=1)).isoformat())
+        if spent > script.DAILY_COST_ALERT:
+            alert(f"**腳本費用** {y}（UTC）US${spent:.2f}，超過每日 US${script.DAILY_COST_ALERT}")
+    except Exception as e:  # noqa: BLE001
+        errors.append(f"script: {e!r}")
     problems = res["errors"] + errors
     if problems:
         try:

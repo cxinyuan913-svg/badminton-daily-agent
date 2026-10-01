@@ -1,0 +1,187 @@
+"""口播腳本測試：事實檢查、風格選擇、推送分流；真實資料（data/brief.db）存在時驗證亞運決賽日的事實清單。"""
+import json
+from pathlib import Path
+
+import pytest
+
+from brief import script
+
+FACTS = ["賽事：2026 亞運（綜合運動會），當地 2026-09-29",
+         "男雙 決賽：Leo Rolly CARNANDO / Daniel MARTHIN（印尼，世界 #43）勝 WANG Chang / LIANG Wei Keng（中國，世界 #3），比分 19-21 21-13 21-18",
+         "Leo Rolly CARNANDO / Daniel MARTHIN先輸第一局 19-21，後兩局逆轉",
+         "男雙冠軍（金牌）：Leo Rolly CARNANDO / Daniel MARTHIN（印尼）"]
+FLAGS = {"upset": False, "comeback": True, "first_title": False}
+
+
+def seg(voice, n=1):
+    return [{"time": f"{i}s", "voice": voice, "card": ""} for i in range(n)]
+
+
+VOICE = ("世界排名第 43 的印尼 Leo Rolly CARNANDO / Daniel MARTHIN，決賽先輸一局 19 比 21，"
+         "接著 21 比 13、21 比 18 連扳兩局逆轉，擊敗世界第 3 的 WANG Chang / LIANG Wei Keng 拿下金牌。") * 2
+
+
+def test_check_passes_and_blocks_fabrication():
+    ok = {"titles": ["世界第 43 拿金牌？", "a", "b"], "segments": seg(VOICE)}
+    assert script.check(ok, FACTS, FLAGS) == []
+    fake = {"titles": ["a", "b", "c"], "segments": seg(VOICE + "兩組交手 5 勝 0 負。")}
+    assert any("查不到" in p for p in script.check(fake, FACTS, FLAGS))           # 捏造的交手紀錄
+    wrong_score = {"titles": ["a", "b", "c"], "segments": seg(VOICE.replace("21 比 13", "21 比 12"))}
+    assert any("查不到" in p for p in script.check(wrong_score, FACTS, FLAGS))
+    upset = {"titles": ["a", "b", "c"], "segments": seg(VOICE + "這是本屆最大爆冷。")}
+    assert any("爆冷" in p for p in script.check(upset, FACTS, FLAGS))
+    no_comeback = {**FLAGS, "comeback": False}
+    assert any("逆轉" in p for p in script.check(ok, FACTS, no_comeback))
+    short = {"titles": ["a", "b", "c"], "segments": seg("太短")}
+    assert any("口播" in p for p in script.check(short, FACTS, FLAGS))
+    assert script.check({"titles": ["a"], "segments": []}, FACTS, FLAGS)
+
+
+class FakeLLM:
+    def __init__(self, replies):
+        self.replies, self.calls = list(replies), []
+
+    def complete(self, system, user):
+        self.calls.append(user)
+        return self.replies.pop(0)
+
+
+def test_generate_retries_once_then_gives_up():
+    bad = json.dumps({"titles": ["a", "b", "c"], "segments": seg(VOICE + "交手 9 勝 0 負")}, ensure_ascii=False)
+    good = json.dumps({"titles": ["a", "b", "c"], "segments": seg(VOICE)}, ensure_ascii=False)
+    llm = FakeLLM([bad, good])
+    out, problems = script.generate(llm, "story", FACTS, FLAGS)
+    assert out and problems == [] and "上一版沒有通過檢查" in llm.calls[1]
+    out, problems = script.generate(FakeLLM([bad, bad]), "story", FACTS, FLAGS)
+    assert out is None and problems
+
+
+def test_styles_by_day_type():
+    t = {"end_date": "2026-09-29"}
+    assert script.styles_for_day(t, "2026-09-29", "Final") == ["quick", "story", "taiwan", "numbers"]
+    assert script.styles_for_day(t, "2026-09-28", "SF") == ["daily_taiwan", "daily_story", "daily_quick"]
+    assert script.styles_for_day(t, "2026-09-26", "R16") == ["daily_taiwan", "daily_story"]
+
+
+def test_routing_scripts_daily_alerts(monkeypatch, tmp_path):
+    """10:25：腳本走 DISCORD_WEBHOOK_SCRIPTS、日報走 DAILY、告警走 ALERTS；沒設定或開關沒開就只寫檔。"""
+    from brief import discord
+    env = {"DISCORD_WEBHOOK_SCRIPTS": "https://hook/scripts", "DISCORD_WEBHOOK_DAILY": "https://hook/daily",
+           "DISCORD_WEBHOOK_ALERTS": "https://hook/alerts", "SCRIPT_FINAL": "1"}
+    monkeypatch.setattr(script, "_env", lambda k: env.get(k))
+    sent = []
+    monkeypatch.setattr(discord, "send", lambda url, text, **k: sent.append(url) or 1)
+    sender = script.script_sender()
+    sender("x")
+    assert sent == ["https://hook/scripts"]
+    monkeypatch.setattr(discord, "webhook", lambda name, *a: env[name])
+    assert discord.webhook("DISCORD_WEBHOOK_DAILY") == "https://hook/daily"
+    assert discord.webhook("DISCORD_WEBHOOK_ALERTS") == "https://hook/alerts"
+    env.pop("DISCORD_WEBHOOK_SCRIPTS")
+    assert script.script_sender() is None                                     # 沒設定 → 只寫檔
+
+
+def test_push_only_when_flag_on(monkeypatch):
+    out = {"titles": ["a", "b", "c"], "segments": seg(VOICE)}
+    monkeypatch.setattr(script, "facts_for", lambda *a, **k: {"facts": FACTS, "flags": FLAGS})
+    monkeypatch.setattr(script, "generate", lambda *a, **k: (out, []))
+    monkeypatch.setattr(script, "OUT_DIR", Path(__file__).parent / "_tmp_scripts")
+    t = {"tournament_id": 1, "name": "Asian Games 2026", "level": "MULTI", "start_date": "2026-09-25", "end_date": "2026-09-29"}
+    for flag, expect in (("1", 1), (None, 0)):
+        sent = []
+        monkeypatch.setattr(script, "_env", lambda k: flag if k == "SCRIPT_FINAL" else None)
+        script.run_for_day(None, t, "2026-09-29", "Final", make_llm=lambda p: None, send=sent.append, styles=["story"])
+        assert len(sent) == expect
+    for f in (Path(__file__).parent / "_tmp_scripts").glob("*"):
+        f.unlink()
+    (Path(__file__).parent / "_tmp_scripts").rmdir()
+
+
+DB = Path(__file__).resolve().parent.parent / "data" / "brief.db"
+
+
+@pytest.mark.skipif(not DB.exists(), reason="需要本機的十年回補資料庫")
+def test_real_asian_games_final_facts_contain_example_numbers():
+    """交接單 003：2026-09-29 亞運決賽日的事實清單要包含範例用到的數字。"""
+    from brief.crawler import connect
+    con = connect(str(DB))
+    t = dict(zip(["tournament_id", "name", "level", "start_date", "end_date"],
+                 con.execute("SELECT tournament_id, name, level, start_date, end_date FROM tournament WHERE tournament_id=5874").fetchone()))
+    quick = "\n".join(script.facts_for(con, t, "2026-09-29", "quick")["facts"])
+    for needle in ["#43", "#3", "19-21 21-13 21-18", "26-28 21-18 21-18", "8 勝 1 負"]:
+        assert needle in quick, needle
+    taiwan = "\n".join(script.facts_for(con, t, "2026-09-29", "taiwan")["facts"])
+    assert "四強（銅牌）" in taiwan                                           # 葉宏蔚／詹又蓁混雙銅牌
+    from brief import storylines as sl
+    ch = con.execute("SELECT pairing_id FROM pairing WHERE player_a_id=34810 AND player_b_id IS NULL").fetchone()[0]
+    fa = con.execute("SELECT pairing_id FROM pairing WHERE player_a_id=58089 AND player_b_id IS NULL").fetchone()[0]
+    assert sl.h2h_record(con, ch, fa, "2026-09-29")[:2] == (3, 2)             # 周天成 vs 法漢 3 勝 2 負
+
+
+def test_medal_words_only_for_medal_events():
+    """2026-10-01 試寫：台北公開賽（S300）被寫成「混雙銀牌」。World Tour 沒有獎牌。"""
+    from brief import storylines as sl
+    assert sl.place_name("S300", "F") == "亞軍" and sl.place_name("S300", "SF") == "四強"
+    assert sl.place_name("MULTI", "SF") == "四強（銅牌）" and sl.place_name("G1_IND", "W") == "冠軍（金牌）"
+    facts = ["混雙 決賽：A / B（日本，世界 #5）勝 楊博軒／胡绫芳（中華台北，世界 #12），比分 21-19 21-8",
+             "台灣 混雙 楊博軒／胡绫芳 本站最後名次：亞軍"]
+    out = {"titles": ["a", "b", "c"], "segments": seg(("混雙楊博軒／胡绫芳拿下銀牌，決賽 19 比 21、8 比 21 輸給日本組合。") * 6)}
+    assert any("獎牌" in p for p in script.check(out, facts, FLAGS))
+
+
+def test_upset_by_rank_reference_only():
+    """2026-10-01 試寫：「世界第 71 爆冷擊敗世界第 5」只寫排名，對得上規則判定的場次就放行。"""
+    from brief.llm import unlicensed_upsets
+    src = "女雙 決賽：Sumire NAKADE / Miyu TAKAHASHI（日本，世界 #71）勝 THINAAH Muralitharan / Pearly TAN（馬來西亞，世界 #5），比分 21-16 21-18，規則判定爆冷"
+    assert unlicensed_upsets("世界第 71 爆冷擊敗世界第 5。", src, {}) == []
+    assert unlicensed_upsets("世界第 71 爆冷擊敗世界第 50。", src, {})
+    assert unlicensed_upsets("世界第 7 爆冷擊敗世界第 5。", src, {})          # #7 不能被 #71 矇混
+
+
+def test_switches_default_off(monkeypatch):
+    """開關預設全關：不產生、不花錢；dry 只寫檔；決賽日看 SCRIPT_FINAL、其餘看 SCRIPT_DAILY。"""
+    t = {"end_date": "2026-09-29"}
+    env = {}
+    monkeypatch.setattr(script, "_env", lambda k: env.get(k))
+    assert script.wanted_styles(t, "2026-09-29", "Final") == []
+    env["SCRIPT_DAILY"] = "dry"
+    assert script.wanted_styles(t, "2026-09-29", "Final") == []
+    assert script.wanted_styles(t, "2026-09-28", "SF") == ["daily_taiwan", "daily_story", "daily_quick"]
+    env["SCRIPT_FINAL"] = "1"
+    assert script.wanted_styles(t, "2026-09-29", "Final") == ["quick", "story", "taiwan", "numbers"]
+
+
+def test_cost_since_only_counts_scripts():
+    import sqlite3
+    from brief.llm import CALL_TABLE
+    con = sqlite3.connect(":memory:")
+    con.executescript(CALL_TABLE)
+    con.executemany("INSERT INTO llm_call (called_at, purpose, task, model, input_tokens, output_tokens, cost_usd) VALUES (?,?,?,?,?,?,?)",
+                    [("2026-09-29 01:00:00", "heavy", "script_quick", "m", 1, 1, 0.3),
+                     ("2026-09-29 02:00:00", "routine", "highlight", "m", 1, 1, 0.9),
+                     ("2026-09-30 02:00:00", "heavy", "script_story", "m", 1, 1, 0.2)])
+    assert script.cost_since(con, "2026-09-29", "2026-09-30") == pytest.approx(0.3)
+    assert script.cost_since(con, "2026-09-29") == pytest.approx(0.5)
+
+
+@pytest.mark.skipif(not DB.exists(), reason="需要本機的十年回補資料庫")
+def test_scripts_use_official_ranks_only():
+    """notes 10:40：2018 年混雙、女雙沒有官方週（排名表 API 回 500）只有估算 → 事實清單不寫排名。
+    （男單 2018 有 97 週官方資料，照常寫）"""
+    from brief.crawler import connect
+    con = connect(str(DB))
+    cols = ["tournament_id", "name", "level", "start_date", "end_date"]
+    t = dict(zip(cols, con.execute("SELECT tournament_id, name, level, start_date, end_date FROM tournament WHERE tournament_id=3141").fetchone()))
+    facts = script.facts_for(con, t, "2018-03-18", "quick")["facts"]
+    text = "\n".join(f for f in facts if f.startswith(("混雙", "女雙")))
+    assert text and "#" not in text and "百名外" not in text and "無排名" not in text
+    assert any("決賽" in f for f in facts)
+
+
+def test_rank_label_only_official():
+    from brief import storylines as sl
+    assert sl._rk(5, "official") == "世界 #5"
+    assert sl._rk(5, "estimate") is None and sl._rk(None, "outside100_est") is None and sl._rk(None, None) is None
+    assert sl._rk(None, "outside100") == "百名外"
+    m = sl.official_only({"winner_rank": 3, "winner_rank_src": "estimate", "loser_rank": 9, "loser_rank_src": "official"})
+    assert m["winner_rank"] is None and m["loser_rank"] == 9

@@ -176,6 +176,7 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
 
 
 UPSET_WORD = re.compile(r"爆冷|冷門")
+RANK_REF = re.compile(r"(?:世界第|世界排名第|#)\s*(\d+)")
 SENTENCE = re.compile(r"[^。；;！!？?\n]+")
 
 
@@ -189,8 +190,13 @@ def unlicensed_upsets(text: str, source: str, zh_names: dict[str, str] | None = 
         if not UPSET_WORD.search(sent):
             continue
         names = [n for n in LATIN_NAME.findall(sent) if n not in IGNORE_LATIN] + [z for z in zh_names if z in sent]
-        if not any(n in line for n in names for line in upset_lines):
-            bad.append(sent.strip())
+        if any(n in line for n in names for line in upset_lines):
+            continue
+        # 只用排名指稱（「世界第 71 爆冷擊敗世界第 5」）：兩個排名都要在同一行爆冷場次（2026-10-01 試寫誤擋）
+        ranks = RANK_REF.findall(sent)
+        if len(ranks) >= 2 and any(all(re.search(rf"#{r}(?!\d)", line) for r in ranks) for line in upset_lines):
+            continue
+        bad.append(sent.strip())
     return bad
 
 
