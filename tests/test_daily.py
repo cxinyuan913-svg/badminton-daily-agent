@@ -140,8 +140,7 @@ def test_publish_marks_sent_and_alerts_on_errors(monkeypatch):
     text = sent[0][1]
     assert text.startswith("**羽球晨報 2026-09-30**")
     assert "2026 亞運" not in text                                      # notes 18:15：Super 100 以上改由 brief.watch 發
-    ic = con.execute("SELECT COUNT(*) FROM match WHERE tournament_id=5766").fetchone()[0]
-    assert con.execute("SELECT COUNT(*) FROM digest_item").fetchone()[0] == ic   # 只標記 IC／IS
+    assert con.execute("SELECT COUNT(*) FROM digest_item").fetchone()[0] == 0   # 07:45：今天日期的 IC 場次不列、不標記
 
     sent.clear()
     daily.publish(con, D("2026-09-30"), {**res, "errors": ["live: timeout"]})

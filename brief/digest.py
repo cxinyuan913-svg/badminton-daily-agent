@@ -297,7 +297,10 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
     from brief import nickname
     con.executescript(DIGEST_TABLE + NEWS_TABLE)
     zh.apply_player_names(con)
-    g3 = [m for m in pending_matches(con, today) if m["level"] in grade3.GRADE3
+    # 07:45 修正：只取台北「昨天」，外加「前天」還沒推過的（美洲賽事 06:00 時當地可能還沒打完）；不含今天、不含更早。
+    # LOOKBACK_DAYS（7 天）只給 brief.watch 補漏發用
+    window = {(today - dt.timedelta(days=1)).isoformat(), (today - dt.timedelta(days=2)).isoformat()}
+    g3 = [m for m in pending_matches(con, today) if m["level"] in grade3.GRADE3 and m["date"] in window
           and not grade3.quiet_week(con, m["date"])]          # 空檔週的 IC／IS 由 brief.watch 逐站發（23:15）
     since = (today - dt.timedelta(days=MORNING_NEWS_DAYS)).isoformat()
     news = [n for n in pending_news(con, today) if (n["published"] or "")[:10] >= since]
@@ -311,7 +314,7 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
                     if errors is not None:
                         errors.append(f"llm news: {e!r}")
                     break
-    g3_lines, g3_shown = grade3_section(con, g3)
+    g3_lines, g3_shown = grade3_section(con, g3, podium_on_final_only=True)
     weekly = nickname.weekly_lines(con, today)
     notes = reminders(con, today)
     if not (news or g3_lines or weekly or notes):
@@ -342,8 +345,9 @@ def _sent_players(con, tournament_id: int) -> set[int]:
            WHERE tournament_id = ? AND pl IS NOT NULL""", (tournament_id,))}
 
 
-def grade3_section(con, matches: list[dict]) -> tuple[list[str], int]:
-    """IC/IS 的例外（見 brief/grade3.py）。回傳（行, 列出的比賽場數）。"""
+def grade3_section(con, matches: list[dict], podium_on_final_only: bool = False) -> tuple[list[str], int]:
+    """IC/IS 的例外（見 brief/grade3.py）。回傳（行, 列出的比賽場數）。
+    podium_on_final_only：頒獎台那行只在該站決賽那天出現（晨報用，07:45）。"""
     by_t: dict[int, list[dict]] = defaultdict(list)
     for m in matches:
         if m["team_tie_id"] is None:
@@ -352,7 +356,8 @@ def grade3_section(con, matches: list[dict]) -> tuple[list[str], int]:
     for tid in sorted(by_t):
         ms = by_t[tid]
         name, level = ms[0]["tournament"], ms[0]["level"]
-        line = grade3.podium_line(name, level, ms)
+        has_final = any(m["round"] in ("Final", "F") for m in ms)
+        line = grade3.podium_line(name, level, ms) if has_final or not podium_on_final_only else None
         if line:
             lines.append(line)
         already = _sent_players(con, tid)

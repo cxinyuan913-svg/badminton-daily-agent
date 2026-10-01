@@ -1,7 +1,7 @@
 """Grade 3（IC／IS）日報規則測試：每條例外至少一個正例、一個反例。"""
 import datetime as dt
 
-from brief import digest, grade3, results
+from brief import crawler, digest, grade3, results
 from tests.test_digest import db
 
 D = dt.date(2026, 10, 1)
@@ -98,3 +98,38 @@ def test_notable_lists_only_last_match():
     i = text.index("值得一提")
     block = text[i:].splitlines()
     assert block[1].startswith("  - ") and not (len(block) > 2 and block[2].startswith("  - "))
+
+
+def test_morning_only_yesterday_and_unsent_day_before():
+    """07:45 修正：晨報的 IC／IS 只取台北昨天＋前天未推，不含今天、不含上週。"""
+    import datetime as dt
+    con = db(level="IC")
+    con.execute("INSERT INTO tournament (tournament_id, name, level, start_date, end_date) "
+                "VALUES (9100, 'Other Super 100 2026', 'S100', '2026-09-28', '2026-10-04')")   # 讓這週不是空檔週
+    ids = [r[0] for r in con.execute("SELECT match_id FROM match WHERE tournament_id=5766 ORDER BY match_id")]
+    con.execute("INSERT INTO ranking_snapshot (week_date, event, pairing_id, rank) "
+                "SELECT '2026-08-11', event, side2_id, 12 FROM match WHERE tournament_id=5766")   # 讓每場都有「值得一提」
+    def shown(day):
+        text = digest.morning(con, dt.date.fromisoformat(day))[0] or ""
+        return text.count("值得一提")
+    assert shown("2026-10-01") > 0                       # 9/30 = 昨天 → 列
+    assert shown("2026-10-02") > 0                       # 9/30 = 前天、還沒推 → 列
+    assert shown("2026-10-03") == 0                      # 9/30 = 三天前 → 不列
+    assert shown("2026-09-30") == 0                      # 9/30 = 今天 → 不列
+
+
+def test_morning_podium_only_on_final_day():
+    from brief import grade3
+    a = {"pairing_id": 1, "home": True, "name": "林俊易（LIN Chun-Yi）", "players": [(1, "林俊易（LIN Chun-Yi）", "TPE")]}
+    x = {"pairing_id": 2, "home": False, "name": "X", "players": [(2, "X", "JPN")]}
+    base = {"tournament_id": 1, "tournament": "Portugal International Series 2026", "level": "IS", "event": "MS",
+            "date": "2026-09-30", "team_tie_id": None, "upset": None, "match_id": 1, "score": "21-10 21-10", "status": "Normal",
+            "winner_rank": None, "loser_rank": None}
+    import sqlite3
+    con = crawler.connect(":memory:")
+    digest.DIGEST_TABLE and con.executescript(digest.DIGEST_TABLE)
+    sf = [{**base, "round": "QF", "winner": a, "loser": x}]
+    assert not any("IC／IS｜" in l for l in digest.grade3_section(con, sf, podium_on_final_only=True)[0])
+    assert any("確定至少季軍" in l for l in digest.grade3_section(con, sf)[0])
+    final = [{**base, "round": "Final", "winner": a, "loser": x}]
+    assert any("男單冠軍" in l for l in digest.grade3_section(con, final, podium_on_final_only=True)[0])
