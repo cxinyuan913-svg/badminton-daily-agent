@@ -379,7 +379,7 @@ def run_for_day(con, t: dict, day: str, deepest_round: str | None = None, next_p
 def _story_main(con, t: dict, day: str, title: str, make_llm, send, alert) -> tuple[dict, list[str]]:
     """故事引擎：選 1–2 個故事，各寫一支。回傳（結果, markdown 段落）。"""
     from brief import story
-    cands, daym, _ = story.day_candidates(con, t, day)
+    cands, daym, allm = story.day_candidates(con, t, day)
     picks = story.pick(cands)
     if not picks:
         return {"status": "skipped", "reason": f"沒有分數 ≥ {story.STORY_MIN} 的故事"}, \
@@ -387,9 +387,10 @@ def _story_main(con, t: dict, day: str, title: str, make_llm, send, alert) -> tu
     flag = flag_for("story_main", t, day)
     md, scripts = [], []
     for i, c in enumerate(picks, 1):
-        facts = story.materials(con, t, day, c, cands, daym)
+        facts = story.materials(con, t, day, c, cands, daym, allm)
         model = make_llm("heavy") if make_llm else make_script_llm("heavy", con, effort=story.STORY_EFFORT)
-        out, problems = story.generate(model, facts, con, {"tournament_id": t["tournament_id"], "day": day})
+        editor = make_llm("editor") if make_llm else make_script_llm("routine", con, effort="low")   # 編輯：Sonnet low
+        out, problems = story.generate(model, facts, con, {"tournament_id": t["tournament_id"], "day": day}, editor=editor)
         head = f"故事 {i}｜{c['kind']}"
         if out is None:
             scripts.append({"status": "failed", "kind": c["kind"], "score": c["final"], "problems": problems})

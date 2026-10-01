@@ -25,14 +25,15 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "data" / "posts"
 TRIVIA_RULES = ROOT / "config" / "trivia_rules.md"
 BODY_RANGE = (150, 400)
+BODY_RANGE_TAIWAN = (150, 500)      # notes 20:20（Raymond 選 A）：大賽台灣選手多，戰報放寬到 500 字
 MAX_EMOJI = 5
 EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿⭐⬆⬇↔-⇿]")
 
 SYSTEM = """你是台灣羽球粉專的小編，審稿人是前職業選手 Raymond。用繁體中文、台灣用語寫一則 FB 貼文草稿。
 格式：
 - 第一行就是鉤子（數字或反差），不要用「大家好」開場
-- 正文 150–400 字（不含 hashtag），短段落（每段 1–3 句，段落之間空一行），表情符號整則最多 5 個
-- **正文字數（不含空白）硬上限 400 字，超過會被退回**；台灣選手很多時，挑最重要的 3–4 組寫，其餘一句帶過
+- 正文 150–400 字（台灣戰報可到 500 字；不含 hashtag），短段落（每段 1–3 句，段落之間空一行），表情符號整則最多 5 個
+- **正文字數（不含空白）硬上限 400 字（台灣戰報 500 字），超過會被退回**；台灣選手很多時，挑最重要的 3–4 組寫，其餘一句帶過
 - 結尾一個互動問句
 - hashtag 3–5 個：#羽球 加上相關選手或賽事（中文，不能有空格；外國選手沒有中文名就不要做成 hashtag）
 硬性規則：
@@ -116,13 +117,13 @@ def choose(con, today: str) -> tuple[str, list[str], dict]:
     if ts:
         best = None
         for t in ts:
-            cands, daym, _ = story.day_candidates(con, t, y)
+            cands, daym, allm = story.day_candidates(con, t, y)
             picks = story.pick(cands)
             if picks and (best is None or picks[0]["final"] > best[1]["final"]):
-                best = (t, picks[0], cands, daym)
+                best = (t, picks[0], cands, daym, allm)
         if best:
-            t, c, cands, daym = best
-            return "story", story.materials(con, t, y, c, cands, daym), {"kind": c["kind"], "score": c["final"]}
+            t, c, cands, daym, allm = best
+            return "story", story.materials(con, t, y, c, cands, daym, allm), {"kind": c["kind"], "score": c["final"]}
     return trivia(con, today)
 
 
@@ -133,12 +134,41 @@ def trivia(con, today: str) -> tuple[str, list[str], dict]:
         w = script.weekly_facts(con)
         if w and w["week"] >= (d - dt.timedelta(days=2)).isoformat():
             return "ranking", w["facts"], {"week": w["week"]}
-    order = ["history", "rivalry"] if d.toordinal() % 2 == 0 else ["rivalry", "history"]
-    for kind in order:
-        facts = history_today(con, d) if kind == "history" else recent_rivalry(con, d)
+    kinds = ["history", "rivalry"] + (["rules"] if checked_rules() else [])
+    start = d.toordinal() % len(kinds)
+    for kind in kinds[start:] + kinds[:start]:          # 輪流，當天的那一類沒素材就換下一類
+        facts = {"history": history_today, "rivalry": recent_rivalry, "rules": rules_trivia}[kind](con, d)
         if facts:
             return kind, facts, {}
     return "none", [], {}
+
+
+def load_trivia_rules(path: Path | None = None) -> list[dict]:
+    """config/trivia_rules.md：「## [x] 1. 標題」＋條列內容。回傳每條 {no, title, checked, lines}。"""
+    path = path or TRIVIA_RULES
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return []
+    out = []
+    for m in re.finditer(r"^## \[( |x|X)\] (\d+)\. (.+?)\n(.*?)(?=^## |\Z)", text, re.M | re.S):
+        mark, no, title, body = m.groups()
+        lines = [l.strip()[2:].strip() for l in body.splitlines() if l.strip().startswith("- ")]
+        out.append({"no": int(no), "title": title.strip(), "checked": mark.lower() == "x", "lines": lines})
+    return out
+
+
+def checked_rules(path: Path | None = None) -> list[dict]:
+    """只有 Raymond 勾成 [x] 的條目可以用（notes 20:20）。"""
+    return [r for r in load_trivia_rules(path) if r["checked"]]
+
+
+def rules_trivia(con, d: dt.date) -> list[str]:
+    rules = checked_rules()
+    if not rules:
+        return []
+    r = rules[d.toordinal() % len(rules)]
+    return [f"今天是 {d.isoformat()}，規則與賽制冷知識（config/trivia_rules.md 第 {r['no']} 條，Raymond 審過）：{r['title']}"] + r["lines"]
 
 
 def history_today(con, d: dt.date) -> list[str]:
@@ -183,7 +213,17 @@ def recent_rivalry(con, d: dt.date) -> list[str]:
 
 
 # ---------------------------------------------------------------- 產生與檢查
-def check(out: dict, facts: list[str]) -> list[str]:
+def body_range(kind: str) -> tuple[int, int]:
+    return BODY_RANGE_TAIWAN if kind == "taiwan" else BODY_RANGE
+
+
+def system_prompt() -> str:
+    """貼文規則＋Raymond 的審稿準則全文（docs/video/review-guidelines.md，每次讀最新版；notes 20:35）。"""
+    g = story.guidelines()
+    return SYSTEM + ("\n\n以下是 Raymond 的審稿準則，貼文也要遵守（R3 的「賽果背景」在貼文裡指跟主題無關的段落）：\n" + g if g else "")
+
+
+def check(out: dict, facts: list[str], kind: str = "story") -> list[str]:
     from brief.llm import medal_misuse, unlicensed_upsets, unverified
     from brief.script import rehashed_scores
     body = out.get("body") or ""
@@ -192,8 +232,9 @@ def check(out: dict, facts: list[str]) -> list[str]:
         return ["格式不對：沒有正文"]
     problems = []
     n = len(re.sub(r"\s", "", body))
-    if not BODY_RANGE[0] <= n <= BODY_RANGE[1]:
-        problems.append(f"正文 {n} 字，不在 {BODY_RANGE[0]}–{BODY_RANGE[1]}")
+    lo, hi = body_range(kind)
+    if not lo <= n <= hi:
+        problems.append(f"正文 {n} 字，不在 {lo}–{hi}")
     if body.lstrip().startswith("大家好"):
         problems.append("不要用「大家好」開場")
     if len(EMOJI.findall(body)) > MAX_EMOJI:
@@ -232,14 +273,15 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
     for attempt in range(2):
         prompt = user if not problems else user + "\n\n上一版沒有通過檢查，請修正：" + "；".join(problems)
         n = len(re.sub(r"\s", "", out.get("body") or ""))
-        if n > BODY_RANGE[1]:
-            prompt += f"。上一版正文 {n} 字，至少要刪掉 {n - BODY_RANGE[1] + 30} 字（整段刪掉次要的選手，不要只縮句子）"
-        raw = llm.complete(SYSTEM, prompt)
+        hi = body_range(kind)[1]
+        if n > hi:
+            prompt += f"。上一版正文 {n} 字，至少要刪掉 {n - hi + 30} 字（整段刪掉次要的選手，不要只縮句子）"
+        raw = llm.complete(system_prompt(), prompt)
         try:
             out = json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
         except ValueError:
             out = {}
-        problems = check(out, facts)
+        problems = check(out, facts, kind)
         script.log_check(con, {"day": today}, f"fbpost_{kind}", llm, attempt + 1, problems)
         if not problems:
             return out, []
@@ -247,7 +289,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
 
 
 KIND_LABEL = {"taiwan": "台灣戰報", "story": "故事貼文", "ranking": "排名變化", "history": "冷知識：歷史上的今天",
-              "rivalry": "冷知識：宿敵／宰制", "none": "（沒有素材）"}
+              "rivalry": "冷知識：宿敵／宰制", "rules": "冷知識：規則與賽制", "none": "（沒有素材）"}
 
 
 def render(today: str, kind: str, out: dict) -> str:

@@ -5,8 +5,10 @@
 數據型併入冷知識。
 
 素材：故事候選（`storylines.story_candidates`，全部可回資料庫查）＋冷知識（同一組選手的其他候選、整站紀錄、
-種子）＋賽果背景（台灣選手、決賽日冠軍）＋新聞裡的爭議句（`foreign_article` 內文，附出處）。
+種子）＋賽果背景（故事主角這站的其他場次；準則 R3：不放台灣選手或冠軍名單，台灣戰報交給粉專）＋新聞裡的爭議句。
 推測：AI 可以寫資料庫以外的背景，但每句標「⚠️推測」、最後附待查清單；推測句不進事實檢查。
+編輯檢查（notes 20:35）：事實檢查通過後，Sonnet low 逐條對照 docs/video/review-guidelines.md 打分；有不通過就把意見
+交回寫手重寫一次，第二次仍不過就在腳本最後列「編輯意見」，照樣產出給 Raymond 看。
 """
 from __future__ import annotations
 
@@ -26,25 +28,49 @@ MAX_PER_DAY = 2
 SPEC = "⚠️推測"
 CONTROVERSY = re.compile(r"裁判|挑戰|爭議|換球|抗議|判決|黃牌|紅牌|鷹眼|發球違例|申訴")
 
-SYSTEM = """你是羽球短影音的腳本作者，觀眾是台灣的羽球愛好者，審稿人是前職業選手 Raymond。
-用繁體中文、台灣用語寫一支口播腳本，**以一個故事當主軸**，賽果只當背景。
+GUIDELINES = ROOT / "docs" / "video" / "review-guidelines.md"   # Raymond 的審稿準則（R1、R2…），每次執行讀最新版
+
+SYSTEM_BASE = """你是羽球短影音的腳本作者，觀眾是台灣的羽球愛好者，審稿人是前職業選手 Raymond。
+用繁體中文、台灣用語寫一支口播腳本，**以一個故事當主軸**。
 結構：開場 0–4s（故事最強的一句，含一個數字或反差）→ 故事（主體，一個故事講透）→ 冷知識 約 10s（數據紀錄、選手背景、規則與賽制擇一）
-→ 賽果背景 ≤ 15s（只帶到跟故事有關、或台灣選手的結果；可省略）→ 互動 約 6s（一個問句）。
+→ 賽果背景 ≤ 15s（只放跟這個故事同一批人或同一場比賽的結果；沒有就省略）→ 互動 約 6s（一個問句）。
 全長 30–60 秒：素材夠就約 60 秒（口播 240–280 字），不夠就寫短（120–200 字）。
 **口播總字數（不含空白，標點算字）硬上限 300 字，超過會被退回**；素材很多時挑最強的 2–3 個事實講，不用全部講完。
 字數預算：開場 ≤ 25、故事 ≤ 150、冷知識 ≤ 50、賽果背景 ≤ 50（可省略）、互動 ≤ 25。
-硬性規則：
-- 名字、國家、排名、比分、交手紀錄、日期、名次只能用「事實清單」的內容，照抄不推測；名字照事實清單的寫法，同一人只能一種寫法，絕對不要自己翻譯或音譯
-- 比分照事實清單（勝方在前）；主詞是敗方時倒過來寫成主詞的角度；**不准換角度重講同一個比分湊秒數**
+資料規則（事實檢查會擋）：
+- 名字、國家、排名、比分、交手紀錄、日期、名次只能用「事實清單」的內容，照抄；名字照事實清單的寫法
+- 比分照事實清單（勝方在前）；主詞是敗方時倒過來寫成主詞的角度
 - 「爆冷／冷門」只能用在事實清單標了「規則判定爆冷」的場次；「逆轉」只能用在事實清單寫到逆轉的場次；「首冠」只能用在寫到「第一座」的選手
-- 只有事實清單寫到金牌／銀牌／銅牌的賽事才能用獎牌字眼；World Tour 等賽事寫冠軍、亞軍、四強
-- 事實清單以外的背景（年齡、經歷、規則解釋、原因推論）可以寫，但**每一句都要在句尾加「⚠️推測」**，語氣用「可能、大約、據說」，不能寫成確定語氣；
-  而且每一句推測都要列進 todo（推測內容、依據、建議怎麼查）。數字若不在事實清單，那句就必須是推測句
-- 日期用事實清單的寫法或相對「今天」換算（例如「前天」），不要自己編日期
-- 不要自己算出事實清單沒有的新數字（例如交手 8 次就說「第 9 次碰面」、相加或相減出來的數字）；要用就整句標推測
+- 事實清單以外的背景（年齡、經歷、規則解釋、原因推論）每一句句尾加「⚠️推測」，語氣用「可能、大約、據說」，並列進 todo（推測內容、依據、建議怎麼查）。數字若不在事實清單，那句就必須是推測句
+- 不要自己算出事實清單沒有的新數字（例如交手 8 次就說「第 9 次碰面」、相加或相減出來的數字）
+- 日期用事實清單的寫法或相對「今天」換算，不要自己編日期
 - 範例只示範結構與語氣，範例裡的名字與數字不能用
+- 事實清單的「官方排名走勢」「平均每局分差」「退賽次數」只是數據，不是原因：用它說明轉折時要寫成「數據顯示…」，推論原因就標推測
 只輸出 JSON：{"titles": ["…", "…", "…"], "segments": [{"time": "0–4s", "part": "開場|故事|冷知識|賽果背景|互動", "voice": "口播", "card": "字卡建議"}],
 "todo": [{"claim": "推測內容", "basis": "依據", "how": "建議怎麼查"}]}"""
+
+
+def guidelines() -> str:
+    """docs/video/review-guidelines.md 全文（claude.ai 會持續加 R4、R5…；每次讀檔，不快取）。"""
+    try:
+        return GUIDELINES.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return ""
+
+
+def guideline_ids(text: str | None = None) -> list[str]:
+    return re.findall(r"^## (R\d+)", guidelines() if text is None else text, re.M)
+
+
+def system_prompt() -> str:
+    g = guidelines()
+    return SYSTEM_BASE + ("\n\n以下是 Raymond 的審稿準則，每一條都要遵守：\n" + g if g else "")
+
+
+EDITOR_SYSTEM = """你是羽球短影音的編輯，替前職業選手 Raymond 先審一遍稿。只看「審稿準則」裡編號 R 開頭的每一條，逐條判斷這支腳本有沒有違反。
+- 通過就寫 pass: true；不通過寫 pass: false，quote 引用有問題的原句（照抄），comment 用一句話說怎麼改
+- 只依準則判斷，不要挑準則以外的毛病；不確定就算通過
+只輸出 JSON：{"items": [{"rule": "R1", "pass": true, "quote": "", "comment": ""}]}"""
 
 
 # ---------------------------------------------------------------- 選題
@@ -113,15 +139,16 @@ def seed_facts(con, c: dict, daym: list[dict]) -> list[str]:
     return out
 
 
-def materials(con, t: dict, day: str, c: dict, cands: list[dict], daym: list[dict]) -> list[str]:
+def materials(con, t: dict, day: str, c: dict, cands: list[dict], daym: list[dict], allm: list[dict] | None = None) -> list[str]:
     head = [f"賽事：{zh.tournament(t['name'])}（{zh.level(t['level'])}），今天是當地 {day}"]
     names = _names(c, daym)
     trivia = [f for o in cands if o is not c and o["facts"][0] != c["facts"][0] and any(n in o["facts"][0] for n in names)
               for f in o["facts"][1:]][:4]
     if day == t["end_date"]:
         trivia += [f for o in cands if o["kind"] == "record" and o is not c for f in o["facts"]][:4]   # 紀錄連同那一場
-    back = sl.champions(daym, t.get("level")) if day == t["end_date"] else []
-    back += [sl.match_fact(m) for m in daym if (m["winner"]["home"] or m["loser"]["home"])][:3]
+    # 準則 R3：賽果背景只放故事主角這站的其他場次（不放台灣選手、不放冠軍名單）
+    back = [sl.match_fact(m) for m in (allm or daym) if sl.match_fact(m) != c["facts"][0]
+            and any(n in (m["winner"]["name"], m["loser"]["name"]) for n in names)][-3:]
     # 同一場的其他候選（例：完全宰制＋卡在同一輪）併進同一個故事
     same = [f for o in cands if o is not c and o["facts"][0] == c["facts"][0] for f in o["facts"][1:]]
     facts = head + ["【故事】"] + c["facts"] + same + seed_facts(con, c, daym)
@@ -164,25 +191,71 @@ def _examples() -> str:
     return "\n\n".join(p.read_text(encoding="utf-8") for p in sorted(EXAMPLES.glob("*.md")))
 
 
-def generate(llm, facts: list[str], con=None, ctx: dict | None = None) -> tuple[dict | None, list[str]]:
+def _json(raw: str) -> dict:
+    try:
+        return json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
+    except ValueError:
+        return {}
+
+
+def write(llm, user: str, facts: list[str], con=None, ctx: dict | None = None, attempts: int = 2) -> tuple[dict | None, list[str]]:
+    """寫手：最多 attempts 次，直到事實檢查通過。"""
     from brief import script
     flags = _flags(facts)
-    user = (f"範例（只看結構與語氣）：\n{_examples()}\n\n事實清單：\n" + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(facts)))
     if hasattr(llm, "task"):
         llm.task = "script_story_main"
     problems: list[str] = []
-    for attempt in range(2):
+    for attempt in range(attempts):
         prompt = user if not problems else user + "\n\n上一版沒有通過檢查，請修正：" + "；".join(problems)
-        raw = llm.complete(SYSTEM, prompt)
-        try:
-            out = json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
-        except ValueError:
-            out = {}
+        out = _json(llm.complete(system_prompt(), prompt))
         problems = check(out, facts, flags)
         script.log_check(con, ctx, "story_main", llm, attempt + 1, problems)
         if not problems:
             return out, []
     return None, problems
+
+
+def script_text(out: dict) -> str:
+    lines = ["標題：" + "／".join(out.get("titles") or [])]
+    lines += [f"[{s.get('time', '')}｜{s.get('part', '')}] {s.get('voice', '')}（字卡：{s.get('card', '')}）" for s in out.get("segments") or []]
+    return "\n".join(lines)
+
+
+def edit(editor, out: dict, con=None, ctx: dict | None = None) -> list[dict]:
+    """編輯檢查（LLM-as-judge）：回傳不通過的條目 [{rule, quote, comment}]；編輯本身出錯時當作通過（不擋稿）。"""
+    from brief import script
+    if editor is None:
+        return []
+    if hasattr(editor, "task"):
+        editor.task = "script_editor"
+    g = guidelines()
+    ids = guideline_ids(g)
+    try:
+        res = _json(editor.complete(EDITOR_SYSTEM, f"審稿準則：\n{g}\n\n腳本：\n{script_text(out)}"))
+    except Exception:  # noqa: BLE001
+        return []
+    bad = [x for x in res.get("items") or [] if x.get("pass") is False and x.get("rule") in ids]
+    script.log_check(con, ctx, "story_editor", editor, 1, [f"{x['rule']}：{x.get('quote', '')}" for x in bad])
+    return bad
+
+
+def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=None) -> tuple[dict | None, list[str]]:
+    """寫 → 事實檢查 → 編輯檢查；編輯不過就帶意見重寫一次（重寫也要過事實檢查），仍不過就附「編輯意見」照樣產出。"""
+    user = (f"範例（只看結構與語氣）：\n{_examples()}\n\n事實清單：\n" + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(facts)))
+    out, problems = write(llm, user, facts, con, ctx)
+    if out is None:
+        return None, problems
+    bad = edit(editor, out, con, ctx)
+    out["editor"] = {"first": bad, "rewritten": False, "final": bad}
+    if not bad:
+        return out, []
+    notes = "；".join(f"{x['rule']} 不通過：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in bad)
+    redo, _ = write(llm, user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, facts, con, ctx, attempts=1)
+    if redo is None:                       # 重寫沒過事實檢查：保留第一版，附上編輯意見
+        return out, []
+    final = edit(editor, redo, con, ctx)
+    redo["editor"] = {"first": bad, "rewritten": True, "final": final}
+    return redo, []
 
 
 def to_markdown(title: str, c: dict, out: dict) -> str:
@@ -192,6 +265,13 @@ def to_markdown(title: str, c: dict, out: dict) -> str:
     lines += [f"| {s.get('time', '')} | {s.get('part', '')} | {s.get('voice', '')} | {s.get('card', '')} |" for s in out["segments"]]
     if out.get("todo"):
         lines += ["", "待查清單："] + [f"- {x.get('claim', '')}（依據：{x.get('basis', '')}；怎麼查：{x.get('how', '')}）" for x in out["todo"]]
+    ed = out.get("editor")
+    if ed is not None:
+        status = "通過" if not ed["final"] else "仍有意見"
+        first = "、".join(x["rule"] for x in ed["first"]) or "無"
+        lines += ["", f"編輯檢查：{status}（第一次不通過：{first}；{'有' if ed['rewritten'] else '沒有'}重寫）"]
+        if ed["final"]:
+            lines += ["編輯意見："] + [f"- {x['rule']}：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in ed["final"]]
     return "\n".join(lines)
 
 

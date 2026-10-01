@@ -276,6 +276,42 @@ def _meet(m: dict) -> str:
     return f"{m['tournament']}{'團體賽' if m.get('team') else ''}{zh.round_name(m['round'])}"
 
 
+def _avg_margin(ms: list[dict]) -> float | None:
+    gs = [x - y for m in ms for x, y in m["games"]]
+    return sum(gs) / len(gs) if gs else None
+
+
+def _quits(ms: list[dict], a_side: bool) -> int:
+    """退賽次數：a_side=True 算 a 退賽（a 輸、狀態 Retired／Walkover）。"""
+    return sum(1 for m in ms if m["status"] in ("Retired", "Walkover") and m["a_won"] != a_side)
+
+
+def turning_reasons(con, m: dict, ms: list[dict], k: int, wn: str, ln: str) -> list[str]:
+    """翻轉點的「可能的理由」素材（notes 20:35／準則 R2）：只給數據，不下因果結論。
+    翻轉前後的官方排名、平均每局分差、退賽次數；雙打以組合計，換搭檔就是另一組，這裡不會混在一起。"""
+    from brief.rankings import rank_lookup
+    out = []
+    w_id, l_id = m["winner"]["pairing_id"], m["loser"]["pairing_id"]
+
+    def rk(pid, date):
+        r, src = rank_lookup(con, pid, m["event"], date)
+        return f"#{r}" if src == "official" and r else None
+
+    first, turn = ms[0]["date"], ms[k]["date"]
+    pairs = [(f"{_meet(ms[0])}", first), (f"{_meet(ms[k])}（翻轉點）", turn), (f"{_meet(ms[-1])}", ms[-1]["date"])]
+    ranks = [(label, rk(w_id, d), rk(l_id, d)) for label, d in pairs]
+    if any(a or b for _, a, b in ranks):
+        out.append("官方排名走勢（只是數據，不是原因）：" + "；".join(
+            f"{label} {wn} {a or '無官方排名'}、{ln} {b or '無官方排名'}" for label, a, b in ranks))
+    before, after = _avg_margin(ms[:k]), _avg_margin(ms[k:])
+    if before is not None and after is not None:
+        out.append(f"{wn}平均每局分差（{wn}減{ln}）：翻轉前 {before:+.1f} 分、翻轉後 {after:+.1f} 分")
+    qb_w, qa_w, qb_l, qa_l = _quits(ms[:k], True), _quits(ms[k:], True), _quits(ms[:k], False), _quits(ms[k:], False)
+    if qb_w or qa_w or qb_l or qa_l:
+        out.append(f"兩邊交手中的退賽：翻轉前{wn} {qb_w} 次、{ln} {qb_l} 次；翻轉後{wn} {qa_w} 次、{ln} {qa_l} 次")
+    return out
+
+
 def candidates_for_match(con, m: dict) -> list[dict]:
     """一場比賽可以延伸的故事候選：rivalry、domination、revenge、stuck_round、retired。
     a = 這場的勝方、b = 敗方；所有 facts 都能回資料庫查。"""
@@ -295,6 +331,7 @@ def candidates_for_match(con, m: dict) -> list[dict]:
             bw, bl = _record(ms[:k])
             aw, al = _record(ms[k:])
             facts.append(f"前 {k} 場{wn} {bw} 勝 {bl} 負；從 {_meet(ms[k])}起 {aw} 勝 {al} 負")
+            facts += turning_reasons(con, m, ms, k, wn, ln)
         ws_ = worst_stretch(ms)
         if ws_:
             i, k2, w2 = ws_
@@ -325,10 +362,12 @@ def candidates_for_match(con, m: dict) -> list[dict]:
         won_g = sum(1 for x, y in g_all if x > y)
         lost_g = len(g_all) - won_g
         facts = [base, f"{wn}對{ln} {n} 戰全勝（{SINCE}），局數 {won_g} 勝 {lost_g} 負"]
-        lost_by_l = [(x, y) for x, y in g_all if x > y]
+        lost_by_l = [(x["games"][i][0] - x["games"][i][1], x, i) for x in ms for i in range(len(x["games"]))
+                     if x["games"][i][0] > x["games"][i][1]]
         if lost_by_l:
-            cx, cy = min(lost_by_l, key=lambda g: g[0] - g[1])
-            facts.append(f"{ln}輸的局裡最接近的一局：{cy}-{cx}（{ln}角度）")
+            _, x, i = min(lost_by_l, key=lambda t: t[0])
+            cx, cy = x["games"][i]
+            facts.append(f"{ln}輸的局裡最接近的一局：{_meet(x)}第 {i + 1} 局，{cy}-{cx}（{ln}角度）")
         out.append({"kind": "domination", "score": 4 + n / 2 + deep, "event": m["event"], "facts": facts})
     prev = ms[:-1]
     if prev and not prev[-1]["a_won"] and prev[-1]["round"] in DEEP_ROUNDS:
@@ -395,7 +434,7 @@ def tournament_records(con, t: dict, all_matches: list[dict]) -> list[dict]:
     if timed:
         d, m = max(timed, key=lambda x: x[0])
         out.append({"kind": "record", "score": 3 + (2 if d >= 90 else 0), "event": m["event"],
-                    "facts": [match_fact(m), f"這是本站打最久的一場：{d} 分鐘"]})
+                    "facts": [match_fact(m), f"這是{zh.tournament(t['name'])}打最久的一場（{zh.round_name(m['round'])}）：{d} 分鐘"]})
     return out
 
 
