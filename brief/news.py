@@ -188,19 +188,52 @@ def store(con, rows: list[dict]) -> int:
     return con.execute("SELECT COUNT(*) FROM news_item").fetchone()[0] - before
 
 
+RUN_TABLE = """
+CREATE TABLE IF NOT EXISTS news_run (
+    run_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    source          TEXT NOT NULL,
+    parsed          INTEGER,                      -- 列表頁解析出幾則（不管是不是羽球）
+    matched         INTEGER,                      -- 符合關鍵字幾則
+    added           INTEGER,                      -- 新寫入幾則
+    error           TEXT
+);
+"""
+ZERO_ALERT_HOURS = 24                             # 某來源連續 24 小時整頁解析 0 則 → 告警（notes 06:20 第 2 點）
+ANY = re.compile(".")
+
+
 def collect(client: Client, con, sources=SOURCES) -> tuple[int, list[str]]:
-    """回傳（新增筆數, 錯誤）。單一來源失敗不影響其他來源。"""
+    """回傳（新增筆數, 錯誤）。單一來源失敗不影響其他來源。每次每個來源記一筆 news_run（解析幾則、符合幾則、新增幾則、錯誤）。"""
+    con.executescript(RUN_TABLE)
     added, errors = 0, []
     pattern = keyword_pattern(keywords(con))
     for source, url in sources.items():
+        parsed = matched = new = None
+        err = None
         try:
             r = client.get(url)
             if r is None:
                 raise ValueError("404")
-            added += store(con, parse(source, r.text, pattern))
+            rows = parse(source, r.text, pattern)
+            parsed = len(rows) if source in ("bwf", "bwfworldtour") else len(parse(source, r.text, ANY))
+            matched = len(rows)
+            new = store(con, rows)
+            added += new
         except Exception as e:  # noqa: BLE001
+            err = repr(e)
             errors.append(f"news {source}: {e!r}")
+        con.execute("INSERT INTO news_run (source, parsed, matched, added, error) VALUES (?,?,?,?,?)",
+                    (source, parsed, matched, new, err))
+    con.commit()
     return added, errors
+
+
+def zero_sources(con, hours: int = ZERO_ALERT_HOURS) -> list[str]:
+    """過去 hours 小時每一次都整頁解析 0 則（或出錯）的來源；至少要有 3 次紀錄才算，避免剛上線就告警。"""
+    con.executescript(RUN_TABLE)
+    rows = con.execute("""SELECT source, COUNT(*), MAX(COALESCE(parsed, 0)) FROM news_run
+                          WHERE run_at >= datetime('now', ?) GROUP BY source""", (f"-{hours} hours",)).fetchall()
+    return [src for src, n, best in rows if n >= 3 and best == 0]
 
 
 def main():

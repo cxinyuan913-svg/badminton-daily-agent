@@ -113,7 +113,8 @@ def test_preview_skipped_after_first_match_started():
     assert res["previews"] == [] and sent == []
 
 
-def test_alert_after_three_empty_fetches_once_per_day():
+def test_alert_after_three_empty_fetches_once_per_day(monkeypatch):
+    monkeypatch.setattr(watch, "_news", lambda *a, **k: [])      # 這個測試只看賽果抓取的告警（新聞告警另有測試）
     con = db()
     for _ in range(4):
         _, _, alerts = run(con, FakeClient({}), NOW)

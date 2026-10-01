@@ -256,19 +256,31 @@ def run(con, client, now_utc: dt.datetime, send, alert=None, llm=None, dry_run: 
         previews += _pending_previews(con, client, t, now_utc, send, dry_run)
     con.commit()
     if not dry_run:
-        errors += _news(con, client)
+        errors += _news(con, client, alert)
     return {"sent": sent, "previews": previews, "errors": errors}
 
 
-def _news(con, client) -> list[str]:
-    """新聞列表每 30 分鐘收一次（notes 16:00）：每來源 1 個請求，已收過的網址跳過；新的台灣羽球新聞抓內文存起來。"""
+def _news(con, client, alert=None) -> list[str]:
+    """新聞列表每 30 分鐘收一次（notes 16:00）：每來源 1 個請求，已收過的網址跳過；新的台灣羽球新聞抓內文存起來。
+    某來源連續 24 小時整頁解析 0 則 → 推告警（一天一次；notes 06:20 第 2 點）。"""
     from brief import foreign_names, news
     try:
         _, errs = news.collect(client, con)
         foreign_names.scan_new(con, client, limit=5)
-        return errs
     except Exception as e:  # noqa: BLE001
-        return [f"news: {e!r}"]
+        errs = [f"news: {e!r}"]
+    try:
+        dead = news.zero_sources(con)
+        if dead and alert is not None:
+            con.execute("CREATE TABLE IF NOT EXISTS news_alert (day TEXT, source TEXT, PRIMARY KEY (day, source))")
+            today = (dt.datetime.now(dt.timezone.utc) + preview.TAIPEI).date().isoformat()
+            fresh = [s for s in dead if con.execute("INSERT OR IGNORE INTO news_alert VALUES (?, ?)", (today, s)).rowcount]
+            con.commit()
+            if fresh:
+                alert(f"**新聞來源** {'、'.join(fresh)} 連續 {news.ZERO_ALERT_HOURS} 小時整頁解析 0 則（網站可能改版），請檢查 brief/news.py")
+    except Exception as e:  # noqa: BLE001
+        errs.append(f"news alert: {e!r}")
+    return errs
 
 
 def _scripts(con, t: dict, day: str, stage: list[dict], nxt, alert, errors: list) -> None:

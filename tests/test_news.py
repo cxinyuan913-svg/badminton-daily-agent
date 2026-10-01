@@ -88,3 +88,15 @@ def test_new_taiwan_sources_parse_real_pages():
         assert news.parse(src, page) == []                     # 這三頁當時沒有羽球新聞
     pts = (fx / "news_pts_2026-10-01.html").read_text(encoding="utf-8")
     assert [r["title"][:6] for r in news.parse("pts", pts, re.compile("網球"))] == ["搶十大戰上演"]
+
+
+def test_news_run_log_and_zero_alert():
+    """notes 06:20：每次每來源記解析／符合／新增；連續 24 小時整頁解析 0 則才算壞掉（至少 3 次紀錄）。"""
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    con.executescript(news.RUN_TABLE)
+    con.executemany("INSERT INTO news_run (run_at, source, parsed, matched, added) VALUES (datetime('now', ?), ?, ?, 0, 0)",
+                    [("-1 hours", "pts", 0), ("-2 hours", "pts", 0), ("-3 hours", "pts", 0),
+                     ("-1 hours", "cna", 19), ("-2 hours", "cna", 0), ("-3 hours", "cna", 0),
+                     ("-1 hours", "tsna", 0)])
+    assert news.zero_sources(con) == ["pts"]
