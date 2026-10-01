@@ -70,6 +70,12 @@ def system_prompt() -> str:
 EDITOR_SYSTEM = """你是羽球短影音的編輯，替前職業選手 Raymond 先審一遍稿。只看「審稿準則」裡編號 R 開頭的每一條，逐條判斷這支腳本有沒有違反。
 - 通過就寫 pass: true；不通過寫 pass: false，quote 引用有問題的原句（照抄），comment 用一句話說怎麼改
 - 只依準則判斷，不要挑準則以外的毛病；不確定就算通過
+判斷要點（照準則原文劃清範圍，避免誤判）：
+- R1 只管「某一局、某一場、某個紀錄」：提到具體的一局或一場比分、最接近的一局、最長的一場，要有年份＋賽事＋輪次（＋第幾局）。
+  統計數字（例如「10 場裡 6 勝 4 負」「8 場裡有 5 場在八強」）不是單一場次，不適用 R1
+- R2 只管寫了「轉折」「從那場起」「分水嶺」「開始贏」這類時間點：後面接了理由（數據，例如排名走勢、局分差變化、退賽次數；或標了 ⚠️推測 的推論）就算通過；
+  只丟時間點、沒有任何理由才不通過。單純陳述（「2024 年後的 6 次交手贏了 5 次」）不適用 R2
+- R3 只管跟故事主角無關的段落：故事主角（同一批人）在同一站的其他場次、同一場比賽的細節都算相關；只有不相關的選手（包括台灣選手）的賽果才不通過
 只輸出 JSON：{"items": [{"rule": "R1", "pass": true, "quote": "", "comment": ""}]}"""
 
 
@@ -250,7 +256,7 @@ def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=No
     if not bad:
         return out, []
     notes = "；".join(f"{x['rule']} 不通過：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in bad)
-    redo, _ = write(llm, user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, facts, con, ctx, attempts=1)
+    redo, _ = write(llm, user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, facts, con, ctx, attempts=2)
     if redo is None:                       # 重寫沒過事實檢查：保留第一版，附上編輯意見
         return out, []
     final = edit(editor, redo, con, ctx)

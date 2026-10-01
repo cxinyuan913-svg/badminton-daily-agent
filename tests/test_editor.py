@@ -61,7 +61,7 @@ def test_editor_still_failing_keeps_script_with_notes():
 
 
 def test_rewrite_failing_fact_check_keeps_first_version():
-    writer = Fake([script(GOOD, R1_BAD), script(GOOD, "兩人交手 99 場。")])
+    writer = Fake([script(GOOD, R1_BAD), script(GOOD, "兩人交手 99 場。"), script(GOOD, "兩人交手 98 場。")])   # 重寫最多兩次
     editor = Fake([verdict(("R1", R1_BAD))])
     out, _ = story.generate(writer, FACTS, editor=editor)
     assert R1_BAD in out["segments"][0]["voice"] and out["editor"]["final"][0]["rule"] == "R1"

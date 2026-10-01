@@ -7,6 +7,69 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ---
 
+## 2026-10-01 20:55 — 粉專改版：文章要更豐富（Raymond：「FB 是文字的戰場」）
+
+修改交接單 006：
+1. **字數**：故事貼文、台灣戰報都改成 **500–900 字**；冷知識 300–600 字。分段、每段 2–4 句，適合手機閱讀。提示詞的範例改用 `docs/video/fb-examples-v1.md`（claude.ai 手寫的兩篇亞運故事）。
+2. **內容要「豐富」的具體做法**：一篇只講一個主軸，但要有
+   - 完整的脈絡（例如交手紀錄逐場列出或分段描述、整站一路怎麼打上來）；
+   - 至少一個資料庫算出來、別人不容易知道的數字（得分趨勢、局數、排名變化）；
+   - 交代「所以呢」：這代表什麼、下次要看什麼。
+   審稿準則 `review-guidelines.md` 照用（R1–R3）。
+3. **選題放寬**：沒有新比賽的日子，可以寫**最近 14 天內大賽**的故事（例如亞運），優先於「歷史上的今天」；同一個故事 30 天內不重複。
+4. 台灣選手中文名規則照 notes 20:50。
+
+完成後：更新 status.md、commit、push。
+
+---
+
+## 2026-10-01 20:50 — 兩個小問題（優先修）
+
+1. **`scripts/register_task.ps1` 第 19 行路徑壞了**：`"$root\scripts<CR>un_fbpost.cmd"`，`\r` 被寫成了真的換行字元（CR，用 `cat -A` 看得到 `^M`）。粉專的 Windows 排程如果已經用這個檔註冊，明早 07:00 不會執行。修正後重新註冊，並用 `Get-ScheduledTask badminton-fbpost | Select -Expand Actions` 確認路徑；加一個測試掃 `scripts/*.ps1`、`deploy/**` 不能有字串內的 CR。寫檔時改用原始字串或 `pathlib`，避免 `\r`、`\n`、`\t` 被轉義。
+2. **台灣選手漏中文名**：粉專 10-01 草稿把中華台北的 **LIANG Ting Yu**（2023 高雄大師賽女單冠軍）寫成英文。台灣選手（`country_code='TPE'`）不在名單時：
+   - 先查中華羽協甲組名單（含歷年），拼音比對得到就用中文並記入 `config/players_zh.csv`（追蹤設 N、備註「歷史選手，自動比對」）；
+   - 比對不到就在「給你的備註」列出「這位台灣選手沒有中文名，請提供」，不要只丟英文給 Raymond 自己發現。
+
+---
+
+## 2026-10-01 20:35 — Raymond 審 story_test 的回饋：新增審稿準則＋編輯檢查
+
+> **已併入** CLAUDE.md「已決議」表（2026-10-01，Claude Code）；結果見 `docs/status.md`
+
+Raymond 讀了 `data/scripts/story_test_2026-10-01.md`，指出三個問題，已整理成 **`docs/video/review-guidelines.md`**（R1–R3，之後所有回饋都累積在這份）：
+- **R1 數字沒交代場景**：「最接近的一局 19 比 21」不知道是哪場哪局。
+- **R2 轉折沒有理由**：「KIM Ga Eun 中途退賽，從那場起 WANG Zhi Yi 5 勝 1 負」很突兀。
+- **R3 段落跟主軸無關**：宿敵故事裡插「周天成 32 強、林俊易輸 YOO Tae Bin」。
+
+**要做**
+1. **資料層補素材**（`storylines.py`）
+   - 「最接近的一局」「最長一場」等紀錄型 facts，一律帶 `tournament`（年份＋名稱）、`round`、`game_no`。
+   - `rivalry` 的翻轉點加「可能的理由」素材：翻轉前後兩人的官方排名（`ranking_snapshot`）、翻轉前後的平均局分差、翻轉前後各自的退賽／傷退次數、雙打是否換搭檔。都算不出來就只給事實，提示詞要求改用不暗示因果的寫法（R2）。
+2. **提示詞**：把 `review-guidelines.md` 的準則全文放進故事、粉專提示詞（取代零散的規則句）。
+3. **刪掉賽果背景的「台灣選手」例外**（交接單 005 第 1 節）：影片腳本的賽果背景只能放同一批人或同一場比賽；台灣戰報只出現在粉專。
+4. **編輯檢查（LLM-as-judge）**：腳本通過事實檢查後，用 **Sonnet low** 再跑一次「編輯」，逐條對照 `review-guidelines.md` 打分（每條：通過／不通過＋引用有問題的句子）。有不通過 → 把意見交回寫手重寫一次；第二次仍不過就在腳本最後列「編輯意見」，照樣產出給 Raymond 看（不要整份丟掉）。編輯呼叫的費用記 `llm_call`（task＝`script_editor`）。
+5. **回歸測試**：三個反例做成測試（編輯檢查要能抓到；用固定的假 LLM 回應測流程，不要真的呼叫 API）。
+6. **重跑驗收**：亞運 5 天重跑，新舊並排放 `data/scripts/story_test_v2_2026-10-01.md`，status.md 列每支的編輯檢查結果與費用。開關維持 dry。
+
+之後 Raymond 的每次審稿回饋，claude.ai 都會加進 `review-guidelines.md`（R4、R5…），CLI 只要確認提示詞與編輯檢查讀的是最新版即可。
+
+完成後：更新 status.md、commit、push。
+
+---
+
+## 2026-10-01 20:20 — status.md 四個待決定：1A 2A 3C 4A
+
+> **已併入** CLAUDE.md「已決議」表（2026-10-01，Claude Code）；結果見 `docs/status.md`
+
+1. **模型（A）**：故事用 Opus low；粉專台灣戰報用 Opus low、其他粉專類型用 Sonnet low。維持暫定。
+2. **粉專台灣戰報字數（A）**：上限放寬到 **500 字**（其他類型維持 150–400）。
+3. **故事門檻（C）**：Raymond 先看 `data/scripts/story_test_2026-10-01.md` 再定，`STORY_MIN` 暫時維持 9。
+4. **規則冷知識（A）**：claude.ai 已起草 `config/trivia_rules.md`（12 條，全部出自排名規章 V6.0，附條號）。**只能用勾成 `[x]` 的條目**，目前全是 `[ ]`（等 Raymond 審），所以粉專冷知識還是先跳過這類。程式讀檔時解析勾選狀態；加測試：`[ ]` 條目不會被選到。
+
+完成後：更新 status.md、CLAUDE.md「已決議」、commit、push（`config/trivia_rules.md` 一併 commit）。
+
+---
+
 ## 2026-10-01 16:10 — 新交接單 006（FB 粉專貼文草稿）
 
 > **已併入** CLAUDE.md「已決議」表（2026-10-01，Claude Code）；結果見 `docs/status.md`
