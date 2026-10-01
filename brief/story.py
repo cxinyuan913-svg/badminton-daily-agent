@@ -100,8 +100,11 @@ def pick(cands: list[dict], threshold: float = STORY_MIN) -> list[dict]:
 
 
 def day_candidates(con, t: dict, day: str) -> tuple[list[dict], list[dict], list[dict]]:
+    from brief import grade3
     allm = sl.tournament_matches(con, t["tournament_id"], day)
     daym = [m for m in allm if m["date"] == day]
+    if t.get("level") in grade3.PROMOTE:                     # IC／IS 只用四強以後的場次當故事（notes 21:05）
+        daym = [m for m in daym if m["round"] in grade3.LATE_DAY_ROUNDS]
     cands = sl.story_candidates(con, t, daym, allm, with_records=(day == t["end_date"]))
     return cands, daym, allm
 

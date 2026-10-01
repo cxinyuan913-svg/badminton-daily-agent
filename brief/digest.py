@@ -304,7 +304,8 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
     # LOOKBACK_DAYS（7 天）只給 brief.watch 補漏發用
     window = {(today - dt.timedelta(days=1)).isoformat(), (today - dt.timedelta(days=2)).isoformat()}
     g3 = [m for m in pending_matches(con, today) if m["level"] in grade3.GRADE3 and m["date"] in window
-          and not grade3.quiet_week(con, m["date"])]          # 空檔週的 IC／IS 由 brief.watch 逐站發（23:15）
+          and not grade3.quiet_week(con, m["date"])           # 空檔週的 IC／IS 由 brief.watch 逐站發（23:15）
+          and not grade3.late_day(con, m["tournament_id"], m["date"])]   # 四強日、決賽日也由 watch 發（21:05）
     since = (today - dt.timedelta(days=MORNING_NEWS_DAYS)).isoformat()
     news = [n for n in pending_news(con, today) if (n["published"] or "")[:10] >= since]
     if llm is not None:

@@ -184,6 +184,7 @@ def targets(con, tw_today: dt.date) -> list[dict]:
     rows = con.execute(
         f"""SELECT tournament_id, code, name, level, start_date, end_date, status, source_url FROM tournament
             WHERE start_date <= ? AND end_date >= ? AND COALESCE(status, '') NOT IN ({",".join("?" * len(SKIP_STATUS))})
+              AND name NOT LIKE '%Cancelled%'
               AND COALESCE(level, '') NOT IN ({",".join("?" * len(NEVER))}) AND code IS NOT NULL
             ORDER BY start_date, tournament_id""",
         ((tw_today + dt.timedelta(days=1)).isoformat(), (tw_today - dt.timedelta(days=2)).isoformat(),
@@ -210,7 +211,9 @@ def run(con, client, now_utc: dt.datetime, send, alert=None, llm=None, dry_run: 
         days = [d for d in crawler.dates_between(max(t["start_date"], (tw_today - dt.timedelta(days=2)).isoformat()),
                                                  min(t["end_date"], tw_today.isoformat())) if d not in done]
         if t["level"] in grade3.PROMOTE:
-            days = [d for d in days if grade3.quiet_week(con, d)]    # 有推送層級賽事的週，IC／IS 只在晨報列例外
+            # 空檔週整站升格；非空檔週只看最後兩天（四強日、決賽日照發，notes 21:05），其餘只在晨報列例外
+            last2 = (dt.date.fromisoformat(t["end_date"]) - dt.timedelta(days=1)).isoformat()
+            days = [d for d in days if grade3.quiet_week(con, d) or d >= last2]
             if not days:
                 continue
         try:
@@ -229,6 +232,8 @@ def run(con, client, now_utc: dt.datetime, send, alert=None, llm=None, dry_run: 
             crawler.store_day(con, tid, ms)
             con.commit()
             results.compute(con, tid)
+            if t["level"] in grade3.PROMOTE and not grade3.quiet_week(con, day) and not grade3.late_day(con, tid, day):
+                continue                                         # 非空檔週、也不是四強／決賽日：留給晨報
             complete, unfinished = day_status(ms)
             local_now = now_utc + local_offset(ms)
             forced = not complete and local_now >= dt.datetime.fromisoformat(day) + FORCE_AT

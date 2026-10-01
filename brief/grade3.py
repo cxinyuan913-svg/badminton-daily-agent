@@ -96,6 +96,15 @@ def podium_line(tournament: str, level: str, matches: list[dict]) -> str | None:
 
 # ---------------------------------------------------------------- 空檔週（2026-09-30 23:15 決議）
 PROMOTE = {"IC", "IS"}                   # 空檔週可以升格的層級（FS 不收）
+LATE_DAY_ROUNDS = ("SF", "Semi-finals", "Final", "F")   # notes 21:05：IC／IS 四強日、決賽日不論空檔週都由 watch 逐站發
+# 已取消：狀態欄是 cancelled／postponed，或名稱帶 (Cancelled)（有 5 站狀態還是 normal，例：Azerbaijan Caspian Cup 2026）
+ACTIVE_SQL = "COALESCE(status, '') NOT IN ('cancelled', 'postponed') AND name NOT LIKE '%Cancelled%'"
+
+
+def late_day(con, tournament_id: int, day: str) -> bool:
+    """這一站這一天有四強或決賽。"""
+    return con.execute(f"SELECT 1 FROM match WHERE tournament_id=? AND match_date=? AND round IN ({','.join('?' * len(LATE_DAY_ROUNDS))}) "
+                       "LIMIT 1", (tournament_id, day, *LATE_DAY_ROUNDS)).fetchone() is not None
 NOT_PUSH_LEVELS = ("IC", "IS", "FS")
 
 
@@ -113,6 +122,6 @@ def quiet_week(con, day: str) -> bool:
     n = con.execute(
         f"""SELECT COUNT(*) FROM tournament
             WHERE level IS NOT NULL AND level NOT IN ({",".join("?" * len(NOT_PUSH_LEVELS))})
-              AND COALESCE(status, '') NOT IN ('cancelled', 'postponed')
+              AND {ACTIVE_SQL}
               AND start_date <= ? AND end_date >= ?""", (*NOT_PUSH_LEVELS, sunday, monday)).fetchone()[0]
     return n == 0

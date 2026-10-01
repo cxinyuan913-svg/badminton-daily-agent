@@ -58,12 +58,14 @@ SYSTEM = """你是台灣羽球粉專的小編，審稿人是前職業選手 Raym
 
 # ---------------------------------------------------------------- 選題
 def _tournaments_on(con, day: str) -> list[dict]:
+    """推送層級賽事＋當天有四強或決賽的 IC／IS（notes 21:05）；排除已取消的賽事。"""
     rows = con.execute(
         f"""SELECT DISTINCT t.tournament_id, t.name, t.level, t.start_date, t.end_date FROM match m JOIN tournament t USING (tournament_id)
-            WHERE m.match_date=? AND m.winner_side IN (1, 2) AND t.level IS NOT NULL
-              AND t.level NOT IN ({",".join("?" * len(grade3.NOT_PUSH_LEVELS))})
-            ORDER BY t.level, t.tournament_id""", (day, *grade3.NOT_PUSH_LEVELS)).fetchall()
-    return [dict(zip(["tournament_id", "name", "level", "start_date", "end_date"], r)) for r in rows]
+            WHERE m.match_date=? AND m.winner_side IN (1, 2) AND t.level IS NOT NULL AND t.level <> 'FS'
+              AND {grade3.ACTIVE_SQL.replace(" AND name", " AND t.name").replace("COALESCE(status", "COALESCE(t.status")}
+            ORDER BY t.level, t.tournament_id""", (day,)).fetchall()
+    ts = [dict(zip(["tournament_id", "name", "level", "start_date", "end_date"], r)) for r in rows]
+    return [t for t in ts if t["level"] not in grade3.PROMOTE or grade3.late_day(con, t["tournament_id"], day)]
 
 
 def _today_opponents(con, t: dict, today: str) -> list[str]:
