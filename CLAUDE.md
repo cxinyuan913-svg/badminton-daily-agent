@@ -66,6 +66,9 @@ python -m brief.backfill run --db data/brief.db       # 十年回補（可中斷
 | 暱稱 | 由系統從新聞自動收集（`brief/nickname.py`），Raymond 不手填。規則（XY配、小X、X神）＋ LLM（必須附原文證據）找候選；同篇出現全名且 ≥ 2 個來源或累積 ≥ 3 次才自動採用。採用的暱稱只用於新聞篩選，**日報提到選手不用暱稱**。每週一日報最後列本週新增與待確認的暱稱，Raymond 回覆確認或否決（2026-09-30） |
 | 退休選手 | 名單「追蹤」設 N，比賽資料保留、生涯照常可查。新聞關鍵字是否保留，看退休後的新聞是否仍以羽球為主：**戴資穎保留**；**李洋移除**（現任運動部部長，新聞多為政策）；「麟洋配」暱稱保留（2026-09-30） |
 | 台灣選手名單 | `config/players_zh.csv`（Raymond 維護中文名與是否追蹤；claude.ai 起草為 `players_zh_draft.csv`）。程式優先讀這份，不存在時用 `brief/player_zh.csv`。**中文名一律照表，不自行翻譯或音譯**（2026-09-30） |
+| 外國選手譯名 | `brief/foreign_names.py`：**只用台灣媒體原文**（中央社、NOWnews）「中文（English）」當證據；華裔選手可用原文漢字＋拼音對回 BWF 名字（姓氏、分隔字、國家規則）。2 個不同來源才 confirmed，衝突以中央社為準；Raymond 填的鎖定不覆蓋。**不用 LLM 或拼音自己造譯名**；沒有譯名就用英文（交接單 003，2026-10-01） |
+| 影片腳本 | `brief/script.py` ＋ `brief/storylines.py`（交接單 003、notes 10:15／10:20／10:25／10:30／10:40，2026-10-01）。風格：決賽日 1 快報、2 單一故事、3 台灣視角（有台灣選手才產生）、4 數據型（觀察中，故事不足 3 則不產生），用 heavy；比賽日台灣視角＋單一故事（分數 ≥ `DAILY_STORY_MIN`=6），八強起加快報（當天輪次），用 routine；週二新一週排名存好後產生排名更新（heavy）。每份 3 個標題、口播 200–320 字。**只用官方排名**（估算或查不到就不寫排名）。事實檢查不過重試一次，再不過只丟那一份並告警。`.env` 開關 `SCRIPT_FINAL`／`SCRIPT_DAILY`／`SCRIPT_WEEKLY`：預設關（不產生、不花錢），`dry` 只寫檔 `data/scripts/`，`1` 推到 **`DISCORD_WEBHOOK_SCRIPTS`（腳本專用頻道，不推日報頻道）**。週一晨報列「上週腳本費用」，前一天超過 US$0.5 告警 |
+| 獎牌用詞 | 只有頒獎牌的賽事（奧運、世錦賽、綜合運動會、洲際錦標賽、團體世界賽、世大運）寫金／銀／銅牌；World Tour、IC、IS 寫冠軍、亞軍、四強（2026-10-01 試寫發現後 Claude Code 定的規則，Raymond 可改） |
 
 ## 與 claude.ai 的分工
 
@@ -79,6 +82,7 @@ Raymond 在 claude.ai 做調查、討論、決策與視覺化；在這裡（Clau
   - 「待 Raymond 決定」每一題都寫：背景一句、目前暫定值或預設行為、可選方案（A/B/C/D）
   - 數字附上出處：哪個 commit、檔案或指令的輸出，讓 claude.ai 能核對
   - status.md 是唯一的進度來源；不需要另外給 claude.ai 連結或摘要
+  - **有亮點就記進 `docs/highlights.md`**（求職作品素材）：日期、問題、怎麼發現、怎麼解決、數字、commit
 - **claude.ai 讀本機 repo 只用唯讀指令**，只會新增 `docs/notes-from-claude-ai.md` 與 `docs/handoffs/` 底下的檔案。遇到 `.git/index.lock` 錯誤、且確定沒有其他 git 程序在跑時，可以直接刪除後重試
 
 ## 工作規則
