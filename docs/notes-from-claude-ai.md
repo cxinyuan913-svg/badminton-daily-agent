@@ -7,17 +7,31 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ---
 
+## 2026-10-02 06:55 — 三方合作規則（claude.ai／本機 CLI／雲端工作階段）
+
+| 角色 | 負責 | 會改的檔案 |
+|---|---|---|
+| claude.ai | 和 Raymond 討論、定案；寫 notes 與交接單，每項標 ☁️ 或 💻 | 只有 `docs/notes-from-claude-ai.md`、`docs/handoffs/`、`docs/video/`、`config/`（直接寫本機檔，不 commit） |
+| 本機 CLI 💻 | 需要資料庫、網路、排程、真實試跑的工作；**唯一可以直接 commit 到 main 的角色**；合併後同步 | 全部 |
+| 雲端工作階段 ☁️ | 只用假資料就能完成的程式修改；**一律在新分支、開 PR**，不直接推 main | 程式與測試；**不改** `docs/status.md`、`docs/notes-from-claude-ai.md`、`CLAUDE.md`、`config/` |
+
+**規則**
+1. 雲端的完成報告寫在 **PR 說明**（做了什麼、測試結果、還沒做的）。本機 CLI 合併後，把重點抄進 `docs/status.md`。這樣 status.md 只有一個人在改，不會衝突。
+2. 同一個 notes 項目只會標 ☁️ 或 💻 其中一個；沒標的預設 💻。
+3. 開工前一律先 `git pull`。雲端 PR 開著的期間，本機 CLI 不改那個 PR 動到的檔案；真的要改，等合併後再改。
+4. claude.ai 寫在本機的 notes／config 變更，由本機 CLI 下次 commit 一起推上 GitHub，雲端才看得到。所以**派雲端任務前，本機 CLI 要先 commit、push**。
+5. PR 合併由 Raymond 在 GitHub 按；或 Raymond 說「合併」時由本機 CLI 用 `gh pr merge` 合併。
+
+（把這段併入 CLAUDE.md「與 claude.ai 的分工」。）
+
+---
+
 ## 2026-10-02 06:50 — 分工：雲端工作階段（☁️）與本機 CLI（💻）
 
 Raymond 開始用 Claude Code 雲端工作階段分擔工作。雲端看不到 `data/brief.db`、`.env`，也連不到 BWF 與新聞網站（網路只開套件庫），所以只做**用測試假資料就能完成的程式修改**。
 
-### ☁️ 雲端做（在新分支上做，推 branch、開 PR，Raymond 合併）
-- notes 05:55 **第 1 點**：載入範例時把未 confirmed 的外國譯名換回英文（用 `tests/fixtures` 測）。
-- notes 05:55 **第 2 點**：R7 固定檢查改成全篇 ≤ 5 個數字。
-- notes 05:55 **第 3 點**：編輯檢查改用 Opus low（只改設定與測試）。
-- notes 05:55 **第 6 點**：多故事並列主題每個都要講到（提示詞＋編輯檢查＋假 LLM 測試）。
-- notes 06:20 **第 1 點**：晨報新聞摘要的程式（用假新聞內文 fixture 與假 LLM 測；真實 dry-run 交給本機）。
-- 測試必須在沒有 `.env`、沒有資料庫、沒有網路的情況下全過（`tests/conftest.py` 已隔離）。
+### ☁️ 雲端做
+- **目前沒有**：原本列的 05:55 第 1、2、3、6 點與 06:20 第 1 點，本機 CLI 在 06:14–06:47 已全部完成（見 git log）。下一批 ☁️ 任務由 claude.ai 另外標。
 
 ### 💻 本機 CLI 做（不要碰上面 ☁️ 的項目，避免兩邊改同一個檔案）
 - notes 06:20 第 2 點（查新聞為什麼沒收到）、06:25 新聞改版、補兩年新聞。
