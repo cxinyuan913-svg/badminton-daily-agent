@@ -319,6 +319,7 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
         spent = script.cost_since(con, (today - dt.timedelta(days=7)).isoformat(), today.isoformat())
         if spent:
             weekly.append(f"上週腳本費用 US${spent:.2f}")
+        weekly.append(backup_line())
     notes = reminders(con, today)
     if not (news or g3_lines or weekly or notes):
         return None, g3, news
@@ -423,3 +424,26 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def backup_line(root=None) -> str:
+    """週一晨報一行（notes 06:20 第 3 點、06:35 第 3 點）：資料庫大小、本機最近一次備份、最近一次推到主機（異地）。"""
+    from pathlib import Path
+    root = Path(root) if root else Path(__file__).resolve().parent.parent
+    db = root / "data" / "brief.db"
+    size = f"{db.stat().st_size / 1e6:.0f} MB" if db.exists() else "?"
+    backups = sorted((root / "data" / "backups").glob("brief-*.db"))
+    local = dt.datetime.fromtimestamp(backups[-1].stat().st_mtime).strftime("%m-%d %H:%M") if backups else "沒有"
+    offsite = "沒有紀錄"
+    log = root / "data" / "logs" / "offsite.log"
+    if log.exists():
+        lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+        stamp = None
+        for line in lines:
+            if line.startswith("====="):
+                stamp = line.strip("= ").strip()
+            elif ".gz" in line and "bda-vultr" in line:
+                offsite = f"{stamp}（成功）"
+            elif line.startswith("失敗"):
+                offsite = f"{stamp}（失敗）"
+    return f"資料庫 {size}｜本機最近備份 {local}｜最近推到主機 {offsite}"

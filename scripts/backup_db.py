@@ -11,7 +11,7 @@ from pathlib import Path
 def backup(db: str, out_dir: str, keep: int) -> Path:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    target = out / f"brief-{dt.datetime.now(dt.timezone.utc):%Y%m%d}.db"
+    target = out / f"brief-{dt.datetime.now():%Y%m%d}.db"          # 本機時間（台北）；每天一份
     src, dst = sqlite3.connect(db), sqlite3.connect(target)
     with dst:
         src.backup(dst)

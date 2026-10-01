@@ -170,3 +170,15 @@ def test_walkover_is_not_upset_and_has_no_empty_score():
 def test_estimated_rank_is_labelled():
     assert digest._rank(12, "estimate") == "#12（估算）"
     assert digest._rank(12, "official") == "#12" and digest._rank(None) == "無排名"
+
+
+def test_backup_line(tmp_path):
+    (tmp_path / "data" / "backups").mkdir(parents=True)
+    (tmp_path / "data" / "logs").mkdir()
+    (tmp_path / "data" / "brief.db").write_bytes(b"x" * 2_000_000)
+    (tmp_path / "data" / "backups" / "brief-20261002.db").write_bytes(b"x")
+    (tmp_path / "data" / "logs" / "offsite.log").write_text(
+        "===== 週一 2026/10/05 12:00 =====\nbrief-20261005.db.gz（31.3 MB gzip）→ bda-vultr:/root/badminton-backups，主機現有 2 份\n",
+        encoding="utf-8")
+    line = digest.backup_line(tmp_path)
+    assert "資料庫 2 MB" in line and "2026/10/05 12:00（成功）" in line
