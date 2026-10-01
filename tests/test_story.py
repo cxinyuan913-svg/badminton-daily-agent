@@ -35,3 +35,11 @@ def test_pick_one_or_two_with_tpe_preference():
     assert [x["score"] for x in story.pick([c(12, True), c(20, False)])] == [20, 12]
     assert [x["score"] for x in story.pick([c(14, True), c(10, False)])] == [14]                   # 最高分已含台灣
     assert story.pick([c(5, False)]) == []                                                          # 寧缺勿濫
+
+
+def test_record_written_as_score_is_allowed():
+    """實驗發現：「16 勝 0 負」被寫成「0 比 16」「9-0」會被當成捏造比分。"""
+    from brief.llm import unverified
+    src = "TAN Ning / LIU Sheng Shu對洪恩慈／謝沛珊 8 戰全勝，局數 16 勝 0 負；從 2025 丹麥公開賽四強起 9 勝 0 負"
+    assert unverified("局數 0 比 16，最近 9-0", src, {}) == []
+    assert unverified("局數 0 比 15", src, {})                           # 對不上的照擋

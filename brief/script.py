@@ -388,7 +388,7 @@ def _story_main(con, t: dict, day: str, title: str, make_llm, send, alert) -> tu
     md, scripts = [], []
     for i, c in enumerate(picks, 1):
         facts = story.materials(con, t, day, c, cands, daym)
-        model = make_llm("heavy") if make_llm else make_script_llm("heavy", con)
+        model = make_llm("heavy") if make_llm else make_script_llm("heavy", con, effort=story.STORY_EFFORT)
         out, problems = story.generate(model, facts, con, {"tournament_id": t["tournament_id"], "day": day})
         head = f"故事 {i}｜{c['kind']}"
         if out is None:

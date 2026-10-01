@@ -171,6 +171,8 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
     # 比分整組比對：「21-15」「21 比 15」「3–2」都要在原始資料有同一組（正反順序皆可，敗方角度會倒過來寫）。
     # 2026-09-30 實測：LLM 捏造「印尼 3–2 中國」，拆成單獨數字比對會被 3、2 矇混過去
     scores = {tuple(m) for m in SCORE.findall(source)}
+    # 戰績「16 勝 0 負」常被寫成「0 比 16」「9-0」（2026-10-01 推理強度實驗：誤擋 3 次）
+    scores |= {tuple(m) for m in re.findall(r"(\d+) 勝 (\d+) 負", source)}
     scores |= {(b, a) for a, b in scores}
     missing = []
     for a, b in SCORE.findall(text):
