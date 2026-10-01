@@ -155,3 +155,50 @@ def test_r7_number_budget():
     assert any("一段最多 1 個" in p for p in fbpost.check_form(crowded, gap=2))
     many = "【羽球故事】開頭。\n\n" + "\n\n".join(f"第 {i} 段" for i in range(1, 8)) + "\n\n" + sig
     assert any("超過 5 個" in p for p in fbpost.check_form(many, gap=2))
+
+
+R9_BAD = "女單黃宥薰、男雙劉廣珩／陳政寬、混雙李佳馨／吳冠勳也都打進四強，對手全是後來的冠亞軍。"
+
+
+def test_r9_counterexample_goes_back_to_writer():
+    """notes 23:10：R9 反例（四強輸給冠亞軍＝廢話），編輯判不通過就交回寫手。"""
+    r9 = "KIM Ga Eun 這屆停在 16 強，輸給的 WANG Zhi Yi 後來也一路贏到最後。"   # 名字都在事實清單，只差 R9
+    writer = Fake([script(GOOD, r9), script(GOOD)])
+    editor = Fake([json.dumps({"items": [{"rule": "R9", "pass": False, "quote": r9, "comment": "冠軍本來就一路贏到最後，刪掉"}]},
+                              ensure_ascii=False), verdict()])
+    out, _ = story.generate(writer, FACTS, editor=editor)
+    assert out["editor"]["first"][0]["rule"] == "R9" and out["editor"]["rewritten"]
+    assert "R9 不通過" in writer.prompts[1][1]
+    assert "換成「當然」開頭" in story.EDITOR_SYSTEM and "R10" in story.EDITOR_SYSTEM and "R11" in story.EDITOR_SYSTEM
+
+
+def test_r10_counts_sides():
+    from brief import storylines as sl
+    facts = ["女雙 八強：TAN Ning / LIU Sheng Shu（中國，世界 #1）勝 洪恩慈／謝沛珊（中華台北，世界 #10），比分 21-15 21-15",
+             "女單 四強：Tanvi SHARMA（印度，世界 #34）勝 黃宥薰（HUANG Yu-Hsun）（中華台北，世界 #24），比分 21-17 21-11",
+             "男雙 四強：Aaron CHIA / Aaron TAI（馬來西亞，世界 #378）勝 劉廣珩／陳政寬（中華台北，世界 #82），比分 24-26 21-19 21-16",
+             "混雙 四強：A B（日本）勝 李佳馨／吳冠勳（中華台北），比分 21-19 21-8"]
+    assert sl.count_sides("洪恩慈／謝沛珊對上 TAN Ning / LIU Sheng Shu", facts) == ["TAN Ning / LIU Sheng Shu", "洪恩慈／謝沛珊"]
+    many = sl.count_sides("洪恩慈／謝沛珊輸給 TAN／LIU；" + R9_BAD + "CHIA 也贏了", facts)
+    assert len(many) == 6                                        # 超過 4 組 → R10 退回
+
+
+def test_r11_related_trivia_only_when_relevant():
+    hist = ["上一屆（2025 日本公開賽）也是這一組拿冠軍：這站是衛冕戰"]
+    got = story.related_trivia(hist)
+    assert got and "第 6 條" in got[0]                          # 衛冕 → 積分在下一屆開打時失效
+    assert story.related_trivia(["兩人交手 10 場"]) == []          # 不相關就不硬塞
+
+
+def test_r11_recent_news_matches_names(tmp_path):
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE news_item (url TEXT PRIMARY KEY, source TEXT, title TEXT, published TEXT, fetched_at TEXT)")
+    con.execute("CREATE TABLE foreign_article (url TEXT PRIMARY KEY, source TEXT, text TEXT, fetched_at TEXT)")
+    con.execute("INSERT INTO news_item VALUES ('u1', 'cna', '周天成亞運賽後受訪', '2026-09-28', NULL)")
+    con.execute("INSERT INTO foreign_article VALUES ('u1', 'cna', '前言。周天成說膝蓋還有點緊。他會調整賽程。最後一句。', NULL)")
+    con.execute("INSERT INTO news_item VALUES ('u2', 'cna', '舊新聞', '2026-07-01', NULL)")
+    con.execute("INSERT INTO foreign_article VALUES ('u2', 'cna', '周天成很久以前的新聞。', NULL)")
+    got = story.recent_news(con, ["周天成（CHOU Tien Chen）"], "2026-10-01")
+    assert len(got) == 1 and "周天成亞運賽後受訪（cna，2026-09-28）" in got[0] and "膝蓋" in got[0]
+    assert story.recent_news(con, ["林俊易"], "2026-10-01") == []

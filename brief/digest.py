@@ -414,7 +414,7 @@ def main():
     model = None
     if a.llm:
         from brief import llm
-        model = llm.AnthropicLLM("routine", con=con)
+        model = llm.AnthropicLLM("heavy", con=con, effort="low")   # 今日重點也是寫作 → Opus low（notes 23:15）
     errors: list[str] = []
     text, matches, ties, news = build(con, today, llm=model, errors=errors, include_sent=a.include_sent)
     for e in errors:

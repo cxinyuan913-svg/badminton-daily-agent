@@ -212,12 +212,13 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
     return missing
 
 
-MEDAL_WORD = re.compile(r"金牌|銀牌|銅牌|獎牌|奪金|摘金|摘銀|摘銅")
+THIRD_PLACE = re.compile(r"季軍|第三名")
 
 
-def medal_misuse(text: str, source: str) -> bool:
-    """原始資料沒有金銀銅（World Tour、IC、IS 不頒獎牌）卻寫了獎牌字眼（notes 15:40 第 1 條）。"""
-    return bool(MEDAL_WORD.search(text)) and not re.search(r"金牌|銀牌|銅牌", source)
+def third_place_word(text: str) -> bool:
+    """名次用語（notes 23:15，取代 15:40 的「非獎牌賽事不准寫金銀銅」）：所有賽事都可以寫金銀銅，
+    但不用「季軍」「第三名」（巡迴賽沒有季軍戰，兩位四強輸家都算銅牌）。"""
+    return bool(THIRD_PLACE.search(text))
 
 
 # 試寫時出現過的暫定譯名（台灣媒體的寫法是昆拉武特、法漢、卡爾南多、馬丁）
@@ -285,8 +286,8 @@ def highlight(llm: LLM, digest_text: str) -> str:
     bad = unlicensed_upsets(text, digest_text)
     if bad:
         raise ValueError(f"今日重點把規則沒判定的場次寫成爆冷，未採用：{bad[0][:60]}")
-    if medal_misuse(text, digest_text):
-        raise ValueError(f"今日重點在沒有頒獎牌的賽事寫了獎牌，未採用：{text[:60]}")
+    if third_place_word(text):
+        raise ValueError(f"今日重點用了「季軍／第三名」，未採用：{text[:60]}")
     missing = unverified(text, digest_text)
     lines =[f"**今日重點**（AI 整理，請審稿）\n{text}"]
     if missing:

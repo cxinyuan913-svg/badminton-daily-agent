@@ -332,7 +332,7 @@ def main():
     a = ap.parse_args()
     now = dt.datetime.fromisoformat(a.now) if a.now else dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
     con = connect(a.db)
-    model = None if a.no_llm or not llm.available() else llm.AnthropicLLM("routine", con=con)
+    model = None if a.no_llm or not llm.available() else llm.AnthropicLLM("heavy", con=con, effort="low")   # 今日重點也是寫作 → Opus low（notes 23:15）
     send = (lambda text: print(text + "\n" + "-" * 40)) if a.dry_run else \
         (lambda text: discord.send(discord.webhook("DISCORD_WEBHOOK_DAILY"), text))
     alert = lambda text: discord.send(discord.webhook("DISCORD_WEBHOOK_ALERTS"), text)

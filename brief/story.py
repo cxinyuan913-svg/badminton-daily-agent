@@ -25,6 +25,9 @@ STORY_EFFORT = "low"     # 推理強度實驗（notes 15:20）：opus low 兩個
 STORY_MIN = 9.0          # 分數門檻（status.md 記錄；依 Raymond 回饋調）
 TPE_BONUS = 3.0          # 有台灣選手的故事加分（台灣視角變成選題偏好）
 MAX_PER_DAY = 2
+NO_NEWS = "無（最近 30 天沒有主角的新聞）"
+NO_TRIVIA = "無（沒有相關的審過冷知識）"
+MAX_SIDES = 4            # 準則 R10：文中出現的選手／組合超過 4 組就退回
 SPEC = "⚠️推測"
 CONTROVERSY = re.compile(r"裁判|挑戰|爭議|換球|抗議|判決|黃牌|紅牌|鷹眼|發球違例|申訴")
 
@@ -76,6 +79,9 @@ EDITOR_SYSTEM = """你是羽球短影音的編輯，替前職業選手 Raymond �
 - R2 只管寫了「轉折」「從那場起」「分水嶺」「開始贏」這類時間點：後面接了理由（數據，例如排名走勢、局分差變化、退賽次數；或標了 ⚠️推測 的推論）就算通過；
   只丟時間點、沒有任何理由才不通過。單純陳述（「2024 年後的 6 次交手贏了 5 次」）不適用 R2
 - R3 只管跟故事主角無關的段落：故事主角（同一批人）在同一站的其他場次、同一場比賽的細節都算相關；只有不相關的選手（包括台灣選手）的賽果才不通過
+- R9：把那句換成「當然」開頭仍然成立（四強輸給冠亞軍、決賽輸了是亞軍、冠軍一路贏到最後）→ 不通過
+- R10：數稿子裡出現的選手／組合（雙打一組算一個），超過 4 組 → 不通過；1–2 組主角以外只能一句帶過
+- R11：補充說明會列出「新聞素材」。稿子裡沒有任何「這場以外」的歷史事實 → 不通過；新聞素材不是「無」、稿子卻完全沒用到 → 不通過
 只輸出 JSON：{"items": [{"rule": "R1", "pass": true, "quote": "", "comment": ""}]}"""
 
 
@@ -160,16 +166,63 @@ def materials(con, t: dict, day: str, c: dict, cands: list[dict], daym: list[dic
             and any(n in (m["winner"]["name"], m["loser"]["name"]) for n in names)][-3:]
     # 同一場的其他候選（例：完全宰制＋卡在同一輪）併進同一個故事
     same = [f for o in cands if o is not c and o["facts"][0] == c["facts"][0] for f in o["facts"][1:]]
-    facts = head + ["【故事】"] + c["facts"] + same + seed_facts(con, c, daym)
-    # 準則 R8：故事主角的生涯（最高排名、目前排名、大賽冠亞軍）；沒查生涯不准寫黑馬／新星／回勇
+    # 準則 R11：素材固定三區——【歷史】（必備）、【新聞】（有就要用）、【冷知識】（相關才用）
+    history = c["facts"] + same + seed_facts(con, c, daym)
     m = next((x for x in (allm or daym) if sl.match_fact(x) == c["facts"][0]), None)
     if m is not None:
-        facts += ["【生涯】"] + [f for side in ("winner", "loser")
-                                 for f in sl.career(con, m[side]["pairing_id"], m["event"], m[side]["name"], m["date"])]
+        d = sl.defending(con, t, m["winner"]["pairing_id"], m["event"])
+        history += ([d] if d else []) + [f for side in ("winner", "loser")      # R8：生涯
+                                         for f in sl.career(con, m[side]["pairing_id"], m["event"], m[side]["name"], m["date"])]
+    facts = head + ["【歷史】"] + history
+    facts += ["【新聞】"] + (recent_news(con, names, day) or [NO_NEWS])
+    facts += ["【冷知識】"] + (related_trivia(history) or [NO_TRIVIA])
     facts += (["【冷知識素材】"] + trivia) if trivia else []
     facts += (["【賽果背景素材】"] + back) if back else []
-    facts += (["【新聞】"] + news) if (news := news_controversy(con, names)) else []
     return list(dict.fromkeys(facts))
+
+
+def recent_news(con, names: set[str] | list[str], upto: str, days: int = 30, limit: int = 3) -> list[str]:
+    """R11：主角最近 30 天的新聞（中英文名比對已存的內文）：標題（來源，日期）：提到主角的兩三句。"""
+    import datetime as dt
+    since = (dt.date.fromisoformat(upto[:10]) - dt.timedelta(days=days)).isoformat()
+    keys = [k for n in names for k in sl.members(n)]
+    if not keys:
+        return []
+    try:
+        rows = con.execute("""SELECT n.title, n.source, n.published, a.text FROM foreign_article a JOIN news_item n USING (url)
+                              WHERE substr(n.published, 1, 10) BETWEEN ? AND ? ORDER BY n.published DESC""",
+                           (since, upto[:10])).fetchall()
+    except Exception:  # noqa: BLE001
+        return []
+    out = []
+    for title, source, published, text in rows:
+        sents = [x.strip() for x in re.split(r"(?<=[。！？])", text or "") if x.strip()]
+        hit = next((i for i, x in enumerate(sents) if any(k in x for k in keys)), None)
+        if hit is None and not any(k in (title or "") for k in keys):
+            continue
+        hit = hit or 0
+        gist = "".join(sents[hit:hit + 2])[:160]
+        out.append(f"新聞：{title}（{source}，{(published or '')[:10]}）：{gist}")
+        if len(out) >= limit:
+            break
+    return out
+
+
+TRIVIA_SIGNALS = [(r"衛冕", 6), (r"團體賽", 9), (r"年終總決賽.*(小組|第 [123] 輪)", 10), (r"輪空", 8), (r"外卡", 7),
+                  (r"排名.*(上升|下滑|新進|跌出)", 12)]
+
+
+def related_trivia(history: list[str]) -> list[str]:
+    """R11：只用 trivia_rules.md 勾 [x] 的條目，而且要跟故事有關（例：衛冕 → 第 6 條）；不相關就沒有。"""
+    from brief import fbpost
+    rules = {r["no"]: r for r in fbpost.checked_rules()}
+    text = "\n".join(history)
+    out = []
+    for pattern, no in TRIVIA_SIGNALS:
+        if no in rules and re.search(pattern, text) and no not in [o[0] for o in out]:
+            r = rules[no]
+            out.append((no, f"冷知識（trivia_rules 第 {no} 條，Raymond 審過）：{r['title']}。" + " ".join(r["lines"])))
+    return [x for _, x in out]
 
 
 # ---------------------------------------------------------------- 檢查
@@ -187,6 +240,9 @@ def check(out: dict, facts: list[str], flags: dict) -> list[str]:
                "segments": [{**s, "voice": strip_speculation(s.get("voice", "")), "card": strip_speculation(s.get("card", ""))}
                             for s in segs]}
     problems = script.check(checked, facts, flags)
+    sides = sl.count_sides("".join(x.get("voice", "") + x.get("card", "") for x in segs), facts)
+    if len(sides) > MAX_SIDES:
+        problems.append(f"出現 {len(sides)} 組選手（R10：最多 {MAX_SIDES} 組，1–2 組主角、其他一句帶過）：" + "、".join(sides[:6]))
     # 長度以完整口播（含推測句）計
     full = "".join(s.get("voice", "") for s in segs)
     n = len(re.sub(r"\s", "", full))
@@ -260,7 +316,8 @@ def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=No
     out, problems = write(llm, user, facts, con, ctx)
     if out is None:
         return None, problems
-    bad = edit(editor, out, con, ctx)
+    context = news_context(facts)
+    bad = edit(editor, out, con, ctx, context=context)
     out["editor"] = {"first": bad, "rewritten": False, "final": bad}
     if not bad:
         return out, []
@@ -268,9 +325,22 @@ def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=No
     redo, _ = write(llm, user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, facts, con, ctx, attempts=2)
     if redo is None:                       # 重寫沒過事實檢查：保留第一版，附上編輯意見
         return out, []
-    final = edit(editor, redo, con, ctx)
+    final = edit(editor, redo, con, ctx, context=context)
     redo["editor"] = {"first": bad, "rewritten": True, "final": final}
     return redo, []
+
+
+def news_context(facts: list[str]) -> str:
+    """給編輯的補充說明：素材裡的【新聞】區（R11：有新聞卻沒用要退回）。"""
+    if "【新聞】" not in facts:
+        return ""
+    i = facts.index("【新聞】")
+    block = []
+    for f in facts[i + 1:]:
+        if f.startswith("【"):
+            break
+        block.append(f)
+    return "新聞素材：" + ("；".join(block) if block else NO_NEWS)
 
 
 def to_markdown(title: str, c: dict, out: dict) -> str:

@@ -8,7 +8,7 @@
      （規則與賽制要等 config/trivia_rules.md 由 Raymond 審過才用，在那之前跳過）
 
 推送：`FBPOST=1` 且有 `DISCORD_WEBHOOK_FBPAGE` 才推；預設 dry，只寫檔 data/posts/YYYY-MM-DD.md。
-模型：effort low；台灣戰報用 heavy（Opus，Sonnet 寫不進 400 字），其餘 routine（Sonnet）；計入每日預算，超過就跳過並告警。
+模型：所有類型 Opus（effort low，不過再試 medium；notes 23:15）；編輯 Sonnet low；計入每日預算，超過就跳過並告警。
 """
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from brief.llm import _env
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "data" / "posts"
 TRIVIA_RULES = ROOT / "config" / "trivia_rules.md"
+EFFORTS = ("low", "medium")         # 寫手 Opus 的推理強度：low 不過才試 medium（notes 23:15）
 BODY_RANGE = (150, 400)
 BODY_RANGE_TAIWAN = (150, 500)      # notes 20:20（Raymond 選 A）：大賽台灣選手多，戰報放寬到 500 字
 MAX_EMOJI = 5
@@ -50,7 +51,7 @@ SYSTEM = """你是台灣羽球粉專的小編，審稿人是前職業選手 Raym
 - 名字、國家、排名、比分、交手紀錄、日期、名次只能用「事實清單」的內容，照抄不推測；名字照事實清單的寫法，同一人只能一種寫法，不要自己翻譯或音譯
 - 比分照事實清單（勝方在前）；主詞是敗方時倒過來寫；不准換角度重講同一個比分
 - 「爆冷／冷門」只能用在事實清單標了「規則判定爆冷」的場次；「逆轉」只能用在寫到逆轉的場次
-- 只有事實清單寫到金牌／銀牌／銅牌的賽事才能用獎牌字眼；World Tour 等賽事寫冠軍、亞軍、四強
+- 名次可以寫金牌／銀牌／銅牌（冠軍＝金、亞軍＝銀、四強＝銅）；不要用「季軍」「第三名」
 - 不要自己算出事實清單沒有的新數字
 - 事實清單以外的背景可以寫，但每句句尾加「⚠️推測」、語氣用「可能、大約」，並列進 todo；正文盡量少用推測
 - 事實清單有「新聞」的，把標題與網址放進 first_comment（建議放在第一則留言），不要塞在正文
@@ -111,20 +112,34 @@ def choose(con, today: str) -> tuple[str, list[str], dict]:
         if any(m["winner"]["home"] or m["loser"]["home"] for m in ms):
             tpe_ts.append((t, ms))
     if tpe_ts:
-        facts = []
+        facts, names_all = [], []
         for t, ms in tpe_ts:
             facts.append(f"賽事：{zh.tournament(t['name'])}（{zh.level(t['level'])}），昨天是 {y}")
             tw = [m for m in ms if m["winner"]["home"] != m["loser"]["home"]]      # 不算台灣內戰
             won = sum(1 for m in tw if m["winner"]["home"])
             facts.append(f"昨天台灣選手對外國選手 {won} 勝 {len(tw) - won} 負（共 {len(tw)} 場；台灣內戰另計）")
-            facts += ["【昨天台灣選手】"] + key_tpe_lines(sl.taiwan_facts(con, t, ms, whole=False), limit=5)
-            opp = _today_opponents(con, t, today)
-            if opp:
-                facts += ["【今天的對手】"] + opp[:4]
-            cands, daym, _ = story.day_candidates(con, t, y)
+            # R10：只挑當天最有故事的一場當主角（故事分數最高的台灣故事；沒有就挑重點場次的第一場），其他一句帶過
+            cands, daym, allm = story.day_candidates(con, t, y)
             tpe_story = next((c for c in story.pick(cands, threshold=0) if story._tpe(c)), None)
-            if tpe_story:
-                facts += ["【跟台灣有關的故事】"] + tpe_story["facts"]
+            lines = sl.taiwan_facts(con, t, ms, whole=False)
+            main = tpe_story["facts"] if tpe_story else key_tpe_lines(lines, limit=1)
+            facts += ["【主角（當天最有故事的一場）】"] + main
+            main_names = sl.side_names(main[:1])
+            m0 = next((m for m in ms if sl.match_fact(m) == main[0]), None)
+            if m0 is not None:
+                facts += ["【歷史】"] + [f for side in ("winner", "loser")
+                                         for f in sl.career(con, m0[side]["pairing_id"], m0["event"], m0[side]["name"], m0["date"])]
+            others = [m for m in tw if not any(n in (m["winner"]["name"], m["loser"]["name"]) for n in main_names)]
+            adv = [m["winner"]["name"] for m in others if m["winner"]["home"]]
+            out_ = [m["loser"]["name"] for m in others if m["loser"]["home"]]
+            if others:
+                facts.append(f"【其他台灣選手（最多一句帶過，不要逐組點名）】另外 {len(adv)} 組晉級、{len(out_)} 組止步")
+            opp = [o for o in _today_opponents(con, t, today) if any(n in o for n in main_names)]
+            if opp:
+                facts += ["【主角今天的對手】"] + opp[:2]
+            names_all += main_names
+        facts += ["【新聞】"] + (story.recent_news(con, names_all, today) or [story.NO_NEWS])
+        facts += ["【冷知識】"] + (story.related_trivia(facts) or [story.NO_TRIVIA])
         return "taiwan", list(dict.fromkeys(facts)), {"tournaments": [t["name"] for t, _ in tpe_ts], "gap": _gap(today, y)}
     if ts:
         best = None
@@ -246,8 +261,11 @@ def recent_rivalry(con, d: dt.date) -> list[str]:
         return []
     careers = [f for side in ("winner", "loser")                      # 準則 R8：生涯素材
                for f in sl.career(con, best_m[side]["pairing_id"], best_m["event"], best_m[side]["name"], best_m["date"])]
-    return ([f"今天是 {d.isoformat()}，沒有比賽；最近 3 個月交手過的宿敵／宰制故事（最近一次交手 {best_date}）："]
-            + best["facts"] + ["【生涯】"] + careers)
+    names = sl.side_names(best["facts"][:1])
+    history = best["facts"] + careers
+    return ([f"今天是 {d.isoformat()}，沒有比賽；最近 3 個月交手過的宿敵／宰制故事（最近一次交手 {best_date}）：", "【歷史】"]
+            + history + ["【新聞】"] + (story.recent_news(con, names, d.isoformat()) or [story.NO_NEWS])
+            + ["【冷知識】"] + (story.related_trivia(history) or [story.NO_TRIVIA]))
 
 
 # ---------------------------------------------------------------- 產生與檢查
@@ -303,7 +321,7 @@ def check_form(body: str, gap: int | None) -> list[str]:
 
 
 def check(out: dict, facts: list[str], kind: str = "story", gap: int | None = None) -> list[str]:
-    from brief.llm import medal_misuse, unlicensed_upsets, unverified
+    from brief.llm import third_place_word, unlicensed_upsets, unverified
     from brief.script import rehashed_scores
     body = out.get("body") or ""
     tags = out.get("hashtags") or []
@@ -336,8 +354,11 @@ def check(out: dict, facts: list[str], kind: str = "story", gap: int | None = No
         problems.append(f"「爆冷」用在規則沒判定的場次：{bad[0][:60]}")
     if "逆轉" in checked and "逆轉" not in source:
         problems.append("「逆轉」沒有對應的事實")
-    if medal_misuse(checked, source):
-        problems.append("這站沒有頒獎牌，不能寫金銀銅牌")
+    if third_place_word(checked):
+        problems.append("不要用「季軍」「第三名」，改成銅牌或四強（notes 23:15）")
+    sides = sl.count_sides(checked, facts)
+    if len(sides) > story.MAX_SIDES:
+        problems.append(f"出現 {len(sides)} 組選手（R10：最多 {story.MAX_SIDES} 組，1–2 組主角、其他一句帶過）：" + "、".join(sides[:6]))
     rep = rehashed_scores(checked)
     if rep:
         problems.append("同一個比分換角度重講：" + "、".join(rep[:3]))
@@ -392,7 +413,8 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
     out, problems = write(user, 2)
     if out is None:
         return None, problems
-    context = f"貼文日 {today}；距離故事最新一場比賽 {gap if gap is not None else '很多'} 天（R6：+1 天內新聞語氣，超過故事語氣）"
+    context = (f"貼文日 {today}；距離故事最新一場比賽 {gap if gap is not None else '很多'} 天（R6：+1 天內新聞語氣，超過故事語氣）；"
+               + story.news_context(facts))
     bad = story.edit(editor, out, con, {"day": today}, text=post_text(out), context=context)
     out["editor"] = {"first": bad, "rewritten": False, "final": bad}
     if not bad:
@@ -441,12 +463,17 @@ def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bo
     if not ignore_budget and script.over_budget(con, script.taipei_today()):
         script.budget_alert(con, alert, script.taipei_today(), who="粉專貼文")   # notes 21:00：被擋要告警，不能默默沒推
         return {"status": "skipped_budget", "kind": kind}
-    # 台灣戰報素材多，Sonnet low 連續 4 次超過 400 字；opus low 一次通過（2026-10-01 驗收）→ 戰報暫用 heavy、其餘 routine
-    purpose = "heavy" if kind == "taiwan" else "routine"
-    llm = make_llm() if make_llm else script.make_script_llm(purpose, con, effort="low")
+    # notes 23:15：粉專所有類型都用 Opus；先 low，不過再試 medium（status.md 回報）。編輯維持 Sonnet low
     gap = info.get("gap")
-    editor = make_llm() if make_llm else script.make_script_llm("routine", con, effort="low")   # 編輯：Sonnet low
-    out, problems = generate(llm, kind, facts, con, today, gap, editor)
+    editor = make_llm() if make_llm else script.make_script_llm("routine", con, effort="low")
+    out, problems, used = None, [], None
+    for effort in EFFORTS:
+        llm = make_llm() if make_llm else script.make_script_llm("heavy", con, effort=effort)
+        out, problems = generate(llm, kind, facts, con, today, gap, editor)
+        used = effort
+        if out is not None:
+            break
+    info["effort"] = used
     if out is None:
         path.write_text(f"# 粉專貼文草稿｜{today}\n\n（未通過事實檢查：{'；'.join(problems)}）\n", encoding="utf-8")
         if alert:

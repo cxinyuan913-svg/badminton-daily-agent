@@ -25,7 +25,7 @@ import re
 from pathlib import Path
 
 from brief import digest, storylines as sl, zh
-from brief.llm import _env, medal_misuse, unlicensed_upsets, unverified
+from brief.llm import _env, third_place_word, unlicensed_upsets, unverified
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "data" / "scripts"
@@ -69,7 +69,7 @@ STYLE_GUIDE = {
     "quick": "五個項目的冠軍一次看：開場 0–4 秒用分數最高的故事一句話（含一個數字）；接著約 10 秒台灣段落；"
              "再依故事分數排五項冠軍，有故事的多講、沒故事的一句帶過；結尾約 6 秒互動問句＋下一站預告（事實清單有下一站才講）。",
     "story": "只講一個故事（事實清單第一則），從開場鉤子、過程到結果，結尾一句互動問句。",
-    "taiwan": "整站台灣選手的成績：獎牌、最佳成績、「差一點」的場次、輸給後來的冠亞軍；結尾問觀眾最想看哪一組復仇。",
+    "taiwan": "整站台灣選手的成績：獎牌、最佳成績、「差一點」的場次；結尾問觀眾最想看哪一組復仇。",
     "numbers": "三個數字看懂這一天：每個數字一段，數字一定要來自事實清單。",
     "daily_taiwan": "今天台灣選手的全部戰果（含差一點的場次），以及明天的對手與台灣時間（事實清單有才講）。",
     "daily_story": "只講今天分數最高的那個故事，結尾一句互動問句。",
@@ -84,7 +84,7 @@ SYSTEM = """你是羽球短影音的腳本作者，觀眾是台灣的羽球愛�
 - 名字照事實清單的寫法（有中文就用中文，只有英文就用英文），絕對不要自己翻譯或音譯；同一個人整支腳本只能有一種寫法（範例裡的名字寫法不算數）
 - 不准換角度重講同一個比分來湊秒數（例如先說「21 比 11」再說「從對手角度是 11 比 21」）
 - 比分照事實清單（勝方在前）；句子主詞是敗方時，比分倒過來寫成主詞的角度
-- 只有事實清單寫到金牌／銀牌／銅牌的賽事才能用獎牌字眼；World Tour 等賽事寫冠軍、亞軍、四強
+- 名次可以寫金牌／銀牌／銅牌（冠軍＝金、亞軍＝銀、四強＝銅）；不要用「季軍」「第三名」
 - 「爆冷／冷門」只能用在事實清單標了「規則判定爆冷」的場次；「逆轉」只能用在事實清單寫到逆轉的場次；「首冠／首座」只能用在事實清單寫到「第一座」的選手
 - 標題 3 個：一個具體數字或排名反差＋問句或驚嘆；或一句話總結當天最大的反差
 - 範例只示範格式與語氣，範例裡的名字與數字不能用
@@ -221,8 +221,8 @@ def check(out: dict, facts: list[str], flags: dict) -> list[str]:
         problems.append("「逆轉」沒有對應的故事")
     if re.search(r"首冠|首座", text) and not flags["first_title"]:
         problems.append("「首冠／首座」沒有對應的故事")
-    if medal_misuse(text, source):
-        problems.append("這站沒有頒獎牌（World Tour／IC／IS），不能寫金銀銅牌")
+    if third_place_word(text):
+        problems.append("不要用「季軍」「第三名」，四強輸球改寫成銅牌或四強（notes 23:15）")
     repeated = rehashed_scores(voice)
     if repeated:
         problems.append("同一個比分換角度重講：" + "、".join(repeated[:3]))

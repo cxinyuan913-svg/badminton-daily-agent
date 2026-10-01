@@ -116,15 +116,17 @@ def test_real_asian_games_final_facts_contain_example_numbers():
     assert sl.h2h_record(con, ch, fa, "2026-09-29")[:2] == (3, 2)             # 周天成 vs 法漢 3 勝 2 負
 
 
-def test_medal_words_only_for_medal_events():
-    """2026-10-01 試寫：台北公開賽（S300）被寫成「混雙銀牌」。World Tour 沒有獎牌。"""
+def test_medal_words_allowed_everywhere_but_no_third_place():
+    """notes 23:15（取代 15:40 第 1 點）：所有賽事都可以寫金銀銅（冠軍＝金、亞軍＝銀、四強＝銅）；不用「季軍」「第三名」。"""
     from brief import storylines as sl
-    assert sl.place_name("S300", "F") == "亞軍" and sl.place_name("S300", "SF") == "四強"
-    assert sl.place_name("MULTI", "SF") == "四強（銅牌）" and sl.place_name("G1_IND", "W") == "冠軍（金牌）"
+    assert sl.place_name("S300", "F") == "亞軍（銀牌）" and sl.place_name("S300", "SF") == "四強（銅牌）"
+    assert sl.place_name("MULTI", "W") == "冠軍（金牌）" and sl.place_name("IC", "QF") == "八強"
     facts = ["混雙 決賽：A / B（日本，世界 #5）勝 楊博軒／胡绫芳（中華台北，世界 #12），比分 21-19 21-8",
-             "台灣 混雙 楊博軒／胡绫芳 本站最後名次：亞軍"]
-    out = {"titles": ["a", "b", "c"], "segments": seg(("混雙楊博軒／胡绫芳拿下銀牌，決賽 19 比 21、8 比 21 輸給日本組合。") * 6)}
-    assert any("獎牌" in p for p in script.check(out, facts, FLAGS))
+             "台灣 混雙 楊博軒／胡绫芳 本站最後名次：亞軍（銀牌）"]
+    ok = {"titles": ["a", "b", "c"], "segments": seg(("混雙楊博軒／胡绫芳拿下銀牌，決賽輸給日本組合，第一局只差兩分。") * 5)}
+    assert not [p for p in script.check(ok, facts, FLAGS) if "季軍" in p or "獎牌" in p]
+    bad = {"titles": ["a", "b", "c"], "segments": seg(("混雙楊博軒／胡绫芳拿下季軍，決賽輸給日本組合，第一局只差兩分。") * 5)}
+    assert any("季軍" in p for p in script.check(bad, facts, FLAGS))
 
 
 def test_upset_by_rank_reference_only():
@@ -213,12 +215,11 @@ def test_short_script_allowed():
 
 def test_foreign_name_variants_and_medals_in_highlight():
     """notes 15:40 第 1、2 條，今日重點也適用。"""
-    from brief.llm import medal_misuse, unverified
+    from brief.llm import third_place_word, unverified
     src = "男單 決賽：昆拉武特（泰國，世界 #1）勝 LOH Kean Yew（新加坡，世界 #13），比分 21-12 21-16"
     assert "坤拉武特（譯名不一致）" in unverified("坤拉武特 21-12 21-16 奪冠", src, {})
     assert not [m for m in unverified("昆拉武特 21-12 21-16 奪冠", src, {}) if "譯名" in m]
-    assert medal_misuse("昆拉武特拿下金牌", src) and not medal_misuse("昆拉武特拿下冠軍", src)
-    assert not medal_misuse("拿下金牌", "男單冠軍（金牌）：昆拉武特（泰國）")
+    assert not third_place_word("昆拉武特拿下金牌") and third_place_word("拿下季軍") and third_place_word("拿到第三名")
 
 
 def test_daily_budget_skips_scripts_and_alerts_once(monkeypatch):

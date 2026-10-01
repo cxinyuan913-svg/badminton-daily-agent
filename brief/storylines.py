@@ -17,6 +17,7 @@ LLM 只拿事實清單寫稿，不拿原始資料；事實檢查以事實清單�
 from __future__ import annotations
 
 import datetime as dt
+import re
 from collections import defaultdict
 
 from brief import digest, zh
@@ -24,15 +25,14 @@ from brief import digest, zh
 DEEP = {"Final": "決賽", "F": "決賽", "SF": "四強"}
 BIG_LEVELS = ("G1_IND", "G1_EVENT", "WTF", "S1000", "S750", "MULTI", "CONT_IND")
 PLACE = {"W": "冠軍", "F": "亞軍", "SF": "四強", "QF": "八強", "R16": "16 強", "R32": "32 強", "R64": "64 強", "R128": "128 強"}
-# 只有頒獎牌的賽事才寫金銀銅（2026-10-01 試寫發現：台北公開賽 S300 被寫成「混雙銀牌」「好幾面銅牌」）
-MEDAL_LEVELS = {"G1_IND", "G1_EVENT", "MULTI", "MULTI_TEAM", "CONT_IND", "CONT_TEAM", "FISU", "G1_TEAM"}
+# 名次用語（notes 23:15，取代 15:40 第 1 點）：所有賽事都可以寫金銀銅——冠軍＝金、亞軍＝銀、四強＝銅；不用「季軍」「第三名」
 MEDAL_PLACE = {"W": "冠軍（金牌）", "F": "亞軍（銀牌）", "SF": "四強（銅牌）"}
+# 「對手後來奪冠／打進決賽」只在這些輪次輸球時才是資訊；四強、決賽輸球的對手本來就是冠亞軍（R9 不寫廢話）
+EARLY_ROUNDS = {"QF", "R16", "R32", "R64", "R128", "Quarterfinals", "Round of 16"}
 
 
 def place_name(level: str | None, pos: str) -> str:
-    if level in MEDAL_LEVELS and pos in MEDAL_PLACE:
-        return MEDAL_PLACE[pos]
-    return PLACE.get(pos, pos)
+    return MEDAL_PLACE.get(pos) or PLACE.get(pos, pos)
 EVENT_ZH = zh.EVENT
 
 
@@ -167,7 +167,8 @@ def stories_for(con, t: dict, day: str, day_matches: list[dict], all_matches: li
 
 # ---------------------------------------------------------------- 台灣段落
 def taiwan_facts(con, t: dict, matches: list[dict], whole: bool) -> list[str]:
-    """whole=True：整站（風格 3）；False：當天（每日台灣視角）。含「差一點」（輸的那局差 ≤ 2 分）與輸給後來的名次。"""
+    """whole=True：整站（風格 3）；False：當天（每日台灣視角）。含「差一點」（輸的那局差 ≤ 2 分）；
+    八強或更早輸球時，附對手最後的名次（四強、決賽輸球的對手本來就是冠亞軍，不寫：準則 R9）。"""
     place = placings(con, t["tournament_id"])
     out = []
     for m in sorted((x for x in matches if x["winner"]["home"] or x["loser"]["home"]), key=lambda x: (x["date"], x["match_id"])):
@@ -177,7 +178,7 @@ def taiwan_facts(con, t: dict, matches: list[dict], whole: bool) -> list[str]:
             if close:
                 line += f"；台灣這邊輸的局差 2 分以內：{'、'.join(close)}（差一點）"
             opp = place.get((m["event"], m["winner"]["pairing_id"]))
-            if opp in ("W", "F"):
+            if opp in ("W", "F") and m["round"] in EARLY_ROUNDS:
                 line += f"；對手最後拿到{place_name(t.get('level'), opp)}"
         out.append(line)
     if whole:
@@ -310,6 +311,46 @@ def turning_reasons(con, m: dict, ms: list[dict], k: int, wn: str, ln: str) -> l
     if qb_w or qa_w or qb_l or qa_l:
         out.append(f"兩邊交手中的退賽：翻轉前{wn} {qb_w} 次、{ln} {qb_l} 次；翻轉後{wn} {qa_w} 次、{ln} {qa_l} 次")
     return out
+
+
+def defending(con, t: dict, pairing_id: int, event: str) -> str | None:
+    """上一屆（名稱把年份減一）同一組合拿冠軍 → 衛冕事實（R11 冷知識第 6 條「積分在下一屆開打時失效」用得上）。"""
+    m = re.search(r"(19|20)\d{2}", t["name"])
+    if not m:
+        return None
+    prev = t["name"].replace(m.group(0), str(int(m.group(0)) - 1), 1)
+    row = con.execute("""SELECT t.name FROM tournament_result r JOIN tournament t USING (tournament_id)
+                         WHERE t.name=? AND r.pairing_id=? AND r.event=? AND r.round_reached='W'""", (prev, pairing_id, event)).fetchone()
+    return f"上一屆（{zh.tournament(row[0])}）也是這一組拿冠軍：這站是衛冕戰" if row else None
+
+
+COUNTRY_NAMES = sorted(set(zh.COUNTRY.values()), key=len, reverse=True)
+_SIDE = re.compile(r"(?:^|[：；，、]|勝 |對 )\s*([^：；，、（）\n]+?)(?:（[A-Za-z][^）]*）)?（(?:" + "|".join(map(re.escape, COUNTRY_NAMES)) + r")")
+
+
+def side_names(facts: list[str]) -> list[str]:
+    """事實清單裡出現的選手／組合名（match_fact 的「名字（國家…）」格式）。"""
+    out = []
+    for f in facts:
+        for name in _SIDE.findall(f):
+            name = name.strip()
+            if name and name not in out and not name.startswith(("比分", "世界")):
+                out.append(name)
+    return out
+
+
+def members(name: str) -> list[str]:
+    """組合名 → 可以在文中辨認的片段：中文名、英文姓（全大寫、至少 3 個字母）。"""
+    out = []
+    for part in re.split(r"\s*[/／]\s*", name):
+        zh_part = re.findall(r"[\u4e00-\u9fff]{2,4}", part)
+        out += zh_part or [w for w in re.findall(r"[A-Z][A-Z'-]{2,}", part)] or [part.strip()]
+    return [x for x in out if x]
+
+
+def count_sides(text: str, facts: list[str]) -> list[str]:
+    """文中出現的選手／組合（R10：超過 4 組就是在報數據）。"""
+    return [n for n in side_names(facts) if any(x in text for x in members(n))]
 
 
 CAREER_LEVELS = ("G1_IND", "G1_EVENT", "WTF", "S1000", "S750", "S500", "MULTI", "CONT_IND", "SSP", "SS", "GPG")

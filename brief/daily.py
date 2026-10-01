@@ -146,7 +146,7 @@ def publish(con, today: dt.date, res: dict) -> list[str]:
     errors = []
     try:
         from brief import llm
-        model = llm.AnthropicLLM("routine", con=con) if llm.available() else None
+        model = llm.AnthropicLLM("heavy", con=con, effort="low") if llm.available() else None   # 今日重點也是寫作 → Opus low（notes 23:15）
         text, g3, news_rows = digest.morning(con, today, llm=model, errors=errors)   # notes 18:15：晨報縮小
         if text:
             discord.send(discord.webhook("DISCORD_WEBHOOK_DAILY"), text)

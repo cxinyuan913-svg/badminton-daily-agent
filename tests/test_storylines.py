@@ -79,4 +79,22 @@ def test_career_facts_carnando_marthin():
     assert "2022 2022" not in text                                   # 年份不重複
     cands, daym, allm = story.day_candidates(con, t, "2026-09-29")
     facts = story.materials(con, t, "2026-09-29", story.pick(cands)[0], cands, daym, allm)
-    assert "【生涯】" in facts and any("生涯最高官方排名" in f for f in facts)
+    # R11：素材固定三區；生涯放在【歷史】
+    assert facts.index("【歷史】") < facts.index("【新聞】") < facts.index("【冷知識】")
+    assert any("生涯最高官方排名" in f for f in facts[facts.index("【歷史】"):facts.index("【新聞】")])
+
+
+@needs_db
+def test_r9_eventual_champion_only_for_early_losses():
+    """notes 23:10／R9：四強、決賽輸球的對手本來就是冠亞軍，不產生「對手最後拿到…」；八強以前才有。"""
+    from brief import zh
+    from brief.crawler import connect
+    con = connect(str(DB))
+    zh.apply_player_names(con)
+    t = _t(con, 5874)
+    allm = sl.tournament_matches(con, 5874, t["end_date"])
+    lines = sl.taiwan_facts(con, t, allm, whole=False)
+    sf = [l for l in lines if l.startswith("混雙 四強") and "詹又蓁" in l][0]
+    qf = [l for l in lines if l.startswith("女雙 八強") and "林芝昀" in l][0]
+    assert "對手最後拿到" not in sf
+    assert "對手最後拿到冠軍（金牌）" in qf
