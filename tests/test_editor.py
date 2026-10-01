@@ -213,3 +213,19 @@ def test_examples_sanitized_names():
     assert "卡納多" not in text and "馬汀" not in text and "白荷娜" not in text
     assert "Leo Rolly CARNANDO／Daniel MARTHIN（Leo Rolly CARNANDO／Daniel MARTHIN）" not in text   # 重複括號去掉
     assert "BAEK Ha Na" in text
+
+
+def test_fbpost_pushes_once_per_day(monkeypatch, tmp_path):
+    """切換主機：手動觸發推過 10-02，07:00 的排程就不能再推一次。"""
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    monkeypatch.setattr(fbpost, "_env", lambda k: {"FBPOST": "1", "DISCORD_WEBHOOK_FBPAGE": "https://hook/fb"}.get(k))
+    monkeypatch.setattr(fbpost, "OUT_DIR", tmp_path)
+    monkeypatch.setattr(fbpost, "choose", lambda con, today: ("history", ["今天是 2026-10-02"], {"gap": None}))
+    body = "【羽球故事】" + "三年前的今天，高雄同一天出現兩位台灣單打冠軍，是很值得回味的一天。" * 10 + "\n\n" + fbpost.SIGNATURE
+    monkeypatch.setattr(fbpost, "generate", lambda *a, **k: ({"body": body, "hashtags": ["#羽球", "#台灣", "#冠軍"]}, []))
+    sent = []
+    assert fbpost.run(con, "2026-10-02", make_llm=lambda: None, send=sent.append, ignore_budget=True)["status"] == "ok"
+    assert fbpost.run(con, "2026-10-02", make_llm=lambda: None, send=sent.append, ignore_budget=True)["status"] == "skipped_sent"
+    assert len(sent) == 1
+    assert fbpost.run(con, "2026-10-03", make_llm=lambda: None, send=sent.append, ignore_budget=True)["status"] == "ok"

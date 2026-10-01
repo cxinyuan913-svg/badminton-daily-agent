@@ -477,8 +477,10 @@ def render(today: str, kind: str, out: dict) -> str:
                       "**── 給你的備註（不要貼）──**"] + [f"- {x}" for x in notes])
 
 
-def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bool = False) -> dict:
+def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bool = False, force: bool = False) -> dict:
     from brief import discord, script
+    if _env("FBPOST") == "1" and already_sent(con, today) and not force:
+        return {"status": "skipped_sent", "kind": None}
     kind, facts, info = choose(con, today)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUT_DIR / f"{today}.md"
@@ -511,7 +513,18 @@ def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bo
     url = _env("DISCORD_WEBHOOK_FBPAGE")
     if _env("FBPOST") == "1" and url:
         (send or (lambda t: discord.send(url, t)))(text)
+        con.execute("INSERT OR REPLACE INTO fbpost_sent (day, kind) VALUES (?, ?)", (today, kind))
+        con.commit()
     return {"status": "ok", "kind": kind, "info": info, "out": out, "facts": facts, "path": str(path)}
+
+
+SENT_TABLE = "CREATE TABLE IF NOT EXISTS fbpost_sent (day TEXT PRIMARY KEY, kind TEXT, sent_at TEXT NOT NULL DEFAULT (datetime('now')))"
+
+
+def already_sent(con, today: str) -> bool:
+    """同一天推過就不再推（2026-10-02 切換主機：手動觸發後，當天的排程不能再推一次）。"""
+    con.execute(SENT_TABLE)
+    return con.execute("SELECT 1 FROM fbpost_sent WHERE day=?", (today,)).fetchone() is not None
 
 
 def main():
