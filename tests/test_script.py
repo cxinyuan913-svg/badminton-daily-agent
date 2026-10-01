@@ -57,10 +57,12 @@ def test_generate_retries_once_then_gives_up():
 
 
 def test_styles_by_day_type():
+    """交接單 005：每個比賽日都走故事引擎；決賽日看 SCRIPT_FINAL，其餘看 SCRIPT_DAILY。"""
     t = {"end_date": "2026-09-29"}
-    assert script.styles_for_day(t, "2026-09-29", "Final") == ["quick", "story", "taiwan", "numbers"]
-    assert script.styles_for_day(t, "2026-09-28", "SF") == ["daily_taiwan", "daily_story", "daily_quick"]
-    assert script.styles_for_day(t, "2026-09-26", "R16") == ["daily_taiwan", "daily_story"]
+    assert script.styles_for_day(t, "2026-09-29", "Final") == ["story_main"]
+    assert script.styles_for_day(t, "2026-09-26", "R16") == ["story_main"]
+    assert script.flag_for("story_main", t, "2026-09-29") == "SCRIPT_FINAL"
+    assert script.flag_for("story_main", t, "2026-09-28") == "SCRIPT_DAILY"
 
 
 def test_routing_scripts_daily_alerts(monkeypatch, tmp_path):
@@ -142,9 +144,9 @@ def test_switches_default_off(monkeypatch):
     assert script.wanted_styles(t, "2026-09-29", "Final") == []
     env["SCRIPT_DAILY"] = "dry"
     assert script.wanted_styles(t, "2026-09-29", "Final") == []
-    assert script.wanted_styles(t, "2026-09-28", "SF") == ["daily_taiwan", "daily_story", "daily_quick"]
+    assert script.wanted_styles(t, "2026-09-28", "SF") == ["story_main"]
     env["SCRIPT_FINAL"] = "1"
-    assert script.wanted_styles(t, "2026-09-29", "Final") == ["quick", "story", "taiwan", "numbers"]
+    assert script.wanted_styles(t, "2026-09-29", "Final") == ["story_main"]
 
 
 def test_cost_since_only_counts_scripts():

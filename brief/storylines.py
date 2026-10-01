@@ -207,19 +207,32 @@ def h2h_detail(con, a: int, b: int, upto: str) -> list[dict]:
     """a 對 b 的每一場（含團體賽單場），依日期排序；a_won 與局分都是 a 的角度。"""
     rows = con.execute(
         """SELECT m.match_id, m.match_date, m.round, t.name, t.level, m.side1_id, m.winner_side, m.duration_min,
-                  m.score_status, m.tournament_id
+                  m.score_status, m.tournament_id, m.team_tie_id
            FROM match m JOIN tournament t USING (tournament_id)
            WHERE ((m.side1_id=? AND m.side2_id=?) OR (m.side1_id=? AND m.side2_id=?))
              AND m.match_date<=? AND m.winner_side IN (1, 2)
            ORDER BY m.match_date, m.match_id""", (a, b, b, a, upto)).fetchall()
     out = []
-    for mid, date, rnd, tname, level, s1, ws, dur, status, tid in rows:
+    for mid, date, rnd, tname, level, s1, ws, dur, status, tid, tie in rows:
         a_is_1 = s1 == a
         g = con.execute("SELECT side1_points, side2_points FROM game WHERE match_id=? ORDER BY game_no", (mid,)).fetchall()
         g = [(p1, p2) if a_is_1 else (p2, p1) for p1, p2 in g if p1 is not None and p2 is not None]
         out.append({"match_id": mid, "date": date, "round": rnd, "tournament": zh.tournament(tname), "level": level,
-                    "tournament_id": tid, "a_won": (ws == 1) == a_is_1, "games": g, "duration": dur, "status": status})
+                    "tournament_id": tid, "a_won": (ws == 1) == a_is_1, "games": g, "duration": dur, "status": status,
+                    "team": tie is not None})
     return out
+
+
+def worst_stretch(ms: list[dict], min_len: int = 8) -> tuple[int, int, int] | None:
+    """a 戰績最差的連續區段（至少 min_len 場）：(起點, 長度, a 勝場)；勝率 ≥ 40% 不算低潮。同勝率取較長的。"""
+    best = None
+    for i in range(len(ms)):
+        for n in range(min_len, len(ms) - i + 1):
+            w = sum(m["a_won"] for m in ms[i:i + n])
+            key = (w / n, -n)
+            if best is None or key < best[0]:
+                best = (key, (i, n, w))
+    return best[1] if best and best[0][0] < 0.4 else None
 
 
 def _score_a(gs: list[tuple[int, int]]) -> str:
@@ -257,7 +270,7 @@ def streak(ms: list[dict]) -> tuple[bool, int]:
 
 def _meet(m: dict) -> str:
     """賽事名本身帶年份（zh.tournament），不再重複寫日期。"""
-    return f"{m['tournament']}{zh.round_name(m['round'])}"
+    return f"{m['tournament']}{'團體賽' if m.get('team') else ''}{zh.round_name(m['round'])}"
 
 
 def candidates_for_match(con, m: dict) -> list[dict]:
@@ -279,6 +292,13 @@ def candidates_for_match(con, m: dict) -> list[dict]:
             bw, bl = _record(ms[:k])
             aw, al = _record(ms[k:])
             facts.append(f"前 {k} 場{wn} {bw} 勝 {bl} 負；從 {_meet(ms[k])}起 {aw} 勝 {al} 負")
+        ws_ = worst_stretch(ms)
+        if ws_:
+            i, k2, w2 = ws_
+            seg = ms[i:i + k2]
+            fin = sum(1 for x in seg if x["round"] in FINAL_ROUNDS)
+            facts.append(f"{wn}最低潮：{_meet(seg[0])}到{_meet(seg[-1])}的 {k2} 場只贏 {w2} 場"
+                         + (f"（其中 {fin} 場是決賽）" if fin else ""))
         won, s = streak(ms)
         if s >= 2:
             facts.append(f"{wn}目前對{ln}{'連勝' if won else '連敗'} {s} 場")
@@ -290,6 +310,11 @@ def candidates_for_match(con, m: dict) -> list[dict]:
         if longest:
             facts.append(f"兩邊打最久的一場：{_meet(longest)}，{longest['duration']} 分鐘，"
                          f"{wn if longest['a_won'] else ln}勝（{wn}角度比分 {_score_a(longest['games'])}）")
+        for x in ms:
+            if x["status"] in ("Retired", "Walkover"):
+                quit_ = ln if x["a_won"] else wn
+                facts.append(f"{_meet(x)}{quit_}{'中途退賽' if x['status'] == 'Retired' else '賽前退賽'}"
+                             + (f"（退賽前{wn}角度比分 {_score_a(x['games'])}）" if x["games"] else ""))
         out.append({"kind": "rivalry", "score": 3 + n / 4 + (4 if tp else 0) + len(finals) / 2 + deep,
                     "event": m["event"], "facts": facts})
     if n >= 5 and tl == 0:

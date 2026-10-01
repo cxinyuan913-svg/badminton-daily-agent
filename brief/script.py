@@ -62,6 +62,7 @@ STYLES = {
     "daily_story": ("單一故事（每日）", "story.md", "routine", "SCRIPT_DAILY"),
     "daily_quick": ("快報（當天輪次）", "quick.md", "routine", "SCRIPT_DAILY"),
     "weekly_rank": ("排名更新", None, "heavy", "SCRIPT_WEEKLY"),
+    "story_main": ("故事", None, "heavy", None),            # 交接單 005：旗標依當天是不是決賽日（flag_for）
 }
 
 STYLE_GUIDE = {
@@ -323,11 +324,14 @@ def to_discord(label: str, title: str, out: dict) -> str:
 
 
 def styles_for_day(t: dict, day: str, deepest_round: str | None) -> list[str]:
-    if day == t["end_date"]:
-        return ["quick", "story", "taiwan", "numbers"]
-    if deepest_round in ("QF", "SF"):
-        return ["daily_taiwan", "daily_story", "daily_quick"]
-    return ["daily_taiwan", "daily_story"]
+    """交接單 005：所有比賽日（含決賽日）都走故事引擎，每天 1–2 支。舊的四種風格只在 --styles 指定時產生（對照用）。"""
+    return ["story_main"]
+
+
+def flag_for(style: str, t: dict, day: str) -> str:
+    if style == "story_main":
+        return "SCRIPT_FINAL" if day == t["end_date"] else "SCRIPT_DAILY"
+    return STYLES[style][3]
 
 
 def run_for_day(con, t: dict, day: str, deepest_round: str | None = None, next_preview: list[str] | None = None,
@@ -345,6 +349,11 @@ def run_for_day(con, t: dict, day: str, deepest_round: str | None = None, next_p
             budget_alert(con, alert, today)
             continue
         label, _, purpose, flag = STYLES[style]
+        if style == "story_main":
+            res, part = _story_main(con, t, day, title, make_llm, send, alert)
+            results[style] = res
+            md += part
+            continue
         f = facts_for(con, t, day, style, next_preview)
         if f is None:
             results[style] = {"status": "skipped"}
@@ -365,6 +374,35 @@ def run_for_day(con, t: dict, day: str, deepest_round: str | None = None, next_p
     path = OUT_DIR / f"{day}_{t['tournament_id']}.md"
     path.write_text("\n".join(md), encoding="utf-8")
     return {"path": str(path), "styles": results}
+
+
+def _story_main(con, t: dict, day: str, title: str, make_llm, send, alert) -> tuple[dict, list[str]]:
+    """故事引擎：選 1–2 個故事，各寫一支。回傳（結果, markdown 段落）。"""
+    from brief import story
+    cands, daym, _ = story.day_candidates(con, t, day)
+    picks = story.pick(cands)
+    if not picks:
+        return {"status": "skipped", "reason": f"沒有分數 ≥ {story.STORY_MIN} 的故事"}, \
+               [f"（今天沒有分數 ≥ {story.STORY_MIN} 的故事，不產生）", ""]
+    flag = flag_for("story_main", t, day)
+    md, scripts = [], []
+    for i, c in enumerate(picks, 1):
+        facts = story.materials(con, t, day, c, cands, daym)
+        model = make_llm("heavy") if make_llm else make_script_llm("heavy", con)
+        out, problems = story.generate(model, facts, con, {"tournament_id": t["tournament_id"], "day": day})
+        head = f"故事 {i}｜{c['kind']}"
+        if out is None:
+            scripts.append({"status": "failed", "kind": c["kind"], "score": c["final"], "problems": problems})
+            md += [f"### {head}", "", f"（未通過事實檢查：{'；'.join(problems)}）", ""]
+            if alert:
+                alert(f"**腳本產生失敗**｜{title}｜{head}：{'；'.join(problems)[:300]}")
+            continue
+        scripts.append({"status": "ok", "kind": c["kind"], "score": c["final"], "out": out, "facts": facts})
+        md += [story.to_markdown(head, c, out), ""]
+        if send and _env(flag) == "1":
+            send(story.to_discord(f"{title}｜{head}", out))
+    ok = any(x["status"] == "ok" for x in scripts)
+    return {"status": "ok" if ok else "failed", "scripts": scripts}, md
 
 
 def run_weekly(con, make_llm=None, send=None, alert=None, week: str | None = None) -> dict:
@@ -399,7 +437,7 @@ def enabled(flag: str) -> bool:
 
 def wanted_styles(t: dict, day: str, deepest_round: str | None) -> list[str]:
     """開關有開的風格（決賽日看 SCRIPT_FINAL，其餘看 SCRIPT_DAILY）。"""
-    return [s for s in styles_for_day(t, day, deepest_round) if enabled(STYLES[s][3])]
+    return [s for s in styles_for_day(t, day, deepest_round) if enabled(flag_for(s, t, day))]
 
 
 def script_sender():
