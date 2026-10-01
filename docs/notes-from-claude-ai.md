@@ -9,6 +9,8 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ## 2026-10-02 06:55 — 三方合作規則（claude.ai／本機 CLI／雲端工作階段）
 
+> **已併入** CLAUDE.md「與 claude.ai 的分工」（2026-10-02，Claude Code）
+
 | 角色 | 負責 | 會改的檔案 |
 |---|---|---|
 | claude.ai | 和 Raymond 討論、定案；寫 notes 與交接單，每項標 ☁️ 或 💻 | 只有 `docs/notes-from-claude-ai.md`、`docs/handoffs/`、`docs/video/`、`config/`（直接寫本機檔，不 commit） |

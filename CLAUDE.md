@@ -89,6 +89,17 @@ Raymond 在 claude.ai 做調查、討論、決策與視覺化；在這裡（Clau
   - 數字附上出處：哪個 commit、檔案或指令的輸出，讓 claude.ai 能核對
   - status.md 是唯一的進度來源；不需要另外給 claude.ai 連結或摘要
   - **有亮點就記進 `docs/highlights.md`**（求職作品素材）：日期、問題、怎麼發現、怎麼解決、數字、commit
+- **三方合作**（2026-10-02 notes 06:55）：
+  | 角色 | 負責 | 會改的檔案 |
+  |---|---|---|
+  | claude.ai | 和 Raymond 討論、定案；寫 notes 與交接單，每項標 ☁️ 或 💻 | 只有 `docs/notes-from-claude-ai.md`、`docs/handoffs/`、`docs/video/`、`config/`（直接寫本機檔，不 commit） |
+  | 本機 CLI 💻（這裡） | 需要資料庫、網路、排程、真實試跑的工作；**唯一可以直接 commit 到 main 的角色**；合併後同步 | 全部 |
+  | 雲端工作階段 ☁️ | 只用假資料就能完成的程式修改；**一律在新分支、開 PR**，不直接推 main | 程式與測試；不改 `docs/status.md`、`docs/notes-from-claude-ai.md`、`CLAUDE.md`、`config/` |
+  1. 雲端的完成報告寫在 PR 說明；本機 CLI 合併後把重點抄進 `docs/status.md`（status.md 只有本機 CLI 在改）
+  2. 同一個 notes 項目只標 ☁️ 或 💻 其中一個；沒標的預設 💻
+  3. 開工前一律先 `git pull`。雲端 PR 開著的期間，本機 CLI 不改那個 PR 動到的檔案；真的要改，等合併後再改
+  4. claude.ai 寫在本機的 notes／config 變更，由本機 CLI 下次 commit 一起推上 GitHub，雲端才看得到：**派雲端任務前，本機 CLI 要先 commit、push**
+  5. PR 合併由 Raymond 在 GitHub 按；或 Raymond 說「合併」時由本機 CLI 用 `gh pr merge` 合併
 - **claude.ai 讀本機 repo 只用唯讀指令**，只會新增 `docs/notes-from-claude-ai.md` 與 `docs/handoffs/` 底下的檔案。遇到 `.git/index.lock` 錯誤、且確定沒有其他 git 程序在跑時，可以直接刪除後重試
 
 ## 工作規則
