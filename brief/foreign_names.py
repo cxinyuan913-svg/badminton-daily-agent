@@ -26,6 +26,12 @@ SOURCES = {"www.cna.com.tw": "cna", "www.nownews.com": "nownews"}
 PRIORITY = ["cna", "nownews"]                          # 譯名衝突時以中央社為準
 
 TABLE = """
+CREATE TABLE IF NOT EXISTS foreign_article (
+    url             TEXT PRIMARY KEY,
+    source          TEXT NOT NULL,
+    text            TEXT NOT NULL,
+    fetched_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS foreign_name_seen (
     player_id       INTEGER NOT NULL,
     name_zh         TEXT NOT NULL,
@@ -74,7 +80,7 @@ def match_player(con, name_en: str) -> int | None:
     return hits[0] if len(hits) == 1 else None
 
 
-PARTICLE = re.compile(r"迎戰|擊敗|不敵|戰勝|力退|對上|對決|面對|對手|[的與和及遭由被讓將]")
+PARTICLE = re.compile(r"迎戰|擊敗|不敵|戰勝|力退|對上|對決|面對|對手|頭號|男雙|女雙|混雙|男單|女單|[的與和及遭被讓將]")
 
 
 def _country_names() -> list[str]:
@@ -91,7 +97,10 @@ def clean_zh(name: str) -> str:
         if i >= 0 and i + len(c) < len(name):
             name = name[i + len(c):]
             break
-    return PARTICLE.split(name)[-1] or name
+    name = PARTICLE.split(name)[-1] or name
+    if len(name) == 4 and name[0] == "由":       # 「韓國由沈有振」；「由」不能當切點（福島由紀）
+        name = name[1:]
+    return name
 
 
 def extract(con, text: str, url: str, source: str) -> list[tuple[int, str, str]]:
@@ -106,6 +115,60 @@ def extract(con, text: str, url: str, source: str) -> list[tuple[int, str, str]]
             if 2 <= len(zh) <= 8:
                 out.append((pid, zh, sent.strip()[:200]))
     return out
+
+
+# 華裔選手（交接單 003：可用新聞找漢字，但要有證據）：BWF 名字是漢語拼音，台灣媒體多半只寫漢字、不附英文。
+# 新聞原文裡的漢字名轉成拼音後，與 BWF 名字的每個字完全一樣、只對得上一位選手，且文章也寫到他的國家，才建立連結。
+# 譯名本身仍然來自新聞原文，不是用拼音造的。
+PINYIN_COUNTRIES = {"CHN": ("中國",), "HKG": ("香港",), "MAC": ("澳門",), "SGP": ("新加坡", "星國"), "MAS": ("馬來西亞", "大馬")}
+CJK_RUN = re.compile(r"[一-鿿]{2,}")
+# 常見華人姓氏（繁體）：拼音比對的第一個字必須是姓，排除「因疫情」「裡已經」「相遇」這類一般詞
+SURNAMES = set("王李張劉陳楊黃趙吳周徐孫馬朱胡郭何林高羅鄭梁謝宋唐許韓馮鄧曹彭曾蕭田董袁潘于余蔣蔡賈丁魏薛葉閻杜戴夏鍾汪"
+               "任姜范方石姚譚廖鄒熊金陸郝孔白崔康毛邱秦江史顧侯邵孟龍萬段雷錢湯尹黎易常武喬賀賴龔文翁鮑祁戚駱翟")
+SEPARATORS = set("與和及／、，,·‧ ")
+
+
+def _pinyin_index(con) -> dict[str, list[tuple[int, str]]]:
+    from pypinyin import lazy_pinyin  # noqa: F401 — 確認套件存在
+    idx: dict[str, list[tuple[int, str]]] = {}
+    for pid, disp, country in con.execute(
+            f"SELECT player_id, name_display, country_code FROM player WHERE country_code IN "
+            f"({','.join('?' * len(PINYIN_COUNTRIES))}) AND name_display IS NOT NULL", tuple(PINYIN_COUNTRIES)):
+        toks = disp.lower().split()
+        if 2 <= len(toks) <= 3 and all(t.isalpha() for t in toks):
+            idx.setdefault(" ".join(toks), []).append((pid, country))
+    return idx
+
+
+def extract_pinyin(con, text: str, index: dict | None = None) -> list[tuple[int, str, str]]:
+    """規則：第一個字是常見姓氏；不是台灣選手全名的一部分；兩個字的名字前後必須緊貼分隔字（與、和、／、、…）。"""
+    from pypinyin import lazy_pinyin
+    from brief.zh import load_player_table
+    index = _pinyin_index(con) if index is None else index
+    tpe = [r["name_zh"] for r in load_player_table()]
+    out = []
+    for sent in SENT.findall(text):
+        for m in CJK_RUN.finditer(sent):
+            run, start = m.group(0), m.start()
+            for size in (3, 2):
+                for i in range(len(run) - size + 1):
+                    word = run[i:i + size]
+                    if word[0] not in SURNAMES:
+                        continue
+                    if any(word in t and word != t for t in tpe):
+                        continue                       # 「宏蔚」是葉宏蔚的一部分
+                    if size == 2:
+                        before = sent[start + i - 1] if start + i > 0 else ""
+                        after = sent[start + i + 2] if start + i + 2 < len(sent) else ""
+                        if before not in SEPARATORS and after not in SEPARATORS:
+                            continue
+                    hits = index.get(" ".join(lazy_pinyin(word)))
+                    if not hits or len(hits) != 1:
+                        continue
+                    pid, country = hits[0]
+                    if any(c in text for c in PINYIN_COUNTRIES[country]):
+                        out.append((pid, word, sent.strip()[:200]))
+    return list({(p, w): (p, w, e) for p, w, e in out}.values())
 
 
 def store(con, items: list[tuple[int, str, str]], url: str, source: str) -> int:
@@ -158,8 +221,33 @@ def fetch(con, client: Client, urls: list[str]) -> dict[str, int]:
         if r is None:
             out[url] = 0
             continue
-        out[url] = store(con, extract(con, page_text(r.text), url, source), url, source)
+        text = page_text(r.text)
+        con.executescript(TABLE)
+        con.execute("INSERT OR REPLACE INTO foreign_article (url, source, text) VALUES (?, ?, ?)", (url, source, text))
+        out[url] = scan_text(con, text, url, source)
     return out
+
+
+def scan_text(con, text: str, url: str, source: str) -> int:
+    return store(con, extract(con, text, url, source) + extract_pinyin(con, text), url, source)
+
+
+def rescan(con) -> int:
+    """用已存的文章內文重新擷取（改規則後不用再抓一次）。"""
+    con.executescript(TABLE)
+    return sum(scan_text(con, t, u, s) for u, s, t in con.execute("SELECT url, source, text FROM foreign_article").fetchall())
+
+
+def scan_new(con, client: Client, limit: int = 20) -> int:
+    """每日流程：抓還沒看過的台灣媒體羽球新聞內文（每則一次），擷取譯名。"""
+    con.executescript(TABLE)
+    try:
+        urls = [u for (u,) in con.execute(
+            "SELECT url FROM news_item WHERE source IN ('cna', 'nownews') AND url NOT IN (SELECT url FROM foreign_article) "
+            "ORDER BY published DESC LIMIT ?", (limit,))]
+    except Exception:  # noqa: BLE001 — 還沒有 news_item
+        return 0
+    return sum(fetch(con, client, urls).values()) if urls else 0
 
 
 def export(con, path: Path = CSV_PATH) -> int:

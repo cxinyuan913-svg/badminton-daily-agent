@@ -63,3 +63,25 @@ def test_digest_uses_confirmed_foreign_name_and_llm_checks_it():
     src = "- 男單 決賽：**昆拉武特**（泰國，#1）勝 LOH Kean Yew（新加坡，#13） 21-12 21-16"
     assert llm.unverified("昆拉武特直落二奪冠", src, {"昆拉武特": "Kunlavut VITIDSARN"}) == []
     assert llm.unverified("法漢晉級", src, {"法漢": "Alwi FARHAN"}) == ["法漢"]   # 譯名在表上但原始資料沒有
+
+
+def pinyin_db():
+    con = db()
+    con.executemany("INSERT INTO player (player_id, name_display, country_code) VALUES (?, ?, ?)", [
+        (1, "WANG Chang", "CHN"), (2, "LIANG Wei Keng", "CHN"), (3, "YIN Yi Qing", "CHN"),
+        (4, "CHENG Shu", "CHN"), (5, "HONG Wei", "CHN"), (6, "LIU Yi", "CHN")])
+    return con
+
+
+def test_pinyin_link_needs_evidence_and_strict_rules():
+    """華裔選手：新聞原文的漢字名轉拼音對回 BWF 名字。NOWnews 2026-09-24 原句：「梁偉鏗與王昶面對印尼頭號男雙」。"""
+    con = pinyin_db()
+    text = "第二點男雙，梁偉鏗與王昶面對印尼頭號男雙阿爾菲安。中國隊在2：0領先下連丟三盤。"
+    got = {(p, w) for p, w, _ in fn.extract_pinyin(con, text)}
+    assert got == {(2, "梁偉鏗"), (1, "王昶")}
+    assert fn.extract_pinyin(con, "梁偉鏗與王昶面對對手") == []              # 文章沒寫到「中國」→ 不連
+    noise = "中國選手因疫情影響，打法成熟，葉宏蔚也表示相遇不意外。"
+    assert fn.extract_pinyin(con, noise) == []                                # 不是姓開頭、或是台灣選手名字的一部分
+    assert fn.extract_pinyin(con, "中國劉毅迎戰印尼") == []                   # 兩字名前後沒有分隔字 → 不收
+    assert {w for _, w, _ in fn.extract_pinyin(con, "中國的何濟霆與劉毅迎戰印尼")} == {"劉毅"}
+    assert fn.clean_zh("福島由紀") == "福島由紀" and fn.clean_zh("頭號男雙阿爾菲安") == "阿爾菲安"

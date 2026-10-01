@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "requests>=2.31",
     "anthropic>=1.0",
+    "pypinyin>=0.50",
 ]
 
 [project.optional-dependencies]
