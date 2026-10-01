@@ -1,0 +1,11 @@
+[Unit]
+Description=badminton-daily-agent watch：每站當地當天打完就發（每 30 分鐘）
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/badminton-daily-agent
+ExecStart=/bin/sh /root/badminton-daily-agent/scripts/run_job.sh watch
+# 與教練工具共用 1 GB 主機：限制記憶體、降低優先順序
+MemoryMax=400M
+Nice=10
+TimeoutStartSec=2h

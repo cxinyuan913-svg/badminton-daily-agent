@@ -1,0 +1,9 @@
+[Unit]
+Description=badminton-daily-agent watch 每 30 分鐘
+
+[Timer]
+OnCalendar=*:00/30
+Persistent=false
+
+[Install]
+WantedBy=timers.target

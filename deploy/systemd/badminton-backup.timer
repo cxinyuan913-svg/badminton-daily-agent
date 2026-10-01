@@ -1,0 +1,9 @@
+[Unit]
+Description=badminton-daily-agent 資料庫備份 UTC 20:00（避開教練工具 UTC 19:00 備份）
+
+[Timer]
+OnCalendar=*-*-* 20:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

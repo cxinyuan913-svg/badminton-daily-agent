@@ -1,0 +1,9 @@
+[Unit]
+Description=badminton-daily-agent 晨報 台北 06:00（UTC 22:00）
+
+[Timer]
+OnCalendar=*-*-* 22:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

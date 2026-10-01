@@ -1,0 +1,11 @@
+[Unit]
+Description=badminton-daily-agent backup：brief.db 每日備份（UTC 20:00，保留 7 天）
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/badminton-daily-agent
+ExecStart=/bin/sh /root/badminton-daily-agent/scripts/run_job.sh backup
+# 與教練工具共用 1 GB 主機：限制記憶體、降低優先順序
+MemoryMax=400M
+Nice=10
+TimeoutStartSec=2h
