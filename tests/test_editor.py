@@ -229,3 +229,21 @@ def test_fbpost_pushes_once_per_day(monkeypatch, tmp_path):
     assert fbpost.run(con, "2026-10-02", make_llm=lambda: None, send=sent.append, ignore_budget=True)["status"] == "skipped_sent"
     assert len(sent) == 1
     assert fbpost.run(con, "2026-10-03", make_llm=lambda: None, send=sent.append, ignore_budget=True)["status"] == "ok"
+
+
+def test_prompt_really_contains_examples():
+    """10-02 修 bug：範例那段少了 f 前綴，模型收到的是字面上的 {_examples_fb(con)}。"""
+    writer = Fake([json.dumps({"body": ""}, ensure_ascii=False)] * 2)
+    fbpost.generate(writer, "story", ["事實"], gap=3)
+    prompt = writer.prompts[0][1]
+    assert "{_examples_fb" not in prompt and "範例 1" in prompt
+
+
+def test_theme_requires_every_story_and_skips_r10():
+    theme = [{"title": "男雙世界第一", "keys": ["KIM Won Ho"]}, {"title": "女雙世界第一", "keys": ["TAN Ning"]}]
+    body = "【羽球故事】" + "KIM Won Ho 四強就輸了。" * 30 + "\n\n" + fbpost.SIGNATURE
+    probs = fbpost.check({"body": body, "hashtags": ["#羽球", "#亞運", "#男雙"]}, ["KIM Won Ho"], "story", 3, theme)
+    assert any("沒講到：女雙世界第一" in p for p in probs)
+    writer = Fake([json.dumps({"body": ""}, ensure_ascii=False)] * 2)
+    fbpost.generate(writer, "story", ["事實"], gap=3, theme=theme)
+    assert "每一個都要講到" in writer.prompts[0][1] and "2. 女雙世界第一" in writer.prompts[0][1]

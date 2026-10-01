@@ -322,7 +322,7 @@ def check_form(body: str, gap: int | None) -> list[str]:
     return problems
 
 
-def check(out: dict, facts: list[str], kind: str = "story", gap: int | None = None) -> list[str]:
+def check(out: dict, facts: list[str], kind: str = "story", gap: int | None = None, theme: list[dict] | None = None) -> list[str]:
     from brief.llm import third_place_word, unlicensed_upsets, unverified
     from brief.script import rehashed_scores
     body = out.get("body") or ""
@@ -358,8 +358,12 @@ def check(out: dict, facts: list[str], kind: str = "story", gap: int | None = No
         problems.append("「逆轉」沒有對應的事實")
     if third_place_word(checked):
         problems.append("不要用「季軍」「第三名」，改成銅牌或四強（notes 23:15）")
+    if theme:                                              # 指定多故事：每一個都要講到；不數組數
+        missing = [x["title"] for x in theme if not any(k in body for k in x["keys"])]
+        if missing:
+            problems.append("指定的故事沒講到：" + "、".join(missing))
     sides = sl.count_sides(checked, facts)
-    if len(sides) > story.MAX_SIDES:
+    if len(sides) > story.MAX_SIDES and not theme:
         problems.append(f"出現 {len(sides)} 組選手（R10：最多 {story.MAX_SIDES} 組，1–2 組主角、其他一句帶過）：" + "、".join(sides[:6]))
     rep = rehashed_scores(checked)
     if rep:
@@ -400,7 +404,9 @@ def post_text(out: dict) -> str:
 
 
 def generate(llm, kind: str, facts: list[str], con=None, today: str | None = None, gap: int | None = None,
-             editor=None) -> tuple[dict | None, list[str]]:
+             editor=None, theme: list[dict] | None = None) -> tuple[dict | None, list[str]]:
+    """theme：明確指定的多個並列故事 [{"title": "…", "keys": ["名字", …]}]——每一個都要講到（不適用 R10 的組數上限）；
+    自動選題（theme=None）照 R10 只講 1–2 組主角（notes 10-02 05:55 第 6 項）。"""
     """寫 → 固定檢查＋事實檢查 → 編輯檢查（準則 R1–R6）；編輯不過帶意見重寫（最多 2 次），仍不過就附編輯意見照樣產出。"""
     from brief import script
     tone = tone_for(gap)
@@ -408,8 +414,10 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
                  f"距離故事最新一場比賽 {gap if gap is not None else '很多'} 天 → 故事語氣（範例 3 的寫法，開頭【羽球故事】或【○○故事】，"
                  "從人物或關係切入、照時間順序講，最新那場只是其中一段）")
     user = (f"貼文類型：{KIND_LABEL[kind]}\n語氣：{tone_text}\n\n範例（只看寫法與語氣；範例裡的名字與數字不能用；"
-            "**範例裡外國選手的中文名是暫用的，不准照用**——名字一律照事實清單：事實清單寫英文就寫英文）：\n{_examples_fb(con)}"
-            f"\n\n事實清單：\n" + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(facts)))
+            f"**範例裡外國選手的中文名是暫用的，不准照用**——名字一律照事實清單：事實清單寫英文就寫英文）：\n{_examples_fb(con)}"
+            + (("\n\n**這篇是指定的多故事主題，下面每一個都要講到（每個至少一段）**：\n"
+                 + "\n".join(f"{i + 1}. {x['title']}" for i, x in enumerate(theme))) if theme else "")
+            + f"\n\n事實清單：\n" + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(facts)))
     if hasattr(llm, "task"):
         llm.task = "fbpost"
 
@@ -427,7 +435,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
                 out = json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
             except ValueError:
                 out = {}
-            problems = check(out, facts, kind, gap)
+            problems = check(out, facts, kind, gap, theme)
             script.log_check(con, {"day": today}, f"fbpost_{kind}", llm, attempt + 1, problems)
             if not problems:
                 return out, []
@@ -437,7 +445,8 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
     if out is None:
         return None, problems
     context = (f"貼文日 {today}；距離故事最新一場比賽 {gap if gap is not None else '很多'} 天（R6：+1 天內新聞語氣，超過故事語氣）；"
-               + story.news_context(facts))
+               + story.news_context(facts)
+               + (("；指定多故事（每一個都要講到，這篇不適用 R10 的組數上限）：" + "、".join(x["title"] for x in theme)) if theme else ""))
     bad = story.edit(editor, out, con, {"day": today}, text=post_text(out), context=context)
     out["editor"] = {"first": bad, "rewritten": False, "final": bad}
     if not bad:
