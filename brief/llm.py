@@ -172,7 +172,36 @@ def unverified(text: str, source: str, zh_names: dict[str, str] | None = None) -
     for name_zh in zh_names:
         if name_zh in text and name_zh not in source and name_zh not in missing:
             missing.append(name_zh)
+    # 外國選手的其他中文寫法（譯名表的候選、試寫出現過的暫定譯名）：同一人只能有一種寫法（notes 15:40）
+    for name_zh in _foreign_variants():
+        if name_zh in text and name_zh not in source and name_zh not in missing and f"{name_zh}（譯名不一致）" not in missing:
+            missing.append(f"{name_zh}（譯名不一致）")
     return missing
+
+
+MEDAL_WORD = re.compile(r"金牌|銀牌|銅牌|獎牌|奪金|摘金|摘銀|摘銅")
+
+
+def medal_misuse(text: str, source: str) -> bool:
+    """原始資料沒有金銀銅（World Tour、IC、IS 不頒獎牌）卻寫了獎牌字眼（notes 15:40 第 1 條）。"""
+    return bool(MEDAL_WORD.search(text)) and not re.search(r"金牌|銀牌|銅牌", source)
+
+
+# 試寫時出現過的暫定譯名（台灣媒體的寫法是昆拉武特、法漢、卡爾南多、馬丁）
+KNOWN_VARIANTS = {"坤拉武特", "法罕", "卡納多", "馬汀"}
+
+
+def _foreign_variants() -> set[str]:
+    names = set(KNOWN_VARIANTS)
+    try:
+        import sqlite3
+        db = ENV_FILE.parent / "data" / "brief.db"
+        if db.exists():
+            con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+            names |= {z for (z,) in con.execute("SELECT name_zh FROM foreign_name")}
+    except Exception:  # noqa: BLE001 — 沒有譯名表時只用已知異寫
+        pass
+    return names
 
 
 UPSET_WORD = re.compile(r"爆冷|冷門")
@@ -223,8 +252,10 @@ def highlight(llm: LLM, digest_text: str) -> str:
     bad = unlicensed_upsets(text, digest_text)
     if bad:
         raise ValueError(f"今日重點把規則沒判定的場次寫成爆冷，未採用：{bad[0][:60]}")
+    if medal_misuse(text, digest_text):
+        raise ValueError(f"今日重點在沒有頒獎牌的賽事寫了獎牌，未採用：{text[:60]}")
     missing = unverified(text, digest_text)
-    lines = [f"**今日重點**（AI 整理，請審稿）\n{text}"]
+    lines =[f"**今日重點**（AI 整理，請審稿）\n{text}"]
     if missing:
         lines.append("⚠️待確認（原始資料查不到）：" + "、".join(missing))
     return "\n".join(lines)

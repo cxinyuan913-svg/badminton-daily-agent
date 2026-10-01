@@ -193,3 +193,27 @@ def test_upset_by_event_final():
     assert unlicensed_upsets("男單決賽爆冷。", src, {})                    # 男單決賽不是爆冷（爆冷在四強）
     assert unlicensed_upsets("台北公開賽爆冷封后。", src, {})              # 沒寫項目
     assert unlicensed_upsets("女雙八強爆冷。", src, {})                    # 有項目，但不是決賽／冠軍
+
+
+def test_rehashed_score_is_rejected():
+    """notes 15:40 第 3 條：9/28 單一故事先說 21 比 11、21 比 14，再「從韓國角度」說 11 比 21、14 比 21。"""
+    assert script.rehashed_scores("第一局 21 比 11，第二局 21 比 14。從韓國組合的角度看，就是 11 比 21、14 比 21。") == ["21-11", "21-14"]
+    assert script.rehashed_scores("第一局 19 比 21 先丟，後兩局 21 比 13、21 比 18。") == []
+    out = {"titles": ["a", "b", "c"], "segments": seg(VOICE + "從中國組合的角度看，是 13 比 21。")}
+    assert any("換角度重講" in p for p in script.check(out, FACTS, FLAGS))
+
+
+def test_short_script_allowed():
+    """素材不夠就短：約 30 秒（120 字以上）可以通過。"""
+    short = {"titles": ["a", "b", "c"], "segments": seg(VOICE[: len(VOICE) // 2 + 20])}
+    assert not any("口播" in p for p in script.check(short, FACTS, FLAGS))
+
+
+def test_foreign_name_variants_and_medals_in_highlight():
+    """notes 15:40 第 1、2 條，今日重點也適用。"""
+    from brief.llm import medal_misuse, unverified
+    src = "男單 決賽：昆拉武特（泰國，世界 #1）勝 LOH Kean Yew（新加坡，世界 #13），比分 21-12 21-16"
+    assert "坤拉武特（譯名不一致）" in unverified("坤拉武特 21-12 21-16 奪冠", src, {})
+    assert not [m for m in unverified("昆拉武特 21-12 21-16 奪冠", src, {}) if "譯名" in m]
+    assert medal_misuse("昆拉武特拿下金牌", src) and not medal_misuse("昆拉武特拿下冠軍", src)
+    assert not medal_misuse("拿下金牌", "男單冠軍（金牌）：昆拉武特（泰國）")

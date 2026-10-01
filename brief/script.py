@@ -13,7 +13,8 @@ webhook 沒設定時 1 也等於 dry。費用：週一晨報列「上週腳本�
 
 事實檢查（每份各自跑，不通過只丟那一份）：數字（比分整組比對）、人名都要在事實清單裡；
 「爆冷」只能用在規則判定的場次、「逆轉」只能用在逆轉的故事、「首冠／首座」只能用在 first_title；
-口播總長 200–320 字（目標 240–280，約 60 秒）。不通過重試一次，再不過就記錯誤、不發。
+口播總長 120–320 字（素材夠就約 60 秒，不夠就 30–45 秒，notes 15:40）；同一個比分不能換角度重講；
+非獎牌賽事不能出現金銀銅牌；外國選手名字只能是事實清單的寫法。不通過重試一次，再不過就記錯誤、不發。
 """
 from __future__ import annotations
 
@@ -24,13 +25,13 @@ import re
 from pathlib import Path
 
 from brief import digest, storylines as sl, zh
-from brief.llm import _env, unlicensed_upsets, unverified
+from brief.llm import _env, medal_misuse, unlicensed_upsets, unverified
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "data" / "scripts"
 EXAMPLES = ROOT / "tests" / "fixtures" / "script_styles"
 DAILY_STORY_MIN = 6.0         # 每日單一故事的分數門檻：低於就不產生（寧缺勿濫）
-VOICE_RANGE = (200, 320)
+VOICE_RANGE = (120, 320)      # 30 秒約 120 字；素材不夠就短，不湊秒數（notes 15:40）
 DAILY_COST_ALERT = 0.5      # US$／天（notes 10:20）
 QUICK_TPE_ROUNDS = {"R16", "QF", "SF", "Final", "F"}   # 快報的台灣段落：16 強起被淘汰的那場（主場賽事台灣選手很多）
 
@@ -58,10 +59,11 @@ STYLE_GUIDE = {
 }
 
 SYSTEM = """你是羽球短影音的腳本作者，觀眾是台灣的羽球愛好者，審稿人是前職業選手 Raymond。
-用繁體中文、台灣用語寫一支約 60 秒的口播腳本，口播總長 240–280 字。
+用繁體中文、台灣用語寫一支口播腳本：素材夠就約 60 秒（口播 240–280 字）；素材不夠就寫短，30–45 秒（120–200 字）也可以。
 硬性規則：
 - 只能使用「事實清單」裡的內容：名字、國家、排名、比分、交手紀錄、名次一律照抄，不可推測或補充
-- 名字照事實清單的寫法（有中文就用中文，只有英文就用英文），絕對不要自己翻譯或音譯
+- 名字照事實清單的寫法（有中文就用中文，只有英文就用英文），絕對不要自己翻譯或音譯；同一個人整支腳本只能有一種寫法（範例裡的名字寫法不算數）
+- 不准換角度重講同一個比分來湊秒數（例如先說「21 比 11」再說「從對手角度是 11 比 21」）
 - 比分照事實清單（勝方在前）；句子主詞是敗方時，比分倒過來寫成主詞的角度
 - 只有事實清單寫到金牌／銀牌／銅牌的賽事才能用獎牌字眼；World Tour 等賽事寫冠軍、亞軍、四強
 - 「爆冷／冷門」只能用在事實清單標了「規則判定爆冷」的場次；「逆轉」只能用在事實清單寫到逆轉的場次；「首冠／首座」只能用在事實清單寫到「第一座」的選手
@@ -200,12 +202,22 @@ def check(out: dict, facts: list[str], flags: dict) -> list[str]:
         problems.append("「逆轉」沒有對應的故事")
     if re.search(r"首冠|首座", text) and not flags["first_title"]:
         problems.append("「首冠／首座」沒有對應的故事")
-    if re.search(r"金牌|銀牌|銅牌|獎牌", text) and not re.search(r"金牌|銀牌|銅牌", source):
+    if medal_misuse(text, source):
         problems.append("這站沒有頒獎牌（World Tour／IC／IS），不能寫金銀銅牌")
+    repeated = rehashed_scores(voice)
+    if repeated:
+        problems.append("同一個比分換角度重講：" + "、".join(repeated[:3]))
     n = len(re.sub(r"\s", "", voice))
     if not VOICE_RANGE[0] <= n <= VOICE_RANGE[1]:
         problems.append(f"口播 {n} 字，不在 {VOICE_RANGE[0]}–{VOICE_RANGE[1]}")
     return problems
+
+
+def rehashed_scores(voice: str) -> list[str]:
+    """口播裡同一組比分正反兩個方向都出現（「21 比 11」又「11 比 21」）＝換角度重講（notes 15:40 反例：9/28 單一故事）。"""
+    from brief.llm import SCORE
+    pairs = {(int(a), int(b)) for a, b in SCORE.findall(voice)}
+    return sorted({f"{max(p)}-{min(p)}" for p in pairs if p[0] != p[1] and (p[1], p[0]) in pairs})
 
 
 def _parse(raw: str) -> dict:

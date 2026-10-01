@@ -194,3 +194,194 @@ def champions(matches: list[dict], level: str | None = None) -> list[str]:
     label = place_name(level, "W")
     return [f"{EVENT_ZH.get(m['event'], m['event'])}{label}：{side_text(m['winner'])}"
             for m in matches if m["round"] in ("Final", "F")]
+
+
+# ---------------------------------------------------------------- 故事候選（notes 15:40：資料層，不動提示詞）
+# 交手紀錄從資料庫算（2017 年起的回補範圍），facts 一律寫明「2017 年以來」；排名紀錄只用官方排名（2019-01-15 起完整）
+SINCE = "2017 年以來"
+FINAL_ROUNDS = ("Final", "F")
+DEEP_ROUNDS = ("Final", "F", "SF", "Semi-finals")
+
+
+def h2h_detail(con, a: int, b: int, upto: str) -> list[dict]:
+    """a 對 b 的每一場（含團體賽單場），依日期排序；a_won 與局分都是 a 的角度。"""
+    rows = con.execute(
+        """SELECT m.match_id, m.match_date, m.round, t.name, t.level, m.side1_id, m.winner_side, m.duration_min,
+                  m.score_status, m.tournament_id
+           FROM match m JOIN tournament t USING (tournament_id)
+           WHERE ((m.side1_id=? AND m.side2_id=?) OR (m.side1_id=? AND m.side2_id=?))
+             AND m.match_date<=? AND m.winner_side IN (1, 2)
+           ORDER BY m.match_date, m.match_id""", (a, b, b, a, upto)).fetchall()
+    out = []
+    for mid, date, rnd, tname, level, s1, ws, dur, status, tid in rows:
+        a_is_1 = s1 == a
+        g = con.execute("SELECT side1_points, side2_points FROM game WHERE match_id=? ORDER BY game_no", (mid,)).fetchall()
+        g = [(p1, p2) if a_is_1 else (p2, p1) for p1, p2 in g if p1 is not None and p2 is not None]
+        out.append({"match_id": mid, "date": date, "round": rnd, "tournament": zh.tournament(tname), "level": level,
+                    "tournament_id": tid, "a_won": (ws == 1) == a_is_1, "games": g, "duration": dur, "status": status})
+    return out
+
+
+def _score_a(gs: list[tuple[int, int]]) -> str:
+    return " ".join(f"{x}-{y}" for x, y in gs)
+
+
+def _record(ms: list[dict]) -> tuple[int, int]:
+    w = sum(1 for m in ms if m["a_won"])
+    return w, len(ms) - w
+
+
+def turning_point(ms: list[dict], min_seg: int = 3) -> tuple[int, float] | None:
+    """勝率前後落差最大的切點 k（前 k 場 vs 之後），兩段都至少 min_seg 場；落差 < 0.5 不算翻轉。"""
+    best = None
+    for k in range(min_seg, len(ms) - min_seg + 1):
+        before = sum(m["a_won"] for m in ms[:k]) / k
+        after = sum(m["a_won"] for m in ms[k:]) / (len(ms) - k)
+        gap = abs(after - before)
+        if best is None or gap > best[1]:
+            best = (k, gap)
+    return best if best and best[1] >= 0.5 else None
+
+
+def streak(ms: list[dict]) -> tuple[bool, int]:
+    """最近的連勝（True）或連敗（False）場數。"""
+    if not ms:
+        return True, 0
+    last, n = ms[-1]["a_won"], 0
+    for m in reversed(ms):
+        if m["a_won"] != last:
+            break
+        n += 1
+    return last, n
+
+
+def _meet(m: dict) -> str:
+    """賽事名本身帶年份（zh.tournament），不再重複寫日期。"""
+    return f"{m['tournament']}{zh.round_name(m['round'])}"
+
+
+def candidates_for_match(con, m: dict) -> list[dict]:
+    """一場比賽可以延伸的故事候選：rivalry、domination、revenge、stuck_round、retired。
+    a = 這場的勝方、b = 敗方；所有 facts 都能回資料庫查。"""
+    w, l = m["winner"], m["loser"]
+    wn, ln = w["name"], l["name"]
+    base = match_fact(m)
+    ms = h2h_detail(con, w["pairing_id"], l["pairing_id"], m["date"])
+    out = []
+    n = len(ms)
+    deep = 2 if m["round"] in DEEP_ROUNDS else 0
+    tw, tl = _record(ms)
+    if n >= 8:
+        facts = [base, f"{wn}對{ln}交手紀錄 {tw} 勝 {tl} 負（{SINCE}，共 {n} 場）"]
+        tp = turning_point(ms)
+        if tp:
+            k = tp[0]
+            bw, bl = _record(ms[:k])
+            aw, al = _record(ms[k:])
+            facts.append(f"前 {k} 場{wn} {bw} 勝 {bl} 負；從 {_meet(ms[k])}起 {aw} 勝 {al} 負")
+        won, s = streak(ms)
+        if s >= 2:
+            facts.append(f"{wn}目前對{ln}{'連勝' if won else '連敗'} {s} 場")
+        finals = [x for x in ms if x["round"] in FINAL_ROUNDS]
+        if finals:
+            fw, fl = _record(finals)
+            facts.append(f"兩邊在決賽碰過 {len(finals)} 次，{wn} {fw} 勝 {fl} 負")
+        longest = max((x for x in ms if x["duration"]), key=lambda x: x["duration"], default=None)
+        if longest:
+            facts.append(f"兩邊打最久的一場：{_meet(longest)}，{longest['duration']} 分鐘，"
+                         f"{wn if longest['a_won'] else ln}勝（{wn}角度比分 {_score_a(longest['games'])}）")
+        out.append({"kind": "rivalry", "score": 3 + n / 4 + (4 if tp else 0) + len(finals) / 2 + deep,
+                    "event": m["event"], "facts": facts})
+    if n >= 5 and tl == 0:
+        g_all = [g for x in ms for g in x["games"]]
+        won_g = sum(1 for x, y in g_all if x > y)
+        lost_g = len(g_all) - won_g
+        facts = [base, f"{wn}對{ln} {n} 戰全勝（{SINCE}），局數 {won_g} 勝 {lost_g} 負"]
+        lost_by_l = [(x, y) for x, y in g_all if x > y]
+        if lost_by_l:
+            cx, cy = min(lost_by_l, key=lambda g: g[0] - g[1])
+            facts.append(f"{ln}輸的局裡最接近的一局：{cy}-{cx}（{ln}角度）")
+        out.append({"kind": "domination", "score": 4 + n / 2 + deep, "event": m["event"], "facts": facts})
+    prev = ms[:-1]
+    if prev and not prev[-1]["a_won"] and prev[-1]["round"] in DEEP_ROUNDS:
+        p = prev[-1]
+        out.append({"kind": "revenge", "score": 5 + (2 if p["round"] in FINAL_ROUNDS else 0) + deep, "event": m["event"],
+                    "facts": [base, f"兩邊上次交手是 {_meet(p)}，{ln}勝（{wn}角度比分 {_score_a(p['games'])}）"]})
+    beaten = [x for x in ms if x["a_won"]]           # 敗方輸給勝方的場次
+    if len(beaten) >= 4:
+        rounds: dict[str, int] = defaultdict(int)
+        for x in beaten:
+            rounds[x["round"]] += 1
+        rnd, cnt = max(rounds.items(), key=lambda kv: kv[1])
+        if cnt >= 3 and cnt / len(beaten) >= 0.5:
+            out.append({"kind": "stuck_round", "score": 3 + cnt + (2 if rnd == m["round"] else 0), "event": m["event"],
+                        "facts": [base, f"{ln}輸給{wn}的 {len(beaten)} 場裡，有 {cnt} 場在{zh.round_name(rnd)}（{SINCE}）"]})
+    status = con.execute("SELECT score_status FROM match WHERE match_id=?", (m["match_id"],)).fetchone()
+    if status and status[0] in ("Retired", "Walkover") and m["round"] in ("QF", "SF", "Final", "F"):
+        word = "中途退賽" if status[0] == "Retired" else "賽前退賽（不戰而勝）"
+        out.append({"kind": "retired", "score": 4 + (3 if m["round"] in FINAL_ROUNDS else 0), "event": m["event"],
+                    "facts": [base, f"這場{ln}{word}"]})
+    return out
+
+
+def _champions_ranked_below(con, level: str, event: str, rank: int, before: str) -> tuple[int, int]:
+    """2019-01-15 起、同層級同項目的冠軍：(官方排名比 rank 更低的人數, 有官方排名的冠軍總數)。"""
+    from brief.rankings import rank_lookup
+    rows = con.execute(
+        """SELECT m.match_date, CASE m.winner_side WHEN 1 THEN m.side1_id ELSE m.side2_id END
+           FROM match m JOIN tournament t USING (tournament_id)
+           WHERE t.level=? AND m.event=? AND m.round IN ('Final', 'F') AND m.winner_side IN (1, 2)
+             AND m.match_date >= '2019-01-15' AND m.match_date < ? AND m.team_tie_id IS NULL""",
+        (level, event, before)).fetchall()
+    lower = total = 0
+    for date, pid in rows:
+        r, src = rank_lookup(con, pid, event, date)
+        if src == "official" and r:
+            total += 1
+            lower += r > rank
+    return lower, total
+
+
+def tournament_records(con, t: dict, all_matches: list[dict]) -> list[dict]:
+    """整站的紀錄型故事：冠軍整站一局未失、同級賽事排名最低的冠軍（官方排名）、本站最長比賽。"""
+    out = []
+    for f in (m for m in all_matches if m["round"] in FINAL_ROUNDS):
+        pid, ev = f["winner"]["pairing_id"], EVENT_ZH.get(f["event"], f["event"])
+        run = [m for m in all_matches if m["event"] == f["event"] and pid in (m["winner"]["pairing_id"], m["loser"]["pairing_id"])]
+        lost = sum(1 for m in run for a, b in games(m["score"]) if (m["winner"]["pairing_id"] == pid) == (a < b))
+        if lost == 0 and len(run) >= 3:
+            out.append({"kind": "record", "score": 6, "event": f["event"],
+                        "facts": [match_fact(f), f"{f['winner']['name']}整站 {len(run)} 場一局未失"]})
+        wr = f["winner_rank"]
+        if wr and f.get("winner_rank_src") == "official":
+            lower, total = _champions_ranked_below(con, t["level"], f["event"], wr, f["date"])
+            if lower == 0 and total >= 5:
+                out.append({"kind": "record", "score": 7, "event": f["event"],
+                            "facts": [match_fact(f), f"世界 #{wr} 奪冠：2019 年以來{zh.level(t['level'])}{ev}的 {total} 位冠軍"
+                                      f"（以官方排名計）沒有人排名比這更低"]})
+    timed = []
+    for m in all_matches:
+        d = con.execute("SELECT duration_min FROM match WHERE match_id=?", (m["match_id"],)).fetchone()[0]
+        if d:
+            timed.append((d, m))
+    if timed:
+        d, m = max(timed, key=lambda x: x[0])
+        out.append({"kind": "record", "score": 3 + (2 if d >= 90 else 0), "event": m["event"],
+                    "facts": [match_fact(m), f"這是本站打最久的一場：{d} 分鐘"]})
+    return out
+
+
+def story_candidates(con, t: dict, matches: list[dict], all_matches: list[dict], with_records: bool = True) -> list[dict]:
+    """matches：要找故事的場次（每日＝當天；整站＝全部）。分數高的在前；同一場同一類只留一則。"""
+    out = []
+    for m in matches:
+        out += candidates_for_match(con, m)
+    if with_records:
+        out += tournament_records(con, t, all_matches)
+    seen, uniq = set(), []
+    for c in sorted(out, key=lambda c: -c["score"]):
+        key = (c["kind"], c["facts"][0])
+        if key not in seen:
+            seen.add(key)
+            uniq.append(c)
+    return uniq
