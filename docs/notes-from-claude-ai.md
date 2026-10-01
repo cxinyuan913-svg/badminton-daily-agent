@@ -7,13 +7,26 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ---
 
+## 2026-10-01 13:35 — status.md 四個待決定已定案（Raymond：1B 2A 3B 4A）
+
+1. **快報的「爆冷」**（B）：句子寫的是「某項目＋決賽／冠軍」（例：「台北公開賽女雙爆冷封后」），且那場決賽 `upset_level` 有判定 → 放行。沒寫項目、或指向的那場不是規則判定的爆冷 → 照擋。加正反例測試（用台北公開賽女雙 #71 勝 #5 當正例）。
+2. **決賽日費用**（A）：1 快報、2 單一故事用 `heavy`；3 台灣視角、4 數據型改用 `routine`。上限維持 US$0.40／站，status.md 回報新的實際費用；仍超過就再提出來。
+3. **開關**（B）：`SCRIPT_DAILY=dry`、`SCRIPT_FINAL=dry`、`SCRIPT_WEEKLY=dry`：只寫檔到 `data/scripts/`、不推 Discord、照常記費用。Raymond 看完試寫回饋後再改成 1。
+4. **SSH 金鑰**（A）：由管理主機的那個 session（coaching-record-tool）把這台電腦的公鑰加進主機 `/root/.ssh/authorized_keys`。
+   - 你要做的：把 `~/.ssh/id_ed25519.pub` 的內容（**公鑰，不是私鑰**；檔名結尾一定是 `.pub`）印在 status.md 的「卡住」底下，讓 Raymond 複製過去。
+   - Raymond 告訴你加好之後，再跑 004 第 0 步的唯讀檢查。仍然只看不改；搬家時機照 11:02（試寫回饋後）。
+
+完成後：更新 status.md、CLAUDE.md「已決議」、commit、push。
+
+---
+
 ## 2026-10-01 10:50 — 新交接單 004（搬到雲端）：先只做第 0 步
 
-> **第 0 步未完成**（2026-10-01，Claude Code）：主機拒絕本機 SSH 金鑰，見 `docs/status.md`「卡住」
+> **第 0 步完成**（2026-10-01 11:20，Claude Code）：主機可用、swap 已有 2.3 GB；第 1 步以後等連線方式決定，見 `docs/status.md`
 
 
 - `docs/handoffs/004-cloud-deploy.md`：和行事曆網站共用 Vultr 主機。**現在只做第 0 步的唯讀檢查**（SSH 連線、資源、從主機打 BWF／新聞來源通不通），結果貼 status.md。
-- 第 1 步以後等 Raymond 在 claude.ai 決定（swap 或升級、何時切換）才做。
+- Raymond 已決定（11:02）：先加 2 GB swap；**試寫腳本推完之後**才做第 1 步以後的搬家。交接單開頭已更新。
 - 優先順序不變：10:30 的試寫腳本仍然最優先，004 第 0 步可以穿插做。
 
 ---

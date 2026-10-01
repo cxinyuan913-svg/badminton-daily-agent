@@ -3,6 +3,40 @@
 Claude Code 每次工作結束前更新這份：做了什麼、卡在哪、下一步。
 Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
+## 2026-10-01 11:20（Claude Code）— 交接單 004 第 0 步完成：主機可用
+
+### 完成
+- **第 0 步唯讀檢查**（Raymond 在自己的 PowerShell 跑；金鑰有 passphrase，Claude Code 的 shell 不能輸入，所以上一段的「Permission denied」不是金鑰錯）
+  | 項目 | 結果 |
+  |---|---|
+  | CPU／記憶體 | 1 vCPU；950 MiB，used 337 MiB、available 612 MiB |
+  | swap | **已有 `/swapfile` 2.3 GB**（used 37 MiB）——交接單寫「沒有 swap」已過時，第 1 步不用再加 |
+  | 磁碟 | 23 GB，used 7.6 GB（35%），剩 15 GB |
+  | 容器 | coaching-record-tool 67.9 MiB／CPU 0.19%；caddy 31.3 MiB |
+  | crontab | 只有 `0 19 * * * sh /root/coaching-record-tool/scripts/backup_db.sh` |
+  | Python | 3.14.4 |
+  | 中央社 `cna.com.tw/list/aspt.aspx` | 200 |
+  | NOWnews | 200 |
+  | BWF API `vue-rankingweek`、BWF 官網 | curl 預設 User-Agent → **403**；用爬蟲的 User-Agent（`crawler.HEADERS`）→ **200** |
+
+### 發現與決定
+- BWF 的 403 是擋 curl 預設標頭，不是擋雲端 IP：本機用 curl 預設標頭也是 403，換爬蟲 User-Agent 就 200（本機、主機都一樣）。程式一律帶 `crawler.HEADERS`，不受影響
+
+### 卡住
+- 第 1 步以後要連主機，但金鑰有 passphrase，Claude Code 無法輸入。需要 Raymond 選方式（見下）
+
+### 待 Raymond 決定
+1. **部署時怎麼連主機**
+   - 背景：Claude Code 的 shell 不能輸入金鑰密碼。
+   - 暫定：不連，什麼都不改。
+   - 選項：
+     - A. Raymond 用系統管理員 PowerShell 啟動 Windows ssh-agent 並 `ssh-add`，Claude Code 用 Windows 的 ssh.exe 連（Claude Code 的權限設定也要允許 ssh）
+     - B. Claude Code 把每一步寫成指令，Raymond 自己貼到 PowerShell 跑，再貼回結果
+     - C. 另做一把只給本專案用、沒有密碼的部署金鑰，加到主機（可隨時從 `authorized_keys` 移除）
+
+### 下一步
+- 依上面的選擇做 004 第 2 步起（clone、venv、`.env`、systemd timer），**「切換」前先停下來確認**，避免本機與主機同時推送
+
 ## 2026-10-01 上午（Claude Code）— notes 07:45～10:50：晨報修正、譯名表、口播腳本（多風格＋每日＋每週）、試寫 8 份（7 份已推腳本頻道）
 
 ### 完成
