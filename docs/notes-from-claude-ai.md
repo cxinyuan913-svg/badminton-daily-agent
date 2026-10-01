@@ -7,14 +7,42 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ---
 
+## 2026-10-01 13:45 — 主機連線：Raymond 已做 C（專案專用、無密碼金鑰）；004 可以做到「切換」前
+
+> **已併入** CLAUDE.md「已決議」表（2026-10-01，Claude Code）；第 2、3、5 步完成，停在切換前，見 `docs/status.md`
+
+**連線**
+- Raymond 已另做一把**只給本專案用、沒有密碼**的金鑰，並加進主機 `authorized_keys`。金鑰路徑問 Raymond（或在 `~/.ssh/` 找最新的那把），**不要**用他原本有密碼的金鑰。
+- 在 `~/.ssh/config` 加一個別名，例如：
+  ```
+  Host bda-vultr
+    HostName 66.245.221.19
+    User root
+    IdentityFile ~/.ssh/<那把專案金鑰>
+    IdentitiesOnly yes
+  ```
+  之後一律 `ssh bda-vultr`。不要改動 `~/.ssh/config` 裡其他段落。
+- 私鑰絕不進 repo、不印出、不貼到任何檔案；CLAUDE.md 只記「用 `ssh bda-vultr` 連主機」。
+- 用這把金鑰時，主機上只動 `/root/badminton-daily-agent` 和我們自己的 systemd 單元；交接單 004「不要動」那一節照守。
+
+**範圍（修改 11:02 的時機）**
+- 現在可以做 004 **第 2、3、5 步**：clone、venv、`.env`（scp，權限 600）、systemd service＋timer **建好但不啟用**、備份與 logrotate。
+- swap 已有 2.3 GB（11:20 檢查），第 1 步跳過。
+- **第 4 步「切換」先不要做**：要等 Raymond 回饋完試寫腳本、在 claude.ai 說可以切換。停在「主機手動跑一次 `brief.watch`、`brief.daily`（都不加 `--send`）成功」為止，結果貼 status.md。
+- 優先順序：先做 13:35 第 1–3 項，再做這段。
+
+完成後：更新 status.md、CLAUDE.md、commit、push。
+
+---
+
 ## 2026-10-01 13:35 — status.md 四個待決定已定案（Raymond：1B 2A 3B 4A）
+
+> **已併入** CLAUDE.md「已決議」表（2026-10-01，Claude Code）；結果見 `docs/status.md`
 
 1. **快報的「爆冷」**（B）：句子寫的是「某項目＋決賽／冠軍」（例：「台北公開賽女雙爆冷封后」），且那場決賽 `upset_level` 有判定 → 放行。沒寫項目、或指向的那場不是規則判定的爆冷 → 照擋。加正反例測試（用台北公開賽女雙 #71 勝 #5 當正例）。
 2. **決賽日費用**（A）：1 快報、2 單一故事用 `heavy`；3 台灣視角、4 數據型改用 `routine`。上限維持 US$0.40／站，status.md 回報新的實際費用；仍超過就再提出來。
 3. **開關**（B）：`SCRIPT_DAILY=dry`、`SCRIPT_FINAL=dry`、`SCRIPT_WEEKLY=dry`：只寫檔到 `data/scripts/`、不推 Discord、照常記費用。Raymond 看完試寫回饋後再改成 1。
-4. **SSH 金鑰**（A）：由管理主機的那個 session（coaching-record-tool）把這台電腦的公鑰加進主機 `/root/.ssh/authorized_keys`。
-   - 你要做的：把 `~/.ssh/id_ed25519.pub` 的內容（**公鑰，不是私鑰**；檔名結尾一定是 `.pub`）印在 status.md 的「卡住」底下，讓 Raymond 複製過去。
-   - Raymond 告訴你加好之後，再跑 004 第 0 步的唯讀檢查。仍然只看不改；搬家時機照 11:02（試寫回饋後）。
+4. ~~SSH 金鑰~~：**作廢**。11:20 已查明是金鑰有 passphrase、不是金鑰沒授權；連線方式改由 status.md 11:20 的「部署時怎麼連主機」決定（Raymond 回覆後 claude.ai 再寫一段）。不用印公鑰。
 
 完成後：更新 status.md、CLAUDE.md「已決議」、commit、push。
 

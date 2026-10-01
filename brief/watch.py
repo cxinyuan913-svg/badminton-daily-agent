@@ -312,7 +312,7 @@ def main():
     ap.add_argument("--now", help="模擬現在時間（UTC，ISO 格式），測試用")
     ap.add_argument("--no-llm", action="store_true")
     a = ap.parse_args()
-    now = dt.datetime.fromisoformat(a.now) if a.now else dt.datetime.utcnow()
+    now = dt.datetime.fromisoformat(a.now) if a.now else dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
     con = connect(a.db)
     model = None if a.no_llm or not llm.available() else llm.AnthropicLLM("routine", con=con)
     send = (lambda text: print(text + "\n" + "-" * 40)) if a.dry_run else \

@@ -85,16 +85,12 @@ def test_push_only_when_flag_on(monkeypatch):
     out = {"titles": ["a", "b", "c"], "segments": seg(VOICE)}
     monkeypatch.setattr(script, "facts_for", lambda *a, **k: {"facts": FACTS, "flags": FLAGS})
     monkeypatch.setattr(script, "generate", lambda *a, **k: (out, []))
-    monkeypatch.setattr(script, "OUT_DIR", Path(__file__).parent / "_tmp_scripts")
     t = {"tournament_id": 1, "name": "Asian Games 2026", "level": "MULTI", "start_date": "2026-09-25", "end_date": "2026-09-29"}
     for flag, expect in (("1", 1), (None, 0)):
         sent = []
         monkeypatch.setattr(script, "_env", lambda k: flag if k == "SCRIPT_FINAL" else None)
         script.run_for_day(None, t, "2026-09-29", "Final", make_llm=lambda p: None, send=sent.append, styles=["story"])
         assert len(sent) == expect
-    for f in (Path(__file__).parent / "_tmp_scripts").glob("*"):
-        f.unlink()
-    (Path(__file__).parent / "_tmp_scripts").rmdir()
 
 
 DB = Path(__file__).resolve().parent.parent / "data" / "brief.db"

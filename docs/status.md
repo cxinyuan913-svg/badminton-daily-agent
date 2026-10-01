@@ -3,6 +3,69 @@
 Claude Code 每次工作結束前更新這份：做了什麼、卡在哪、下一步。
 Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
+## 2026-10-01 14:00（Claude Code）— notes 13:35 第 1–3 項、13:45（004 第 2、3、5 步）完成，停在切換前
+
+### 完成
+- **13:35 第 1 項：快報的「項目＋決賽／冠軍」爆冷句**〔b49b8c7；`llm.unlicensed_upsets`〕：句子寫出項目（男單…混雙）＋決賽／冠軍／封后／封王／奪冠，且該項目決賽是規則判定的爆冷 → 放行。測試〔`test_upset_by_event_final`〕：
+  - 正例：「台北公開賽女雙爆冷封后」（女雙決賽 #71 勝 #5）
+  - 反例：男單決賽沒判定爆冷（爆冷在四強）；沒寫項目；寫了項目但不是決賽
+- **13:35 第 2 項：決賽日模型**〔b49b8c7〕：1 快報、2 單一故事用 heavy；3 台灣視角、4 數據型改用 routine。亞運決賽日重跑結果〔`data/scripts/2026-09-29_5874.md`；DB `llm_call`〕：
+  | 風格 | 模型 | 呼叫次數 | US$ |
+  |---|---|---|---|
+  | 1 快報 | heavy | 2（重試 1） | 0.231 |
+  | 2 單一故事 | heavy | 2（重試 1） | 0.135 |
+  | 3 台灣視角 | routine | 2 | 0.044 |
+  | 4 數據型 | routine | 2 | 0.062 |
+  | 合計 | | 8 | **0.47**（原本 0.77），4 種風格都通過 |
+  - 上次快報沒過，這次通過
+- **13:35 第 3 項：開關**：本機與主機的 `.env` 都是 `SCRIPT_DAILY=dry`、`SCRIPT_FINAL=dry`、`SCRIPT_WEEKLY=dry`：只寫檔、不推、照常記費用
+- **13:45 連線**：專案金鑰 `~/.ssh/badminton_deploy`（無密碼，註解 `badminton-daily-agent-deploy`）；`~/.ssh/config` 新建，只有 `bda-vultr` 一段；CLAUDE.md 記「用 `ssh bda-vultr` 連主機」
+- **004 第 2 步**：`/root/badminton-daily-agent` clone（HTTPS）、`.venv`、`pip install -e ".[dev]"`。主機原本沒有 `python3.14-venv`，用 `apt-get install` 裝了（模擬過：新增 3 個套件，沒有升級或移除；教練工具在 Docker 裡，不受影響）。主機上測試 **168 過、2 略過**（略過的需要本機十年資料庫）。`.env` 用 scp 傳，權限 600
+- **004 第 3、5 步**〔fd83dfd；`deploy/systemd/`、`scripts/run_job.sh`、`scripts/backup_db.py`、`deploy/logrotate.conf`、`scripts/deploy.sh`〕
+  - `badminton-watch.timer`（`*:00/30`）、`badminton-daily.timer`（UTC 22:00＝台北 06:00）、`badminton-backup.timer`（UTC 20:00，避開教練工具 UTC 19:00 備份）
+  - service 都是 `MemoryMax=400M`、`Nice=10`；`run_job.sh` 用 `flock -w 900`，同時只跑一個
+  - 主機沒有 `sqlite3` 指令，備份改用 Python 的 backup API，保留 7 份（有測試）
+  - logrotate 14 天（`logrotate -d` 通過）
+  - `systemd-analyze verify` 對我們的單元沒有錯誤
+  - **三個 timer 都是 disabled／inactive**（還沒啟用）
+- **主機手動試跑**（`systemd-run` 加同樣的 MemoryMax／Nice；資料庫用本機一致備份的副本，109 MB）
+  | 指令 | 結果 |
+  |---|---|
+  | `brief.watch --db data/brief.db --dry-run` | 成功，「發送 0 則賽果、0 則看點」 |
+  | `brief.daily --db data/brief.db`（不加 `--send`） | 成功，5 站、173 場、排名 0 筆（這週排名已有） |
+  | `free -h` 試跑前 → 後 | available 620 MiB → 630 MiB；教練工具兩個容器照常 Up（healthy） |
+  - 主機上的資料庫只是測試副本，切換時會用當下最新的本機資料庫覆蓋
+- watch 的 `datetime.utcnow()` 棄用警告已修（Python 3.14 會提示）
+- **測試誤呼叫 LLM API（已修）**：`.env` 改成 `SCRIPT_*=dry` 後，watch 的 3 個測試走到新加的腳本產生，真的呼叫了 Anthropic API，還把 3 個檔案寫進真正的 `data/scripts/`（已刪除）。期間共跑了 3 次完整測試，每次多花約 3.5 分鐘。新增 `tests/conftest.py`：所有測試一律看不到 `SCRIPT_*` 開關與腳本 webhook，輸出寫到暫存資料夾。修正後測試 **172 過、4.2 秒**
+  - 費用記在測試的暫存資料庫，已經無法回查；估計 US$0.5–2，Anthropic Console 10/1 13:50–14:10 的用量可以核對
+  - 沒有推到 Discord：腳本 webhook 開關是 dry，日報與告警也不經過這條路徑
+
+### 發現與決定
+- `systemd-run --pipe` 不會顯示記憶體峰值，這次只有前後的 `free -h` 對照；切換後可以用 `systemctl status badminton-daily` 看「Memory peak」
+- 主機上試跑 daily 時已經抓了賽果（寫進測試副本）。這是測試副本，切換時會被覆蓋，不影響正式資料
+
+### 卡住
+- 無
+
+### 待 Raymond 決定
+1. **決賽日費用仍超過 US$0.40**
+   - 背景：新模型分配後一站 US$0.47，超出的部分主要是快報和單一故事各重試一次。
+   - 暫定：維持現狀，開關是 `dry`，不推。
+   - 選項：
+     - A. 維持，上限改成 US$0.50
+     - B. 快報也改用 routine（預估約 US$0.25）
+     - C. 精簡快報的事實清單以降低重試率，再量一次
+     - D. 決賽日只產 1 快報＋2 單一故事
+2. **何時切換到主機**（004 第 4 步）
+   - 背景：主機已就緒，timer 還沒啟用，本機 Windows 排程照跑。
+   - 暫定：等 Raymond 在 claude.ai 說可以。
+   - 選項：
+     - A. 試寫回饋完再切
+     - B. 現在就切（停本機排程 → 傳最新資料庫 → 啟用 timer）
+     - C. 等 WTF（12/9）前一週再切
+
+### 下一步
+- 收到「可以切換」後照 004 第 4 步：停用本機三個排程 → `backup_db.py` 做一致副本並 scp → 主機手動跑一次 → `systemctl enable --now badminton-{watch,daily,backup}.timer` → 隔天確認三個頻道沒有重複
 ## 2026-10-01 11:20（Claude Code）— 交接單 004 第 0 步完成：主機可用
 
 ### 完成
