@@ -112,3 +112,16 @@ Grade 1、2、3 用的是同一套元件與 API。
 - 列表各只有 8–30 則，大型綜合賽事期間幾小時就被擠掉：**2026-10-01 起跟 `brief.watch` 每 30 分鐘收一次**（每來源 1 個請求，已收過的網址跳過；notes 16:00）
 - 符合關鍵字的台灣媒體文章抓內文存進 `foreign_article`（譯名表、暱稱、交接單 005 的場上爭議用），只存不外流；推送時只給標題＋連結＋自己寫的一句重點
 - 搜尋：改用正式搜尋 API，配額與費用待查
+
+### 2026-10-02 新聞改版查證（notes 06:20、06:25）
+- **收集本身沒壞**：每來源列表頁都解析得到 8–19 則（`news_run` 有每次紀錄），只是列表只放最新約 20 則、混所有運動，亞運羽球 9/29 結束後就被擠掉。改成**列表上每一則新文章都抓內文、用標題＋全文篩**（羽球／羽毛球 ≥ 1 次，或選手名 ≥ 2 次；`news_seen` 記錄、同網址只抓一次）
+- **站內搜尋／標籤頁都不能用**：
+  | 來源 | 搜尋或標籤 | 結果 |
+  |---|---|---|
+  | 中央社 | `/search/hysearchws.aspx?q=*` | robots.txt `Disallow`；另外 robots 有 `User-agent: ClaudeBot … Disallow: /`（註解寫「封鎖 AI 訓練／模型語料」），但 `*` 群組宣告 `Content-signal: ai-input=yes, ai-train=no`。我們的 User-Agent 不是 ClaudeBot、用途是 AI 輸入不是訓練 → **暫時照用列表頁**，待 Raymond 確認 |
+  | ETtoday | `www.ettoday.net/news_search/` | robots.txt `Disallow: /news_search/` |
+  | NOWnews | `/search?keyword=` | 回 200 但結果是 JavaScript 載入，頁面沒有內容 |
+  | 公視 | `/search*` | robots.txt `Disallow`；標籤頁是數字 ID（`/tag/9978/`），羽球的 ID 還沒找到 |
+  | TSNA | `/search` | robots.txt `Disallow`；`/tag/`、`/keyword/` 404 |
+- **BWF World Tour 新聞停在 9/07 不是壞掉**：網站自己的列表最新就是 9/07（中國大師賽），之後亞運期間沒有 World Tour 賽事。保留來源
+- **兩年回補的可行性**：只有 TSNA（`/sitemap/year/YYYY`，一年約 2 萬篇、沒有標題）有完整歷史；NOWnews 的 sitemap 只列分類頁；中央社、ETtoday sitemap 只有最近幾週；公視沒有文章 sitemap；BWF `sitemap.xml` 404

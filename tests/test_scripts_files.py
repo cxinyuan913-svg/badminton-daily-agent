@@ -17,6 +17,16 @@ def test_no_stray_carriage_returns():
     assert bad == []
 
 
+def test_no_control_characters():
+    """2026-10-02：run_fbpost.cmd 的 \\fbpost、\\brief 被寫成換頁（^L）與倒退（^H），粉專排程從 10-01 起一直跑不起來。"""
+    bad = []
+    for f in _files():
+        data = f.read_bytes().replace(b"\r\n", b"\n")
+        if any(c < 0x20 and c not in (0x09, 0x0A) for c in data):
+            bad.append(f.name)
+    assert bad == []
+
+
 def test_register_script_paths_exist():
     text = (ROOT / "scripts" / "register_task.ps1").read_text(encoding="utf-8-sig")
     names = re.findall(r'\\scripts\\([\w.]+)"', text)
