@@ -98,3 +98,18 @@ def test_r9_eventual_champion_only_for_early_losses():
     qf = [l for l in lines if l.startswith("女雙 八強") and "林芝昀" in l][0]
     assert "對手最後拿到" not in sf
     assert "對手最後拿到冠軍（金牌）" in qf
+
+
+@needs_db
+def test_partner_history_carnando_marthin():
+    """notes 10-02 07:00／R12：雙打排名起落先查搭檔史。claude.ai 查過的時間線要一字不差地在 facts 裡。"""
+    from brief import zh
+    from brief.crawler import connect
+    con = connect(str(DB))
+    zh.apply_player_names(con)
+    text = "\n".join(sl.partner_facts(con, 1957, "MD", "CARNANDO／MARTHIN", "2026-09-29"))
+    for needle in ("2018-09 起一起打", "2024-06-06 之後拆夥", "2026-05-12 重組", "Bagas MAULANA（2024-08～2026-03，73 場）",
+                   "Muhammad Shohibul FIKRI（2024-08～2025-05，46 場）", "重組後第一站：2026 泰國公開賽，成績：冠軍",
+                   "第 157 名", "第 43 名", "原因不明"):
+        assert needle in text, needle
+    assert "2020" not in text.split("拆夥")[0]               # 2020 疫情停賽的空檔不算拆夥（中間沒有別的搭檔）

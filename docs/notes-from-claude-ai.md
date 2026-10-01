@@ -7,6 +7,14 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ---
 
+## 2026-10-02 07:10 — 新文件：AI 生成內容查證紀錄
+
+- claude.ai 新增 `docs/generation-quality-log.md`：整理 09-30 到 10-02 所有「生成內容錯誤」案例（症狀、發現方式、根因、解法、驗證），加上五道防線架構與面試說法草稿。請 commit。
+- **之後的維護規則**：每次修好一個生成品質問題，在對應案例補上 commit 編號與驗證結果；新問題由 claude.ai 先新增案例，CLI 修好後補完。`docs/highlights.md` 加一行指向這份文件。
+- CLAUDE.md 的工作慣例加一行：「生成品質問題 → 先查 `docs/generation-quality-log.md`，修好後補紀錄」。
+
+---
+
 ## 2026-10-02 07:00 — 審稿準則 R12：雙打先查搭檔史
 
 Raymond 質疑粉專試推稿「CARNANDO／MARTHIN 排名一度滑到四十多名，是重返的故事」。claude.ai 查資料庫：

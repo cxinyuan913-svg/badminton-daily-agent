@@ -247,3 +247,10 @@ def test_theme_requires_every_story_and_skips_r10():
     writer = Fake([json.dumps({"body": ""}, ensure_ascii=False)] * 2)
     fbpost.generate(writer, "story", ["事實"], gap=3, theme=theme)
     assert "每一個都要講到" in writer.prompts[0][1] and "2. 女雙世界第一" in writer.prompts[0][1]
+
+
+def test_side_names_ignore_prefixed_duplicates():
+    from brief import storylines as sl
+    facts = ["主題：拆夥再重組——2026 亞運羽球男雙冠軍 Leo Rolly CARNANDO / Daniel MARTHIN（印尼）；今天是 2026-10-02",
+             "男雙 決賽：Leo Rolly CARNANDO / Daniel MARTHIN（印尼，世界 #43）勝 WANG Chang / LIANG Wei Keng（中國，世界 #3），比分 19-21 21-13 21-18"]
+    assert sl.side_names(facts) == ["Leo Rolly CARNANDO / Daniel MARTHIN", "WANG Chang / LIANG Wei Keng"]

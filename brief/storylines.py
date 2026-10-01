@@ -336,7 +336,9 @@ def side_names(facts: list[str]) -> list[str]:
             name = name.strip()
             if name and name not in out and not name.startswith(("比分", "世界")):
                 out.append(name)
-    return out
+    # 「主題：拆夥再重組——…男雙冠軍 Leo Rolly CARNANDO / Daniel MARTHIN（印尼）」會抓到帶前綴的長名字：
+    # 結尾是另一個名字的就丟掉（2026-10-02 試推：同一組被算成兩組）
+    return [n for n in out if not any(o != n and n.endswith(o) for o in out)]
 
 
 def members(name: str) -> list[str]:
@@ -354,6 +356,89 @@ def count_sides(text: str, facts: list[str]) -> list[str]:
 
 
 CAREER_LEVELS = ("G1_IND", "G1_EVENT", "WTF", "S1000", "S750", "S500", "MULTI", "CONT_IND", "SSP", "SS", "GPG")
+
+
+DOUBLES = ("MD", "WD", "XD")
+SPLIT_GAP_DAYS = 120          # 同一組合兩場之間隔這麼久、而且中間有人換搭檔打了 ≥ 3 場 → 算拆夥
+OTHER_MIN = 3                 # 「主要搭檔」：一年至少一起打 3 場
+
+
+def _player_name(con, pid: int) -> str:
+    row = con.execute("SELECT COALESCE(name_zh, name_display) FROM player WHERE player_id=?", (pid,)).fetchone()
+    return row[0] if row else str(pid)
+
+
+def _pairing_dates(con, pairing_id: int, event: str, upto: str) -> list[str]:
+    return [d for (d,) in con.execute("""SELECT DISTINCT match_date FROM match WHERE ? IN (side1_id, side2_id) AND event=?
+                                          AND match_date<=? ORDER BY match_date""", (pairing_id, event, upto))]
+
+
+def _other_partners(con, player: int, pairing_id: int, event: str, start: str, end: str) -> list[tuple[str, int, str, str]]:
+    """這位選手在 start～end 之間和別人搭檔的場數：[(搭檔名, 場數, 第一場, 最後一場)]，場數多的在前。"""
+    rows = con.execute("""SELECT pr.pairing_id, CASE WHEN pr.player_a_id=? THEN pr.player_b_id ELSE pr.player_a_id END,
+                                 COUNT(*), MIN(m.match_date), MAX(m.match_date)
+                          FROM match m JOIN pairing pr ON pr.pairing_id IN (m.side1_id, m.side2_id)
+                          WHERE ? IN (pr.player_a_id, pr.player_b_id) AND pr.pairing_id<>? AND m.event=?
+                            AND m.match_date>? AND m.match_date<? GROUP BY pr.pairing_id ORDER BY 3 DESC""",
+                       (player, player, pairing_id, event, start, end)).fetchall()
+    return [(_player_name(con, other), n, a, b) for _, other, n, a, b in rows if other]
+
+
+def partner_history(con, pairing_id: int, event: str, upto: str) -> dict | None:
+    """雙打搭檔史（notes 10-02 07:00／準則 R12）：這組最近一次拆夥與重組、拆夥期間兩人各自的搭檔、
+    重組後第一站成績、組合排名在重組時與現在。沒有拆夥紀錄回傳 {"splits": []}；不是雙打回傳 None。"""
+    if event not in DOUBLES:
+        return None
+    row = con.execute("SELECT player_a_id, player_b_id FROM pairing WHERE pairing_id=?", (pairing_id,)).fetchone()
+    if not row or not row[1]:
+        return None
+    a, b = row
+    dates = _pairing_dates(con, pairing_id, event, upto)
+    splits = []
+    for prev, nxt in zip(dates, dates[1:]):
+        if (dt.date.fromisoformat(nxt) - dt.date.fromisoformat(prev)).days < SPLIT_GAP_DAYS:
+            continue
+        others = {p: _other_partners(con, p, pairing_id, event, prev, nxt) for p in (a, b)}
+        if any(n >= OTHER_MIN for p in (a, b) for _, n, _, _ in others[p]):
+            splits.append({"split": prev, "reunion": nxt, "others": others})
+    return {"a": a, "b": b, "first": dates[0] if dates else None, "splits": splits}
+
+
+def _rank_on(con, pairing_id: int, event: str, day: str, after: bool) -> tuple[int, str] | None:
+    op, order = (">=", "ASC") if after else ("<=", "DESC")
+    return con.execute(f"""SELECT rank, week_date FROM ranking_snapshot WHERE pairing_id=? AND event=? AND week_date {op} ?
+                           ORDER BY week_date {order} LIMIT 1""", (pairing_id, event, day)).fetchone()
+
+
+def partner_facts(con, pairing_id: int, event: str, name: str, upto: str) -> list[str]:
+    """搭檔史寫成可查的事實句（R12：雙打排名起落先查搭檔史，原因查不到就不要編）。"""
+    h = partner_history(con, pairing_id, event, upto)
+    if not h or not h["splits"]:
+        return []
+    s = h["splits"][-1]
+    out = [f"{name}這組 {h['first'][:7]} 起一起打，{s['split']} 之後拆夥，{s['reunion']} 重組（資料庫範圍內）"]
+    for p in (h["a"], h["b"]):
+        others = [x for x in s["others"][p] if x[1] >= OTHER_MIN]
+        who = _player_name(con, p)
+        if others:
+            out.append(f"拆夥期間 {who} 的搭檔：" + "、".join(f"{o}（{a_[:7]}～{b_[:7]}，{n} 場）" for o, n, a_, b_ in others[:3]))
+            last = max(b_ for _, _, _, b_ in others)
+            if (dt.date.fromisoformat(s["reunion"]) - dt.date.fromisoformat(last)).days >= SPLIT_GAP_DAYS:
+                out.append(f"{who} 從 {last[:7]} 到重組前，資料庫裡沒有一起打 {OTHER_MIN} 場以上的搭檔（⚠️ 原因不明，不要自己編傷病）")
+        else:
+            out.append(f"拆夥期間 {who} 在資料庫裡沒有一起打 {OTHER_MIN} 場以上的男雙／女雙／混雙搭檔（原因不明，不要自己編）")
+    first = con.execute("""SELECT t.tournament_id, t.name FROM match m JOIN tournament t USING (tournament_id)
+                           WHERE ? IN (m.side1_id, m.side2_id) AND m.event=? AND m.match_date=? LIMIT 1""",
+                        (pairing_id, event, s["reunion"])).fetchone()
+    if first:
+        pos = con.execute("SELECT round_reached FROM tournament_result WHERE pairing_id=? AND tournament_id=? AND event=?",
+                          (pairing_id, first[0], event)).fetchone()
+        out.append(f"重組後第一站：{zh.tournament(first[1])}" + (f"，成績：{place_name(None, pos[0])}" if pos else ""))
+    r0 = _rank_on(con, pairing_id, event, s["reunion"], after=True)
+    r1 = _rank_on(con, pairing_id, event, upto, after=False)
+    if r0 and r1:
+        out.append(f"組合官方排名：重組後第一次上榜 {r0[1]} 第 {r0[0]} 名，{r1[1]} 第 {r1[0]} 名")
+    return out
 
 
 def career(con, pairing_id: int, event: str, name: str, upto: str) -> list[str]:
@@ -385,7 +470,7 @@ def career(con, pairing_id: int, event: str, name: str, upto: str) -> list[str]:
                    + (f"（{'、'.join(finals[-3:])}）" if finals else ""))
     else:
         out.append(f"{name}在 Super 500 以上與綜合賽沒有打進過決賽（資料庫 2017 年以來，這站以前）")
-    return out
+    return out + partner_facts(con, pairing_id, event, name, upto)                       # R12：雙打附搭檔史
 
 
 def candidates_for_match(con, m: dict) -> list[dict]:
@@ -459,6 +544,20 @@ def candidates_for_match(con, m: dict) -> list[dict]:
         if cnt >= 3 and cnt / len(beaten) >= 0.5:
             out.append({"kind": "stuck_round", "score": 3 + cnt + (2 if rnd == m["round"] else 0), "event": m["event"],
                         "facts": [base, f"{ln}輸給{wn}的 {len(beaten)} 場裡，有 {cnt} 場在{zh.round_name(rnd)}（{SINCE}）"]})
+    for side in (w, l):                                     # R12：拆夥後重組（一年內）、新組合首站
+        h = partner_history(con, side["pairing_id"], m["event"], m["date"])
+        if not h:
+            continue
+        if h["splits"] and (dt.date.fromisoformat(m["date"]) - dt.date.fromisoformat(h["splits"][-1]["reunion"])).days <= 365:
+            out.append({"kind": "reunion", "score": 5 + (3 if side is w else 0) + deep, "event": m["event"],
+                        "facts": [base] + partner_facts(con, side["pairing_id"], m["event"], side["name"], m["date"])})
+        elif h["first"] and h["first"] >= m["date"][:10] and not h["splits"]:
+            past = [x for p in (h["a"], h["b"]) for x in _other_partners(con, p, side["pairing_id"], m["event"], "0000", m["date"])
+                    if x[1] >= OTHER_MIN]
+            if past:
+                out.append({"kind": "split", "score": 3 + deep, "event": m["event"],
+                            "facts": [base, f"{side['name']}是新組合，這站是第一次一起出賽（資料庫範圍內）"]
+                            + [f"之前的搭檔：{o}（{a_[:7]}～{b_[:7]}，{n} 場）" for o, n, a_, b_ in past[:4]]})
     status = con.execute("SELECT score_status FROM match WHERE match_id=?", (m["match_id"],)).fetchone()
     if status and status[0] in ("Retired", "Walkover") and m["round"] in ("QF", "SF", "Final", "F"):
         word = "中途退賽" if status[0] == "Retired" else "賽前退賽（不戰而勝）"
