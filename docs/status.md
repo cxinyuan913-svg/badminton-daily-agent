@@ -3,6 +3,22 @@
 Claude Code 每次工作結束前更新這份：做了什麼、卡在哪、下一步。
 Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
+## 2026-10-02 17:10（Claude Code）— notes 17:05 排程改背景執行
+
+### 完成
+- `scripts/register_task.ps1` 改寫（524b91e）：7 個排程（backup、daily-agent、watch、fbpost、offsite、**backfill-bwf、backfill-tsna**）全部由這支註冊，保留 WakeToRun、StartWhenAvailable、IgnoreNew；回補兩個每小時觸發、上限 7 天
+  - 預設 S4U（不論是否登入都執行、不存密碼）；`-Headless` 備案把 Action 改成 `conhost.exe --headless cmd.exe /c "<.cmd>"`
+- **目前套用的是備案 `-Headless`**（不需系統管理員，先讓視窗停止跳出）。17:05:36 手動觸發 badminton-watch：LastTaskResult=0，`data/logs/watch.log` 正常寫入「發送 0 則賽果、0 則看點」（當時沒有賽果，Discord 這次沒有實際送出；執行身分與 `.env` 跟之前相同）
+- TSNA 回補：16:56 那次被中斷（log 結尾 ^C，應是關掉跳出的視窗），17:08 由 headless 排程自動接續
+- 測試 246 個全過（`python -m pytest -q`）；`tests/test_scripts_files.py` 加檢查：回補排程在 register_task.ps1 裡、S4U 與 headless 兩種都在
+
+### 待 Raymond 決定
+1. **要不要改成 S4U？** 背景：notes 首選 S4U，需要系統管理員權限，我不能代跑。目前：headless 已生效、不跳視窗。
+   - A. 改 S4U：開「以系統管理員身分執行」的 PowerShell，執行
+     `cd C:\Users\Raymond\Documents\badminton-daily-agent; powershell -ExecutionPolicy Bypass -File scripts\register_task.ps1`
+     跑完告訴我，我觸發 watch 確認 log／Discord；失敗就加 `-Headless` 再跑一次退回
+   - B. 維持 headless（建議：已驗證可用；缺點是登出時不跑，但電腦 24 小時開著、維持登入）
+
 ## 2026-10-02 中午（Claude Code）— notes 07:25、11:20、11:25
 
 ### 進度
