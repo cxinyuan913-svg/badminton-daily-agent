@@ -17,15 +17,22 @@ R1_BAD = "這 10 場裡最接近的一局，KIM Ga Eun 打到 19 比 21。"
 R2_BAD = "轉折在 2024 丹麥公開賽 16 強。從那場起，WANG Zhi Yi 5 勝 1 負。"
 R3_BAD = "台灣這邊，周天成以 21 比 1、21 比 10 拿下男單 32 強。"
 GOOD = ("WANG Zhi Yi 對 KIM Ga Eun，2017 年以來交手 10 場，6 勝 4 負。前 4 場 WANG Zhi Yi 只贏 1 場，"
-        "2024 丹麥公開賽 16 強之後的 6 次交手，WANG Zhi Yi 贏了 5 次。今天亞運 16 強 21 比 14 先拿一局，第二局 11 比 6。") * 2
+        "2024 丹麥公開賽 16 強之後的 6 次交手，WANG Zhi Yi 贏了 5 次。今天亞運 16 強 21 比 14 先拿一局，第二局 11 比 6。")
 
 
 def script(*voices):
     """寫手輸出（11:25 A 逐句引用格式）：每句都引用整份事實清單，讓這些測試只看編輯流程。"""
     ids = [f"F{i}" for i in range(1, len(FACTS) + 1)]
     sentences = [{"text": v, "fact_ids": ids, "kind": "fact"} for v in voices]
-    return json.dumps({"titles": ["a", "b", "c"], "segments": [{"time": "0–60s", "part": "故事", "card": "", "sentences": sentences}],
-                       "todo": []}, ensure_ascii=False)
+    return json.dumps(v2(sentences), ensure_ascii=False)
+
+
+def v2(sentences):
+    """v2 結構（notes 10-02 18:55）：主體放在高潮還原，價值段＋留言問題收尾。"""
+    return {"titles": ["a", "b", "c"], "value_kind": "歷史紀錄", "short_reason": "測試只有一段素材", "todo": [],
+            "segments": [{"time": "0–50s", "part": "高潮還原", "card": "", "sentences": sentences},
+                         {"time": "50–55s", "part": "價值段", "card": "", "sentences": []},
+                         {"time": "55–60s", "part": "留言問題", "card": "", "sentences": []}]}
 
 
 def verdict(*fails):
@@ -94,7 +101,7 @@ def test_background_only_same_people():
     c = story.pick(cands)[0]
     facts = story.materials(con, t, "2026-09-26", c, cands, daym, allm)
     text = "\n".join(facts)
-    assert "WANG Zhi Yi" in c["facts"][0] and "周天成" not in text and "林俊易" not in text
+    assert any(n in c["facts"][0] for n in ("WANG Zhi Yi", "王祉怡")) and "周天成" not in text   # 王祉怡：10-02 18:55 譯名全收 and "林俊易" not in text
     assert any("第 " in f and " 局" in f for f in facts if "最接近" in f) or not any("最接近" in f for f in facts)  # R1
 
 
@@ -284,9 +291,8 @@ def test_verifier_wrong_triggers_rewrite_then_blocks():
 
 def test_citation_check_in_writer_loop():
     """11:25 A：句子含 157，引用的事實沒有 157 → 擋下、要求重寫。"""
-    bad = json.dumps({"titles": ["a", "b", "c"], "segments": [{"time": "0–60s", "part": "故事", "card": "",
-                      "sentences": [{"text": GOOD, "fact_ids": [f"F{i}" for i in range(1, len(FACTS) + 1)]},
-                                    {"text": "重組時排名第 157。", "fact_ids": ["F2"]}]}], "todo": []}, ensure_ascii=False)
+    bad = json.dumps(v2([{"text": GOOD, "fact_ids": [f"F{i}" for i in range(1, len(FACTS) + 1)]},
+                          {"text": "重組時排名第 157。", "fact_ids": ["F2"]}]), ensure_ascii=False)
     writer = Fake([bad, script(GOOD)])
     out, _ = story.generate(writer, FACTS, editor=Fake([verdict()]))
     assert out is not None and "157" in writer.prompts[1][1] and "F2" in writer.prompts[1][1]

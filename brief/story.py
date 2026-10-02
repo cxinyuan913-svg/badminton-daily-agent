@@ -1,8 +1,8 @@
 """故事引擎（交接單 005）：每支腳本一個故事當主軸，每天 1–2 支依故事分數挑。
 
-結構（所有腳本共用）：開場 0–4s → 故事（主體）→ 冷知識 約 10s → 賽果背景 ≤ 15s（可省略）→ 互動 約 6s；
-全長 30–60 秒，素材不夠就短。原本的四種風格不再各產一份：快報降為「賽果背景」、台灣視角變成選題加分、
-數據型併入冷知識。
+結構（notes 10-02 18:55，提示詞 v2 `docs/video/script-prompt-v2.md`）：鉤子 → 反差鋪陳 → 高潮還原 → 價值段
+（冷知識／歷史紀錄優先，沒有才寫金句）→ 伏筆（R16）→ 留言問題；口播 200–260 字（超過 260 退回，短於 200 要寫理由）。
+原本的四種風格不再各產一份：台灣視角變成選題加分、數據型併入價值段。
 
 素材：故事候選（`storylines.story_candidates`，全部可回資料庫查）＋冷知識（同一組選手的其他候選、整站紀錄、
 種子）＋賽果背景（故事主角這站的其他場次；準則 R3：不放台灣選手或冠軍名單，台灣戰報交給粉專）＋新聞裡的爭議句。
@@ -34,30 +34,43 @@ CONTROVERSY = re.compile(r"裁判|挑戰|爭議|換球|抗議|判決|黃牌|紅�
 
 GUIDELINES = ROOT / "docs" / "video" / "review-guidelines.md"   # Raymond 的審稿準則（R1、R2…），每次執行讀最新版
 
-SYSTEM_BASE = """你是羽球短影音的腳本作者，觀眾是台灣的羽球愛好者，審稿人是前職業選手 Raymond。
-用繁體中文、台灣用語寫一支口播腳本，**以一個故事當主軸**。
-結構：開場 0–4s（故事最強的一句，含一個數字或反差）→ 故事（主體，一個故事講透）→ 冷知識 約 10s（數據紀錄、選手背景、規則與賽制擇一）
-→ 賽果背景 ≤ 15s（只放跟這個故事同一批人或同一場比賽的結果；沒有就省略）→ 互動 約 6s（一個問句）。
-全長 30–60 秒：素材夠就約 60 秒（口播 240–280 字），不夠就寫短（120–200 字）。
-**口播總字數（不含空白，標點算字）硬上限 300 字，超過會被退回**；素材很多時挑最強的 2–3 個事實講，不用全部講完。
-字數預算：開場 ≤ 25、故事 ≤ 150、冷知識 ≤ 50、賽果背景 ≤ 50（可省略）、互動 ≤ 25。
-資料規則（事實檢查會擋）：
+PROMPT_V2 = ROOT / "docs" / "video" / "script-prompt-v2.md"   # 故事腳本提示詞 v2（notes 10-02 18:55 A，取代舊的五段結構）
+VOICE_MIN, VOICE_MAX = 200, 260   # v2 下限 200（素材不夠可以短，要寫 short_reason）；上限 260 程式擋（18:55 a）
+PARTS = ["鉤子", "反差鋪陳", "高潮還原", "價值段", "伏筆", "留言問題"]
+VALUE_KINDS = ("冷知識", "歷史紀錄", "金句")
+
+SYSTEM_CODE = """以下是程式附加的規則（和上面衝突時以這裡為準）。
+長度：**口播總字數（不含空白，標點算字）200–260 字，超過 260 會被退回**；素材不夠可以短於 200，但要在 short_reason 說明為什麼短。
+結尾順序固定：價值段 → 伏筆（R16，有支線素材才有）→ 留言問題。
+- 價值段（取代「金句昇華」）：有查證過的冷知識（事實清單【冷知識】區）或資料庫紀錄（事實清單的歷史事實）就優先用，寫成「冷知識」或「歷史紀錄」；
+  都沒有才寫「金句」。value_kind 填你選了哪一種
+- segments 的 part 依序用：鉤子、反差鋪陳、高潮還原、價值段、伏筆、留言問題（沒有伏筆就省略那段；前三段可以合併成較少段，但順序不變）
+""" + """資料規則（事實檢查會擋）：
 - 名字、國家、排名、比分、交手紀錄、日期、名次只能用「事實清單」的內容，照抄；名字照事實清單的寫法
 - 比分照事實清單（勝方在前）；主詞是敗方時倒過來寫成主詞的角度
 - 「爆冷／冷門」只能用在事實清單標了「規則判定爆冷」的場次；「逆轉」只能用在事實清單寫到逆轉的場次；「首冠」只能用在寫到「第一座」的選手
 - 事實清單以外的背景（年齡、經歷、規則解釋、原因推論）每一句句尾加「⚠️推測」，語氣用「可能、大約、據說」，並列進 todo（推測內容、依據、建議怎麼查）。數字若不在事實清單，那句就必須是推測句
 - 不要自己算出事實清單沒有的新數字（例如交手 8 次就說「第 9 次碰面」、相加或相減出來的數字）
 - 日期用事實清單的寫法或相對「今天」換算，不要自己編日期
-- 範例只示範結構與語氣，範例裡的名字與數字不能用
+- 範例只示範語氣與事實的寫法（範例是舊的段落結構，結構以這份提示為準），範例裡的名字與數字不能用
 - 事實清單的「官方排名走勢」「平均每局分差」「退賽次數」只是數據，不是原因：用它說明轉折時要寫成「數據顯示…」，推論原因就標推測
 - **規則與賽制（準則 R13）**：講到規則、積分、賽制時，只能用事實清單裡「冷知識（trivia_rules 第 N 條）」的內容，照原文意思寫；
   其他規則說法一律句尾標「⚠️推測」並列進 todo（反例：「積分一年後就歸零」——正確是保留到下一屆同一站開打或滿 52 週，以先到者為準）
-**逐句引用（準則 R15）**：口播拆成句子，每句標它根據哪幾條事實（事實清單的 F 編號）。含數字、名字、名次、「第一站／首冠／連勝」的句子一定要引用，
-而且句子裡的每個數字都要出現在它引用的事實裡；句子的意思要和引用的事實一致，特別是**時間點**（賽前／賽後／重組時）和比較對象。
-沒有事實的句子（轉場、金句、留言問題）fact_ids 給 []，kind 給 "rhetoric"。
-只輸出 JSON：{"titles": ["…", "…", "…"], "segments": [{"time": "0–4s", "part": "開場|故事|冷知識|賽果背景|互動", "card": "字卡建議",
+- **關鍵對手（品質紀錄 C7）**：事實清單有【關鍵對手：…】時，至少一句要引用它底下的一條脈絡（近期交手、最懸殊敗場、對手近況），不能只寫名字和比分
+""" + """**逐句引用（準則 R15）**：口播拆成句子，每句標它根據哪幾條事實（事實清單的 F 編號）。含數字、名字、名次、「第一站／首冠／連勝」的句子一定要引用，
+**提到名字的句子（含留言問題、伏筆句）都要引用**；句子裡的每個數字都要出現在它引用的事實裡；句子的意思要和引用的事實一致，特別是**時間點**（賽前／賽後／重組時）和比較對象。
+沒有事實的句子（轉場、金句）fact_ids 給 []，kind 給 "rhetoric"。
+只輸出 JSON：{"titles": ["…", "…", "…"], "value_kind": "冷知識|歷史紀錄|金句", "short_reason": "短於 200 字才寫，否則空字串",
+"segments": [{"time": "0–3s", "part": "鉤子|反差鋪陳|高潮還原|價值段|伏筆|留言問題", "card": "字卡建議",
 "sentences": [{"text": "一句口播", "fact_ids": ["F3", "F7"], "kind": "fact|rhetoric"}]}],
 "todo": [{"claim": "推測內容", "basis": "依據", "how": "建議怎麼查"}]}"""
+
+
+def prompt_v2() -> str:
+    """docs/video/script-prompt-v2.md 的角色、結構、規則、節奏（claude.ai 會改；每次讀檔）。「輸出格式」以下由程式提供（JSON 逐句引用）。"""
+    text = PROMPT_V2.read_text(encoding="utf-8")
+    body = text[text.index("## 角色"):] if "## 角色" in text else text
+    return body.split("## 輸出格式")[0].strip()
 
 
 def guidelines() -> str:
@@ -74,7 +87,7 @@ def guideline_ids(text: str | None = None) -> list[str]:
 
 def system_prompt() -> str:
     g = guidelines()
-    return SYSTEM_BASE + ("\n\n以下是 Raymond 的審稿準則，每一條都要遵守：\n" + g if g else "")
+    return prompt_v2() + "\n\n" + SYSTEM_CODE + ("\n\n以下是 Raymond 的審稿準則，每一條都要遵守：\n" + g if g else "")
 
 
 EDITOR_SYSTEM = """你是羽球短影音的編輯，替前職業選手 Raymond 先審一遍稿。只看「審稿準則」裡編號 R 開頭的每一條，逐條判斷這支腳本有沒有違反。
@@ -294,8 +307,33 @@ def check(out: dict, facts: list[str], flags: dict) -> list[str]:
     full = "".join(s.get("voice", "") for s in segs)
     n = len(re.sub(r"\s", "", full))
     problems = [p for p in problems if not p.startswith("口播 ")]
-    if not script.VOICE_RANGE[0] <= n <= script.VOICE_RANGE[1]:
-        problems.append(f"口播 {n} 字，不在 {script.VOICE_RANGE[0]}–{script.VOICE_RANGE[1]}")
+    if n > VOICE_MAX:
+        problems.append(f"口播 {n} 字，超過上限 {VOICE_MAX}：整段刪掉次要的內容，至少刪 {n - VOICE_MAX + 15} 字")
+    elif n < VOICE_MIN and not (out.get("short_reason") or "").strip():
+        problems.append(f"口播 {n} 字，不到 {VOICE_MIN}：素材不夠可以短，但 short_reason 要說明為什麼短")
+    return problems + structure_problems(out)
+
+
+def structure_problems(out: dict) -> list[str]:
+    """v2 結尾順序（notes 10-02 18:55 a）：價值段 → 伏筆 → 留言問題；value_kind 要標冷知識／歷史紀錄／金句。"""
+    parts = [s.get("part", "") for s in out.get("segments") or []]
+    problems = []
+    if out.get("value_kind") not in VALUE_KINDS:
+        problems.append("value_kind 要填「冷知識」「歷史紀錄」或「金句」其中一個")
+    if not parts or parts[-1] != "留言問題":
+        problems.append("最後一段要是留言問題")
+    if "價值段" not in parts:
+        problems.append("少了價值段（冷知識／歷史紀錄，沒有才寫金句）")
+    order = [PARTS.index(x) for x in parts if x in PARTS]
+    if order != sorted(order):
+        problems.append("段落順序要是：鉤子 → 反差鋪陳 → 高潮還原 → 價值段 → 伏筆 → 留言問題")
+    hook = (out.get("hook") or {}).get("teaser")
+    if hook and "伏筆" in parts:
+        seg = next(x for x in out["segments"] if x.get("part") == "伏筆")
+        if hook.strip() not in (seg.get("voice") or cite.assemble(seg.get("sentences") or [])):
+            problems.append("伏筆那一句要放在「伏筆」段（價值段之後、留言問題之前）")
+    elif hook:
+        problems.append("有伏筆就要有「伏筆」段（價值段之後、留言問題之前）")
     return problems
 
 
@@ -453,6 +491,7 @@ def to_markdown(title: str, c: dict, out: dict) -> str:
     lines += [f"{i + 1}. {x}" for i, x in enumerate(out["titles"])]
     lines += ["", "| 秒數 | 段落 | 口播 | 字卡建議 |", "|---|---|---|---|"]
     lines += [f"| {s.get('time', '')} | {s.get('part', '')} | {s.get('voice', '')} | {s.get('card', '')} |" for s in out["segments"]]
+    lines += ["", f"價值段：{out.get('value_kind') or '（未標）'}" + (f"；口播較短：{out['short_reason']}" if out.get("short_reason") else "")]
     if out.get("todo"):
         lines += ["", "待查清單："] + [f"- {x.get('claim', '')}（依據：{x.get('basis', '')}；怎麼查：{x.get('how', '')}）" for x in out["todo"]]
     if out.get("verify"):
@@ -477,6 +516,7 @@ def to_markdown(title: str, c: dict, out: dict) -> str:
 def to_discord(title: str, out: dict) -> str:
     lines = [f"🎬 **影片腳本草稿｜{title}**"] + [f"{i + 1}. {x}" for i, x in enumerate(out["titles"])]
     lines += [f"`{s.get('time', '')}` {s.get('voice', '')} ／ 字卡：{s.get('card', '')}" for s in out["segments"]]
+    lines += [f"價值段：{out.get('value_kind') or '（未標）'}" + (f"；口播較短：{out['short_reason']}" if out.get("short_reason") else "")]
     if out.get("todo"):
         lines += ["待查：" + "；".join(x.get("claim", "") for x in out["todo"])]
     if out.get("verify"):

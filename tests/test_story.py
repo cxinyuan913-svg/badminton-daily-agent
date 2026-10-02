@@ -9,9 +9,12 @@ VOICE = ("曾經輸多贏少，現在連贏 9 場。AN Se Young 對 Akane YAMAGU
          "今天亞運決賽 21 比 17、21 比 9 再贏一次，世界第 1 對世界第 3，第二局只讓對手拿 9 分。") * 2
 
 
-def out(voice, todo=None):
-    return {"titles": ["a", "b", "c"], "segments": [{"time": "0–60s", "part": "故事", "voice": voice, "card": ""}],
-            "todo": todo or []}
+def out(voice, todo=None, **kw):
+    return {"titles": ["a", "b", "c"], "value_kind": "歷史紀錄",
+            "segments": [{"time": "0–50s", "part": "高潮還原", "voice": voice, "card": ""},
+                         {"time": "50–55s", "part": "價值段", "voice": "", "card": ""},
+                         {"time": "55–60s", "part": "留言問題", "voice": "", "card": ""}],
+            "todo": todo or [], **kw}
 
 
 def test_speculation_skipped_but_needs_todo():
@@ -94,3 +97,26 @@ def test_dates_are_not_scores():
 def test_leading_zero_numbers():
     from brief.llm import unverified
     assert unverified("10 月 1 日", "今天是 2026-10-01", {}) == []
+
+
+def test_v2_length_and_structure():
+    """notes 10-02 18:55 a：口播上限 260（短於 200 要寫理由）；結尾順序 價值段 → 伏筆 → 留言問題；value_kind 必填。"""
+    flags = story._flags(FACTS)
+    assert any("超過上限 260" in p for p in story.check(out(VOICE * 2), FACTS, flags))
+    short = VOICE[:60]
+    assert any("short_reason" in p for p in story.check(out(short), FACTS, flags))
+    assert not any(p.startswith("口播") for p in story.check(out(short, short_reason="這站只有一場可講"), FACTS, flags))
+    o = out(VOICE)
+    o["segments"].reverse()
+    assert "最後一段要是留言問題" in story.structure_problems(o)
+    assert any("value_kind" in p for p in story.structure_problems({**out(VOICE), "value_kind": ""}))
+    hooked = out(VOICE, hook={"branch": "B1", "teaser": "他們還有一個剋星。"})
+    assert any("伏筆" in p for p in story.structure_problems(hooked))
+    hooked["segments"].insert(2, {"part": "伏筆", "voice": "他們還有一個剋星。"})
+    assert story.structure_problems(hooked) == []
+
+
+def test_system_prompt_uses_v2():
+    sp = story.system_prompt()
+    assert "說書人" in sp and "200–260" in sp and "價值段" in sp and "提到名字的句子（含留言問題、伏筆句）都要引用" in sp
+    assert "純口播文字" not in sp                     # v2 的「輸出格式」由程式的 JSON 取代
