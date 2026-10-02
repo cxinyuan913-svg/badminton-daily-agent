@@ -5,6 +5,7 @@
   - 含數字、選手名、名次或「第一站／首冠／連勝」這類事實性字眼的句子，fact_ids 不可為空，引用的 id 必須存在
   - 句子裡的數字與名字，要出現在**它引用的那幾條**事實裡（不是整份清單）
   - kind = "rhetoric"（轉場、金句、留言問題）且沒有事實性內容的句子不用引用；帶 ⚠️推測 的句子不檢查
+  - 事實清單有【關鍵對手】脈絡時，至少一句要引用其中一條（notes 10-02 18:55 A）
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ import re
 FACTUAL_WORDS = re.compile(r"冠軍|亞軍|四強|八強|十六強|16 強|32 強|金牌|銀牌|銅牌|第一站|首冠|首座|連勝|連敗|排名|世界第|種子|交手|局數|退賽|逆轉|衛冕")
 DIGIT = re.compile(r"\d")
 SPEC = "⚠️推測"
+OPP_HEAD = "【關鍵對手："
 
 
 def number_facts(facts: list[str]) -> dict[str, str]:
@@ -57,7 +59,29 @@ def check(sentences: list[dict], facts: list[str]) -> list[str]:
         bad = unverified(text, "\n".join(ids[i] for i in cited))
         if bad:
             problems.append(f"「{text[:40]}」的 {'、'.join(bad[:4])} 不在它引用的 {'、'.join(cited)} 裡")
-    return problems
+    return problems + opponent_check(sentences, facts)
+
+
+def opponent_ids(facts: list[str]) -> dict[str, str]:
+    """【關鍵對手：X】底下的脈絡事實（近期交手、最懸殊敗場、對手近況…）的 id → 對手名；標題那條（只有賽前排名）不算。"""
+    out, current = {}, None
+    for k, f in number_facts(facts).items():
+        if f.startswith(OPP_HEAD):
+            current = f[len(OPP_HEAD): f.find("】")]
+        elif f.startswith("【"):
+            current = None
+        elif current:
+            out[k] = current
+    return out
+
+
+def opponent_check(sentences: list[dict], facts: list[str]) -> list[str]:
+    """notes 10-02 18:55 A（品質紀錄 C7）：有關鍵對手脈絡時，正文至少一句要引用其中一條，不能只寫名字和比分。"""
+    ctx = opponent_ids(facts)
+    if not ctx or any(i in ctx for s in sentences for i in (s.get("fact_ids") or [])):
+        return []
+    return [f"碰到關鍵對手（{'、'.join(dict.fromkeys(ctx.values()))}）卻沒有用上對手脈絡：至少一句要引用 "
+            f"{'、'.join(ctx)} 其中一條（近期交手、最懸殊敗場、對手近況），不能只寫名字和比分"]
 
 
 def assemble(sentences: list[dict]) -> str:

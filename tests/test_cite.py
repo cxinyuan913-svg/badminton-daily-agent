@@ -29,3 +29,19 @@ def test_assemble_and_annotated():
     assert cite.assemble(s) == "他們曾是世界第 9。你覺得呢？"
     ann = cite.annotated(s, FACTS)
     assert "F2=CARNANDO" in ann and "（修辭）" in ann
+
+
+OPP = FACTS + ["【關鍵對手：KIM Won Ho / SEO Seung Jae】賽前排名：世界第 1",
+               "CARNANDO／MARTHIN與KIM Won Ho / SEO Seung Jae近 12 個月交手 1 次：2026-09-01 中國大師賽 32 強 KIM Won Ho / SEO Seung Jae勝",
+               "這場（KIM Won Ho / SEO Seung Jae角度 11-21 14-21）是KIM Won Ho / SEO Seung Jae 2025 年以來 15 場敗場裡局分差最懸殊的一場",
+               "【新聞】", "（沒有新聞）"]
+
+
+def test_key_opponent_needs_one_context_sentence():
+    """notes 10-02 18:55 A：有【關鍵對手】脈絡時，只引用標題（賽前排名）不夠，至少一句要引用脈絡事實。"""
+    assert cite.opponent_ids(OPP) == {"F6": "KIM Won Ho / SEO Seung Jae", "F7": "KIM Won Ho / SEO Seung Jae"}
+    only_rank = [{"text": "四強對上世界第 1 的組合。", "fact_ids": ["F5"]}]
+    assert any("關鍵對手" in p and "F6" in p for p in cite.check(only_rank, OPP))
+    ok = only_rank + [{"text": "這是對手 2025 年以來輸最懸殊的一場。", "fact_ids": ["F7"]}]
+    assert cite.check(ok, OPP) == []
+    assert cite.opponent_check(only_rank, FACTS) == []          # 沒有關鍵對手 → 不檢查
