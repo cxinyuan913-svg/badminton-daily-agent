@@ -16,7 +16,7 @@ import json
 import re
 from pathlib import Path
 
-from brief import storylines as sl, zh
+from brief import cite, storylines as sl, verify, zh
 from brief.llm import SENTENCE
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -49,7 +49,11 @@ SYSTEM_BASE = """你是羽球短影音的腳本作者，觀眾是台灣的羽球
 - 日期用事實清單的寫法或相對「今天」換算，不要自己編日期
 - 範例只示範結構與語氣，範例裡的名字與數字不能用
 - 事實清單的「官方排名走勢」「平均每局分差」「退賽次數」只是數據，不是原因：用它說明轉折時要寫成「數據顯示…」，推論原因就標推測
-只輸出 JSON：{"titles": ["…", "…", "…"], "segments": [{"time": "0–4s", "part": "開場|故事|冷知識|賽果背景|互動", "voice": "口播", "card": "字卡建議"}],
+**逐句引用（準則 R15）**：口播拆成句子，每句標它根據哪幾條事實（事實清單的 F 編號）。含數字、名字、名次、「第一站／首冠／連勝」的句子一定要引用，
+而且句子裡的每個數字都要出現在它引用的事實裡；句子的意思要和引用的事實一致，特別是**時間點**（賽前／賽後／重組時）和比較對象。
+沒有事實的句子（轉場、金句、留言問題）fact_ids 給 []，kind 給 "rhetoric"。
+只輸出 JSON：{"titles": ["…", "…", "…"], "segments": [{"time": "0–4s", "part": "開場|故事|冷知識|賽果背景|互動", "card": "字卡建議",
+"sentences": [{"text": "一句口播", "fact_ids": ["F3", "F7"], "kind": "fact|rhetoric"}]}],
 "todo": [{"claim": "推測內容", "basis": "依據", "how": "建議怎麼查"}]}"""
 
 
@@ -83,6 +87,8 @@ EDITOR_SYSTEM = """你是羽球短影音的編輯，替前職業選手 Raymond �
 - R10：數稿子裡出現的選手／組合（雙打一組算一個），超過 4 組 → 不通過；1–2 組主角以外只能一句帶過
 - R11：補充說明會列出「新聞素材」。稿子裡沒有任何「這場以外」的歷史事實 → 不通過；新聞素材不是「無」、稿子卻完全沒用到 → 不通過
 - 補充說明列了「指定多故事」時：每一個都要講到，缺一個就在 R10 寫不通過；這時不適用 R10 的「超過 4 組」
+- R15：看「逐句引用」：每句的意思要和它引用的事實一致，特別是時間點（賽前／賽後／重組時／奪冠後）與比較對象；
+  例如事實寫「奪冠後那週第 157」，句子寫成「重組時第 157」→ 不通過
 只輸出 JSON：{"items": [{"rule": "R1", "pass": true, "quote": "", "comment": ""}]}"""
 
 
@@ -278,12 +284,35 @@ def write(llm, user: str, facts: list[str], con=None, ctx: dict | None = None, a
     problems: list[str] = []
     for attempt in range(attempts):
         prompt = user if not problems else user + "\n\n上一版沒有通過檢查，請修正：" + "；".join(problems)
-        out = _json(llm.complete(system_prompt(), prompt))
+        out = assemble(_json(llm.complete(system_prompt(), prompt)))
         problems = check(out, facts, flags)
+        if not problems:                                  # 逐句引用（11:25 A）：句子的數字要在它引用的事實裡
+            problems = cite.check(all_sentences(out), facts)
         script.log_check(con, ctx, "story_main", llm, attempt + 1, problems)
         if not problems:
             return out, []
     return None, problems
+
+
+def assemble(out: dict) -> dict:
+    """寫手輸出的 sentences 組回 voice（舊格式只有 voice 的照用）。"""
+    for seg in out.get("segments") or []:
+        if seg.get("sentences") and not seg.get("voice"):
+            seg["voice"] = cite.assemble(seg["sentences"])
+    return out
+
+
+def all_sentences(out: dict) -> list[dict]:
+    return [x for seg in out.get("segments") or [] for x in seg.get("sentences") or []]
+
+
+def verify_round(verifier, out: dict, text: str) -> dict | None:
+    if verifier is None:
+        return None
+    try:
+        return verifier(text)
+    except Exception as e:  # noqa: BLE001 — 查證員出錯不擋稿，但要讓 Raymond 知道
+        return {"claims": [], "summary": f"查證員出錯：{e!r}"[:200], "error": True}
 
 
 def script_text(out: dict) -> str:
@@ -311,24 +340,41 @@ def edit(editor, out: dict, con=None, ctx: dict | None = None, text: str | None 
     return bad
 
 
-def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=None) -> tuple[dict | None, list[str]]:
-    """寫 → 事實檢查 → 編輯檢查；編輯不過就帶意見重寫一次（重寫也要過事實檢查），仍不過就附「編輯意見」照樣產出。"""
-    user = (f"範例（只看結構與語氣）：\n{_examples()}\n\n事實清單：\n" + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(facts)))
+def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=None, verifier=None) -> tuple[dict | None, list[str]]:
+    """寫（逐句引用）→ 事實檢查＋引用檢查 → 編輯檢查（不過就帶意見重寫一次，仍不過附「編輯意見」）
+    → 獨立查證員（notes 11:25 B）：有 wrong 就帶查證結果重寫一次再查；仍有 wrong → 不產出（回傳 None，problems 附查證表）。"""
+    user = (f"範例（只看結構與語氣）：\n{_examples()}\n\n事實清單：\n" + cite.facts_block(facts))
     out, problems = write(llm, user, facts, con, ctx)
     if out is None:
         return None, problems
     context = news_context(facts)
-    bad = edit(editor, out, con, ctx, context=context)
+    bad = edit(editor, out, con, ctx, text=script_text(out) + "\n\n逐句引用：\n" + cite.annotated(all_sentences(out), facts),
+               context=context)
     out["editor"] = {"first": bad, "rewritten": False, "final": bad}
-    if not bad:
-        return out, []
-    notes = "；".join(f"{x['rule']} 不通過：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in bad)
-    redo, _ = write(llm, user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, facts, con, ctx, attempts=2)
-    if redo is None:                       # 重寫沒過事實檢查：保留第一版，附上編輯意見
-        return out, []
-    final = edit(editor, redo, con, ctx, context=context)
-    redo["editor"] = {"first": bad, "rewritten": True, "final": final}
-    return redo, []
+    if bad:
+        notes = "；".join(f"{x['rule']} 不通過：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in bad)
+        redo, _ = write(llm, user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, facts, con, ctx, attempts=2)
+        if redo is not None:               # 重寫沒過事實檢查：保留第一版，附上編輯意見
+            final = edit(editor, redo, con, ctx, text=script_text(redo) + "\n\n逐句引用：\n" + cite.annotated(all_sentences(redo), facts),
+                         context=context)
+            redo["editor"] = {"first": bad, "rewritten": True, "final": final}
+            out = redo
+    v = verify_round(verifier, out, voice_text(out))
+    if v is not None and verify.wrong(v):
+        redo, _ = write(llm, user + "\n\n獨立查證員查出錯誤（照證據改，事實清單規則照舊）：" + verify.feedback(v), facts, con, ctx, attempts=2)
+        v2 = verify_round(verifier, redo, voice_text(redo)) if redo is not None else v
+        if redo is None or (v2 is not None and verify.wrong(v2)):
+            out["verify"] = v2 or v
+            return None, ["查證員仍判錯：" + verify.feedback(v2 or v)]
+        redo["editor"] = out.get("editor")
+        out, v = redo, v2
+    if v is not None:
+        out["verify"] = v
+    return out, []
+
+
+def voice_text(out: dict) -> str:
+    return "\n".join([" / ".join(out.get("titles") or [])] + [s.get("voice", "") for s in out.get("segments") or []])
 
 
 def news_context(facts: list[str]) -> str:
@@ -351,6 +397,11 @@ def to_markdown(title: str, c: dict, out: dict) -> str:
     lines += [f"| {s.get('time', '')} | {s.get('part', '')} | {s.get('voice', '')} | {s.get('card', '')} |" for s in out["segments"]]
     if out.get("todo"):
         lines += ["", "待查清單："] + [f"- {x.get('claim', '')}（依據：{x.get('basis', '')}；怎麼查：{x.get('how', '')}）" for x in out["todo"]]
+    if out.get("verify"):
+        lines += ["", out["verify"]["summary"]]
+        uv = [c for c in out["verify"]["claims"] if c["verdict"] == "unverifiable"]
+        if uv:
+            lines += ["查證員無法查證（請 Raymond 確認）："] + [f"- {c['claim']}（{c['note']}）" for c in uv]
     ed = out.get("editor")
     if ed is not None:
         status = "通過" if not ed["final"] else "仍有意見"
@@ -366,4 +417,6 @@ def to_discord(title: str, out: dict) -> str:
     lines += [f"`{s.get('time', '')}` {s.get('voice', '')} ／ 字卡：{s.get('card', '')}" for s in out["segments"]]
     if out.get("todo"):
         lines += ["待查：" + "；".join(x.get("claim", "") for x in out["todo"])]
+    if out.get("verify"):
+        lines += [out["verify"]["summary"]]
     return "\n".join(lines)

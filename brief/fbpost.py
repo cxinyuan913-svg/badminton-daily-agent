@@ -18,7 +18,7 @@ import json
 import re
 from pathlib import Path
 
-from brief import grade3, story, storylines as sl, zh
+from brief import cite, grade3, story, storylines as sl, verify, zh
 from brief.llm import _env
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -43,7 +43,7 @@ SYSTEM = """你是台灣羽球粉專的小編，審稿人是前職業選手 Raym
 - 第一行要讓人一眼知道「羽球＋哪個賽事＋誰」（準則 R4）；數字鉤子放在第一行後半，不要用「大家好」開場
 - 開頭標籤依「語氣」：新聞語氣用【賽事名】（例【亞運羽球】）；故事語氣用【羽球故事】或【○○故事】（準則 R6）
 - FB 不支援 Markdown：不要用 **粗體**、# 標題、條列符號、表格、Unicode 花體字；強調只用開頭【】、段落空行、少量表情符號
-- 正文最後一行固定是「🏸 Raymond 的羽球筆記」（簽名，hashtag 不放在正文裡）
+- 正文最後一行固定是「🏸 Raymond 的羽球筆記」（程式自動加；hashtag 不放在正文裡）
 - **數字預算（準則 R7，程式會數）：全篇最多 5 個**，一段盡量只放 1 個。一串局分（19-21 21-13 21-18）算 1 個、「9 勝 0 負」算 1 個、
   年份與【】裡的不算；排名、分鐘數、局分都算。其他數字改用文字（「排名四十多名」「打了快兩個小時」）
 - 字數（不含 hashtag、不含空白）：故事貼文與台灣戰報 500–1,800 字；冷知識 300–1,200 字。上限是「可以寫到」，**素材不夠就短，不准灌水、換角度重講**
@@ -59,7 +59,10 @@ SYSTEM = """你是台灣羽球粉專的小編，審稿人是前職業選手 Raym
 - 不要自己算出事實清單沒有的新數字
 - 事實清單以外的背景可以寫，但每句句尾加「⚠️推測」、語氣用「可能、大約」，並列進 todo；正文盡量少用推測
 - 事實清單有「新聞」的，把標題與網址放進 first_comment（建議放在第一則留言），不要塞在正文
-只輸出 JSON：{"body": "貼文正文（不含 hashtag）", "hashtags": ["#羽球", "…"], "image": "建議配圖：版型＋要填的欄位",
+- **逐句引用（準則 R15）**：正文拆成段落、段落拆成句子，每句標它根據哪幾條事實（F 編號）。含數字、名字、名次、「第一站／首冠／連勝」
+  的句子一定要引用，句子裡的每個數字都要出現在它引用的事實裡；意思要和引用的事實一致，特別是時間點（賽前／賽後／重組時）。
+  轉場、金句、留言問題 fact_ids 給 []、kind 給 "rhetoric"。簽名不用寫，程式會自動加在最後
+只輸出 JSON：{"paragraphs": [{"sentences": [{"text": "一句", "fact_ids": ["F3"], "kind": "fact|rhetoric"}]}], "hashtags": ["#羽球", "…"], "image": "建議配圖：版型＋要填的欄位",
 "first_comment": ["新聞標題 網址"], "coach_slot": "教練觀點建議放在哪裡、可以談什麼（一句）",
 "todo": [{"claim": "推測內容", "basis": "依據", "how": "建議怎麼查"}]}"""
 
@@ -403,8 +406,21 @@ def post_text(out: dict) -> str:
     return (out.get("body") or "") + "\n\n" + " ".join(out.get("hashtags") or [])
 
 
+def assemble(out: dict) -> dict:
+    """paragraphs → body（段落之間空一行），最後自動補簽名（R5）。舊格式只有 body 的照用。"""
+    if out.get("paragraphs") and not out.get("body"):
+        paras = [cite.assemble(p.get("sentences") or []) for p in out["paragraphs"]]
+        body = "\n\n".join(x for x in paras if x.strip())
+        out["body"] = body if body.rstrip().endswith(SIGNATURE) else body.rstrip() + "\n\n" + SIGNATURE
+    return out
+
+
+def sentences_of(out: dict) -> list[dict]:
+    return [x for p in out.get("paragraphs") or [] for x in p.get("sentences") or []]
+
+
 def generate(llm, kind: str, facts: list[str], con=None, today: str | None = None, gap: int | None = None,
-             editor=None, theme: list[dict] | None = None) -> tuple[dict | None, list[str]]:
+             editor=None, theme: list[dict] | None = None, verifier=None) -> tuple[dict | None, list[str]]:
     """theme：明確指定的多個並列故事 [{"title": "…", "keys": ["名字", …]}]——每一個都要講到（不適用 R10 的組數上限）；
     自動選題（theme=None）照 R10 只講 1–2 組主角（notes 10-02 05:55 第 6 項）。"""
     """寫 → 固定檢查＋事實檢查 → 編輯檢查（準則 R1–R6）；編輯不過帶意見重寫（最多 2 次），仍不過就附編輯意見照樣產出。"""
@@ -417,7 +433,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
             f"**範例裡外國選手的中文名是暫用的，不准照用**——名字一律照事實清單：事實清單寫英文就寫英文）：\n{_examples_fb(con)}"
             + (("\n\n**這篇是指定的多故事主題，下面每一個都要講到（每個至少一段）**：\n"
                  + "\n".join(f"{i + 1}. {x['title']}" for i, x in enumerate(theme))) if theme else "")
-            + f"\n\n事實清單：\n" + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(facts)))
+            + f"\n\n事實清單：\n" + cite.facts_block(facts))
     if hasattr(llm, "task"):
         llm.task = "fbpost"
 
@@ -432,10 +448,12 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
                 prompt += f"。上一版正文 {n} 字，至少要刪掉 {n - hi + 30} 字（整段刪掉次要的內容，不要只縮句子）"
             raw = llm.complete(system_prompt(), prompt)
             try:
-                out = json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
+                out = assemble(json.loads(raw[raw.find("{"): raw.rfind("}") + 1]))
             except ValueError:
                 out = {}
             problems = check(out, facts, kind, gap, theme)
+            if not problems and out.get("paragraphs"):     # 逐句引用（11:25 A）
+                problems = cite.check(sentences_of(out), facts)
             script.log_check(con, {"day": today}, f"fbpost_{kind}", llm, attempt + 1, problems)
             if not problems:
                 return out, []
@@ -447,17 +465,29 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
     context = (f"貼文日 {today}；距離故事最新一場比賽 {gap if gap is not None else '很多'} 天（R6：+1 天內新聞語氣，超過故事語氣）；"
                + story.news_context(facts)
                + (("；指定多故事（每一個都要講到，這篇不適用 R10 的組數上限）：" + "、".join(x["title"] for x in theme)) if theme else ""))
-    bad = story.edit(editor, out, con, {"day": today}, text=post_text(out), context=context)
+    ann = lambda o: post_text(o) + ("\n\n逐句引用：\n" + cite.annotated(sentences_of(o), facts) if o.get("paragraphs") else "")
+    bad = story.edit(editor, out, con, {"day": today}, text=ann(out), context=context)
     out["editor"] = {"first": bad, "rewritten": False, "final": bad}
-    if not bad:
-        return out, []
-    notes = "；".join(f"{x['rule']} 不通過：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in bad)
-    redo, _ = write(user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, 2)
-    if redo is None:
-        return out, []
-    final = story.edit(editor, redo, con, {"day": today}, text=post_text(redo), context=context)
-    redo["editor"] = {"first": bad, "rewritten": True, "final": final}
-    return redo, []
+    if bad:
+        notes = "；".join(f"{x['rule']} 不通過：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in bad)
+        redo, _ = write(user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, 2)
+        if redo is not None:
+            final = story.edit(editor, redo, con, {"day": today}, text=ann(redo), context=context)
+            redo["editor"] = {"first": bad, "rewritten": True, "final": final}
+            out = redo
+    # 獨立查證員（11:25 B）：有 wrong → 帶查證結果重寫一次再查；仍有 wrong → 不發
+    v = story.verify_round(verifier, out, out.get("body") or "")
+    if v is not None and verify.wrong(v):
+        redo, _ = write(user + "\n\n獨立查證員查出錯誤（照證據改，事實清單規則照舊）：" + verify.feedback(v), 2)
+        v2 = story.verify_round(verifier, redo, redo.get("body") or "") if redo is not None else v
+        if redo is None or (v2 is not None and verify.wrong(v2)):
+            out["verify"] = v2 or v
+            return None, ["查證員仍判錯：" + verify.feedback(v2 or v)]
+        redo["editor"] = out.get("editor")
+        out, v = redo, v2
+    if v is not None:
+        out["verify"] = v
+    return out, []
 
 
 KIND_LABEL = {"taiwan": "台灣戰報", "story": "故事貼文", "ranking": "排名變化", "history": "冷知識：歷史上的今天",
@@ -475,6 +505,9 @@ def render(today: str, kind: str, out: dict) -> str:
         notes.append("編輯檢查：" + ("通過" if not ed["final"] else "仍有意見")
                      + f"（第一次不通過：{'、'.join(x['rule'] for x in ed['first']) or '無'}；{'有' if ed['rewritten'] else '沒有'}重寫）")
         notes += [f"編輯意見 {x['rule']}：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in ed["final"]]
+    if out.get("verify"):
+        notes.append(out["verify"]["summary"])
+        notes += [f"查證員無法查證：{c['claim']}（{c['note']}）" for c in out["verify"]["claims"] if c["verdict"] == "unverifiable"]
     for name in out.get("_missing_zh") or []:
         notes.append(f"這位台灣選手沒有中文名，請提供：{name}")
     if out.get("coach_slot"):
@@ -505,7 +538,8 @@ def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bo
     out, problems, used = None, [], None
     for effort in EFFORTS:
         llm = make_llm() if make_llm else script.make_script_llm("heavy", con, effort=effort, max_tokens=POST_MAX_TOKENS)
-        out, problems = generate(llm, kind, facts, con, today, gap, editor)
+        checker = None if make_llm else (lambda text: verify.verify(text, con=con))     # 獨立查證員（notes 11:25 B）
+        out, problems = generate(llm, kind, facts, con, today, gap, editor, verifier=checker)
         used = effort
         if out is not None:
             break
@@ -515,6 +549,8 @@ def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bo
         if alert:
             alert(f"**粉專貼文產生失敗**｜{today}：{'；'.join(problems)[:300]}")
         return {"status": "failed", "kind": kind, "problems": problems, "facts": facts, "path": str(path)}
+    if out.get("verify"):
+        verify.save(out["verify"], OUT_DIR / f"{today}_verify.json")
     out["_missing_zh"] = missing_tpe_zh(facts)
     text = render(today, kind, out)
     path.write_text(text + "\n\n<details><summary>事實清單</summary>\n\n" + "\n".join(f"- {f}" for f in facts)

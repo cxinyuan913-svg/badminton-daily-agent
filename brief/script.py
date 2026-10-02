@@ -390,13 +390,19 @@ def _story_main(con, t: dict, day: str, title: str, make_llm, send, alert) -> tu
         facts = story.materials(con, t, day, c, cands, daym, allm)
         model = make_llm("heavy") if make_llm else make_script_llm("heavy", con, effort=story.STORY_EFFORT)
         editor = make_llm("editor") if make_llm else make_script_llm("heavy", con, effort="low")     # 編輯：Opus low（10-02 05:55）
-        out, problems = story.generate(model, facts, con, {"tournament_id": t["tournament_id"], "day": day}, editor=editor)
+        from brief import verify
+        checker = None if make_llm else (lambda text: verify.verify(text, con=con))     # 獨立查證員（notes 11:25 B）
+        out, problems = story.generate(model, facts, con, {"tournament_id": t["tournament_id"], "day": day}, editor=editor,
+                                       verifier=checker)
         head = f"故事 {i}｜{c['kind']}"
+        vpath = OUT_DIR / f"{day}_{t['tournament_id']}_story{i}_verify.json"
+        if out is not None and out.get("verify"):
+            verify.save(out["verify"], vpath)
         if out is None:
             scripts.append({"status": "failed", "kind": c["kind"], "score": c["final"], "problems": problems})
-            md += [f"### {head}", "", f"（未通過事實檢查：{'；'.join(problems)}）", ""]
+            md += [f"### {head}", "", f"（未通過檢查：{'；'.join(problems)}）", ""]
             if alert:
-                alert(f"**腳本產生失敗**｜{title}｜{head}：{'；'.join(problems)[:300]}")
+                alert(f"**腳本產生失敗**｜{title}｜{head}：{'；'.join(problems)[:1500]}")
             continue
         scripts.append({"status": "ok", "kind": c["kind"], "score": c["final"], "out": out, "facts": facts})
         md += [story.to_markdown(head, c, out), ""]

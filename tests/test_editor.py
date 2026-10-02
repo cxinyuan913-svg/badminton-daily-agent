@@ -21,7 +21,10 @@ GOOD = ("WANG Zhi Yi 對 KIM Ga Eun，2017 年以來交手 10 場，6 勝 4 負�
 
 
 def script(*voices):
-    return json.dumps({"titles": ["a", "b", "c"], "segments": [{"time": "0–60s", "part": "故事", "voice": " ".join(voices), "card": ""}],
+    """寫手輸出（11:25 A 逐句引用格式）：每句都引用整份事實清單，讓這些測試只看編輯流程。"""
+    ids = [f"F{i}" for i in range(1, len(FACTS) + 1)]
+    sentences = [{"text": v, "fact_ids": ids, "kind": "fact"} for v in voices]
+    return json.dumps({"titles": ["a", "b", "c"], "segments": [{"time": "0–60s", "part": "故事", "card": "", "sentences": sentences}],
                        "todo": []}, ensure_ascii=False)
 
 
@@ -254,3 +257,42 @@ def test_side_names_ignore_prefixed_duplicates():
     facts = ["主題：拆夥再重組——2026 亞運羽球男雙冠軍 Leo Rolly CARNANDO / Daniel MARTHIN（印尼）；今天是 2026-10-02",
              "男雙 決賽：Leo Rolly CARNANDO / Daniel MARTHIN（印尼，世界 #43）勝 WANG Chang / LIANG Wei Keng（中國，世界 #3），比分 19-21 21-13 21-18"]
     assert sl.side_names(facts) == ["Leo Rolly CARNANDO / Daniel MARTHIN", "WANG Chang / LIANG Wei Keng"]
+
+
+def _verdicts(*v):
+    claims = [{"claim": f"主張{i}", "verdict": x, "evidence_sql": "", "evidence_rows": "", "note": "證據"} for i, x in enumerate(v)]
+    from brief import verify
+    return {"claims": claims, "summary": verify.summary(claims), "queries": 1, "cost": 0.01}
+
+
+def test_verifier_wrong_triggers_rewrite_then_blocks():
+    """11:25 B：查證員判 wrong → 帶查證結果重寫一次再查；仍 wrong → 不產出。"""
+    calls = []
+    def verifier_ok_second(text):
+        calls.append(text)
+        return _verdicts("wrong") if len(calls) == 1 else _verdicts("ok", "unverifiable")
+    writer = Fake([script(GOOD), script(GOOD)])
+    out, problems = story.generate(writer, FACTS, editor=Fake([verdict()]), verifier=verifier_ok_second)
+    assert out is not None and problems == [] and "獨立查證員查出錯誤" in writer.prompts[1][1]
+    assert out["verify"]["summary"] == "查證 2 條：1 ok、1 無法查證" and len(calls) == 2
+    md = story.to_markdown("故事 1", {"kind": "rivalry", "final": 10.5}, out)
+    assert "查證 2 條" in md and "無法查證" in md
+    writer = Fake([script(GOOD), script(GOOD)])
+    out, problems = story.generate(writer, FACTS, editor=Fake([verdict()]), verifier=lambda t: _verdicts("wrong"))
+    assert out is None and problems[0].startswith("查證員仍判錯")
+
+
+def test_citation_check_in_writer_loop():
+    """11:25 A：句子含 157，引用的事實沒有 157 → 擋下、要求重寫。"""
+    bad = json.dumps({"titles": ["a", "b", "c"], "segments": [{"time": "0–60s", "part": "故事", "card": "",
+                      "sentences": [{"text": GOOD, "fact_ids": [f"F{i}" for i in range(1, len(FACTS) + 1)]},
+                                    {"text": "重組時排名第 157。", "fact_ids": ["F2"]}]}], "todo": []}, ensure_ascii=False)
+    writer = Fake([bad, script(GOOD)])
+    out, _ = story.generate(writer, FACTS, editor=Fake([verdict()]))
+    assert out is not None and "157" in writer.prompts[1][1] and "F2" in writer.prompts[1][1]
+
+
+def test_fbpost_paragraphs_assembled_with_signature():
+    out = fbpost.assemble({"paragraphs": [{"sentences": [{"text": "【羽球故事】第一句。"}, {"text": "第二句。"}]},
+                                          {"sentences": [{"text": "你覺得呢？", "kind": "rhetoric"}]}]})
+    assert out["body"] == "【羽球故事】第一句。第二句。\n\n你覺得呢？\n\n" + fbpost.SIGNATURE
