@@ -49,7 +49,7 @@ def test_retired_final_denmark_2021():
     allm = sl.tournament_matches(con, 3971, t["end_date"])
     final = [m for m in allm if m["event"] == "WS" and m["round"] == "Final"][0]
     ret = [c for c in sl.candidates_for_match(con, final) if c["kind"] == "retired"]
-    assert ret and "中途退賽" in ret[0]["facts"][1] and "AN Se Young" in ret[0]["facts"][1]
+    assert ret and "中途退賽" in ret[0]["facts"][1] and any(n in ret[0]["facts"][1] for n in ("AN Se Young", "安洗瑩"))   # 10-02 18:55 譯名全收
 
 
 @needs_db
