@@ -3,6 +3,53 @@
 Claude Code 每次工作結束前更新這份：做了什麼、卡在哪、下一步。
 Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
+## 2026-10-03 01:50（Claude Code）— notes 10-02 18:55 回報
+
+### 完成
+- **1. S4U**：Raymond 用系統管理員跑完 `register_task.ps1`，7 個 badminton-* 排程的 LogonType 都是 S4U（`Get-ScheduledTask`）
+  - 01:39 手動觸發 watch：LastTaskResult=0；`data/logs/watch.log` 正常寫入（發送 0 則賽果、0 則看點）
+  - 新聞 7 個來源都有收（`news_run` 01:39，error 都是空的）
+  - `.env` 用程式所在路徑的絕對路徑讀，S4U 也是用 Raymond 的帳號跑，讀得到。實際推 Discord 要等 06:00 晨報／07:00 粉專驗證
+  - 回補有接續：tsna 01:08 起跑（01:43 時 200/1741），bwf 已完成。不需要退回 `-Headless`
+  - 附帶發現：log 在 10-02 18:30 到 10-03 01:00 是空的。原因是電腦 **18:51 異常關機**（System 事件 41／6008），00:59 才重開，不是排程問題
+- **2. 伏筆**：#1、#2 維持 open；#3 標 dropped（drop_reason「與 #1 重複」）
+  - 16:50 粉專試寫 Raymond 還沒說有沒有發，所以**沒有**記進 `fbpost_sent`
+- **3. 關鍵對手至少引用一條**：`cite.opponent_check`，粉專與故事腳本都接在逐句引用檢查裡
+  - 事實清單有【關鍵對手：X】時，至少一句要引用它底下的脈絡事實（近期交手、最懸殊敗場、對手近況、近 2 年敗場）；只引用標題那條（賽前排名）不算，沒有就退回重寫
+  - 寫手提示詞也加了這一條；測試 `tests/test_cite.py::test_key_opponent_needs_one_context_sentence`
+- **4. 影片提示詞 v2 接進故事腳本**：`story.system_prompt()` 每次讀 `docs/video/script-prompt-v2.md` 的「角色」到「節奏與長度」，再接程式規則（資料規則、逐句引用、JSON 格式）與審稿準則
+  - 口播 > 260 字退回重寫；< 200 字要寫 `short_reason`，否則退回
+  - 段落（part）依序：鉤子 → 反差鋪陳 → 高潮還原 → 價值段 → 伏筆 → 留言問題。程式檢查：
+    - 最後一段是留言問題、一定要有價值段、順序不亂
+    - 有伏筆就要放在「伏筆」段
+  - `value_kind`（冷知識／歷史紀錄／金句）必填，寫進給 Raymond 的備註（md 與 Discord）；短稿理由也一起列
+  - 「提到名字的句子（含留言問題、伏筆句）都要引用」寫進 v2 文件與程式提示詞
+  - v2 文件狀態改為正式版，字數 200–260、結尾順序同步更新
+  - 舊範例（`tests/fixtures/story_examples`）還是舊段落結構，提示詞註明「只看語氣，結構以提示為準」
+  - SCRIPT_* 維持 dry
+- **5. 譯名全收**：35 位 candidate 改成 source=raymond、confirmed，evidence 保留原來源
+  - `foreign_name` 現在 43 位都 confirmed（Raymond 39、雙來源 4）
+  - `config/players_zh_foreign.csv` 重新匯出（43 筆）
+- **6. 編輯不通過**：維持現狀，沒有改
+- 測試 258 個全過
+  - 兩個用真實資料庫的測試原本寫死英文名（WANG Zhi Yi、AN Se Young），現在顯示中文譯名，斷言改成接受中英文兩種寫法
+  - test_editor 的假寫手輸出改成 v2 結構
+
+### 發現與決定
+- v2 **還沒有用真實 LLM 跑過正式流程**。下一個有故事的比賽日，watch 會用 v2 產稿（dry，寫進 `data/scripts/`）
+  - 如果要先看一支，可以用 16:50 的同一份素材重跑一次，約 US$0.5
+
+### 卡住
+- 無
+
+### 待 Raymond 決定
+1. **16:50 粉專試寫有沒有發？** 目前沒記進 `fbpost_sent`，伏筆 #2 還不算真的埋下。A：有發，記進去（標 trial）；B：沒發，維持現狀
+2. **v2 要不要先試跑一支？** 預設是等下一個比賽日自然產生。A：現在用 16:50 素材重跑一支（約 US$0.5）；B：等比賽日
+
+### 下一步
+- 06:00 晨報、07:00 粉專確認 S4U 底下 Discord 推送正常
+- tsna 回補跑完後回報「看了幾篇、羽球幾篇、有用幾篇」（notes 16:55）
+
 ## 2026-10-02 17:50（Claude Code）— notes 13:45、13:35、16:50（試寫）、16:55 回報
 
 ### 完成

@@ -7,6 +7,25 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ---
 
+## 2026-10-02 18:55 — status.md 17:50 待決定回覆（Raymond：S4U 待說明、伏筆 B、四強 A、v2 A＋a、譯名全收、編輯 A）
+
+> **已併入**（2026-10-03，Claude Code）；結果見 `docs/status.md`
+
+1. **S4U（B，18:52 決定改）**：Raymond 會自己用系統管理員 PowerShell 跑 `register_task.ps1`（不加 -Headless）。他跑完告訴你後：手動觸發 watch 確認 LastTaskResult=0、log 正常、`.env` 讀得到；回補排程有接續；失敗就請他加 `-Headless` 再跑一次退回。status.md 回報結果。
+2. **伏筆（B）**：#1、#2 保留 open，#3（和 #1 重複）標 dropped。Raymond 可能會自己發 16:50 的粉專試寫；如果他說發了，把那篇記進 `fbpost_sent`（標 trial），#2 才算真的埋下。
+3. **四強段落（A）**：程式檢查加一條——事實清單有【關鍵對手】（`opponent_context`）時，正文至少要有一句引用其中一條對手脈絡事實（近期交手、最懸殊敗場、對手近況任一），沒有就退回重寫。審稿準則 R11 底下由 claude.ai 補一句。
+4. **影片提示詞 v2（A＋a）**：`docs/video/script-prompt-v2.md` 接進正式的故事腳本流程，取代現行提示詞。
+   - 字數上限改 **260**（程式擋，超過就重寫）；下限照 v2 的 200，素材不夠可以短，但要在備註說明。
+   - 結尾順序：價值段 → 伏筆（R16）→ 留言問題。價值段由模型自己選「冷知識／歷史紀錄」或「金句」：有查證過的冷知識或資料庫紀錄就優先用，沒有才寫金句；備註標出選了哪一種。
+   - 把 16:50 試寫時加的那句「提到名字的句子（含留言問題、伏筆句）都要引用」正式寫進 v2。
+   - 腳本開關（SCRIPT_*）維持 dry，Raymond 看過幾支再開。
+5. **譯名（全收）**：`foreign_name` 裡目前所有 candidate（status.md 11:xx 時是 35 位，例如鮑驪婧、陳雨菲、石宇奇、王昶、梁偉鏗、阿爾菲安、喬納坦、山口茜、安洗瑩、李紹希、駱建佑、依瑟儂…）全部改成 Raymond 確認（source=raymond），重新匯出 `config/players_zh_foreign.csv`。之後新出現的 candidate 維持原規則，週一譯名週報列給 Raymond。
+6. **編輯不通過（A）**：維持現狀——保留第一版並附上編輯意見，由 Raymond 人工判斷。
+
+完成後更新 status.md、commit、push。
+
+---
+
 ## 2026-10-02 17:05 — 排程一直跳出空白 CMD 視窗
 
 > **已併入**（2026-10-02，Claude Code）；目前用備案 conhost --headless，S4U 指令待 Raymond 用系統管理員執行，見 `docs/status.md`
