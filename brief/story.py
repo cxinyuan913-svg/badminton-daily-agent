@@ -16,7 +16,7 @@ import json
 import re
 from pathlib import Path
 
-from brief import cite, storylines as sl, verify, zh
+from brief import cite, hooks, storylines as sl, verify, zh
 from brief.llm import SENTENCE
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,6 +27,7 @@ TPE_BONUS = 3.0          # 有台灣選手的故事加分（台灣視角變成�
 MAX_PER_DAY = 2
 NO_NEWS = "無（最近 30 天沒有主角的新聞）"
 NO_TRIVIA = "無（沒有相關的審過冷知識）"
+MAX_BRANCHES = 3         # 伏筆支線素材最多 3 條（notes 13:45）
 MAX_SIDES = 4            # 準則 R10：文中出現的選手／組合超過 4 組就退回
 SPEC = "⚠️推測"
 CONTROVERSY = re.compile(r"裁判|挑戰|爭議|換球|抗議|判決|黃牌|紅牌|鷹眼|發球違例|申訴")
@@ -91,6 +92,7 @@ EDITOR_SYSTEM = """你是羽球短影音的編輯，替前職業選手 Raymond �
 - 補充說明列了「指定多故事」時：每一個都要講到，缺一個就在 R10 寫不通過；這時不適用 R10 的「超過 4 組」
 - R13：稿子出現規則、積分、賽制的說法（例「積分會歸零」「打越多站排越前」），卻不在補充說明列的「審過的規則條目」裡、也沒標 ⚠️推測 → 不通過；
   和審過的條目意思不一樣（例「一年後歸零」vs 第 6 條「下一屆同一站或滿 52 週，先到者為準」）也不通過
+- R16：補充說明列了「伏筆支線答案」時，正文要有一句懸念（只寫有這件事）；答案裡的名字、次數、場次出現在正文 → 不通過。沒列就算通過
 - R15：看「逐句引用」：每句的意思要和它引用的事實一致，特別是時間點（賽前／賽後／重組時／奪冠後）與比較對象；
   例如事實寫「奪冠後那週第 157」，句子寫成「重組時第 157」→ 不通過
 只輸出 JSON：{"items": [{"rule": "R1", "pass": true, "quote": "", "comment": ""}]}"""
@@ -184,12 +186,46 @@ def materials(con, t: dict, day: str, c: dict, cands: list[dict], daym: list[dic
         d = sl.defending(con, t, m["winner"]["pairing_id"], m["event"])
         history += ([d] if d else []) + [f for side in ("winner", "loser")      # R8：生涯
                                          for f in sl.career(con, m[side]["pairing_id"], m["event"], m[side]["name"], m["date"], sl.tournament_start(con, m.get("tournament_id"), m["date"]))]
+        history += key_opponents(con, c, allm or daym)[0]
     facts = head + ["【歷史】"] + history
     facts += ["【新聞】"] + (recent_news(con, names, day) or [NO_NEWS])
     facts += ["【冷知識】"] + (related_trivia(history) or [NO_TRIVIA])
     facts += (["【冷知識素材】"] + trivia) if trivia else []
     facts += (["【賽果背景素材】"] + back) if back else []
     return list(dict.fromkeys(facts))
+
+
+def key_opponents(con, c: dict, allm: list[dict]) -> tuple[list[str], list[dict]]:
+    """notes 13:35／13:45：故事主角這站（到故事那天）碰過的關鍵對手（賽前世界前 3 或人氣選手）→ 脈絡事實＋伏筆支線。
+    有剋星支線的對手，主線不放「輸給某人 N 次」（答案留給填坑那篇）。"""
+    m = next((x for x in allm if sl.match_fact(x) == c["facts"][0]), None)
+    if m is None:
+        return [], []
+    start = sl.tournament_start(con, m.get("tournament_id"), m["date"])
+    facts, branches, seen = [], [], set()
+    for side in ("winner", "loser"):
+        p = m[side]["pairing_id"]
+        for x in allm:
+            ids = (x["winner"]["pairing_id"], x["loser"]["pairing_id"])
+            if x["event"] != m["event"] or x["date"] > m["date"] or p not in ids:
+                continue
+            opp = ids[1] if ids[0] == p else ids[0]
+            if (p, opp) in seen:
+                continue
+            seen.add((p, opp))
+            ctx = sl.opponent_context(con, p, opp, x["event"], x["match_id"], x["date"], start)
+            if not ctx:
+                continue
+            b = sl.nemesis_branch(con, p, opp, x["event"], x["date"]) if len(branches) < MAX_BRANCHES else None
+            if b:
+                branches.append(b)
+                ctx = sl.opponent_context(con, p, opp, x["event"], x["match_id"], x["date"], start, nemesis=False)
+            facts += ctx
+    return facts, branches
+
+
+def branches(con, c: dict, allm: list[dict]) -> list[dict]:
+    return key_opponents(con, c, allm)[1]
 
 
 def recent_news(con, names: set[str] | list[str], upto: str, days: int = 30, limit: int = 3) -> list[str]:
@@ -279,7 +315,8 @@ def _json(raw: str) -> dict:
         return {}
 
 
-def write(llm, user: str, facts: list[str], con=None, ctx: dict | None = None, attempts: int = 2) -> tuple[dict | None, list[str]]:
+def write(llm, user: str, facts: list[str], con=None, ctx: dict | None = None, attempts: int = 2,
+          branches: list[dict] | None = None) -> tuple[dict | None, list[str]]:
     """寫手：最多 attempts 次，直到事實檢查通過。"""
     from brief import script
     flags = _flags(facts)
@@ -292,6 +329,8 @@ def write(llm, user: str, facts: list[str], con=None, ctx: dict | None = None, a
         problems = check(out, facts, flags)
         if not problems:                                  # 逐句引用（11:25 A）：句子的數字要在它引用的事實裡
             problems = cite.check(all_sentences(out), facts)
+        if not problems:                                  # 伏筆（R16）
+            problems = hooks.check(out.get("hook"), voice_text(out), branches or [])
         script.log_check(con, ctx, "story_main", llm, attempt + 1, problems)
         if not problems:
             return out, []
@@ -344,20 +383,23 @@ def edit(editor, out: dict, con=None, ctx: dict | None = None, text: str | None 
     return bad
 
 
-def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=None, verifier=None) -> tuple[dict | None, list[str]]:
+def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=None, verifier=None,
+             branches: list[dict] | None = None) -> tuple[dict | None, list[str]]:
     """寫（逐句引用）→ 事實檢查＋引用檢查 → 編輯檢查（不過就帶意見重寫一次，仍不過附「編輯意見」）
     → 獨立查證員（notes 11:25 B）：有 wrong 就帶查證結果重寫一次再查；仍有 wrong → 不產出（回傳 None，problems 附查證表）。"""
     user = (f"範例（只看結構與語氣）：\n{_examples()}\n\n事實清單：\n" + cite.facts_block(facts))
-    out, problems = write(llm, user, facts, con, ctx)
+    if branches:
+        user += "\n\n" + hooks.PROMPT + "\n" + "\n".join(hooks.branches_block(branches))
+    out, problems = write(llm, user, facts, con, ctx, branches=branches)
     if out is None:
         return None, problems
-    context = news_context(facts) + "\n" + rules_context()
+    context = news_context(facts) + "\n" + rules_context() + ("\n" + hooks.editor_context(branches) if branches else "")
     bad = edit(editor, out, con, ctx, text=script_text(out) + "\n\n逐句引用：\n" + cite.annotated(all_sentences(out), facts),
                context=context)
     out["editor"] = {"first": bad, "rewritten": False, "final": bad}
     if bad:
         notes = "；".join(f"{x['rule']} 不通過：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in bad)
-        redo, _ = write(llm, user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, facts, con, ctx, attempts=2)
+        redo, _ = write(llm, user + "\n\n編輯的意見（照著改，事實清單規則照舊）：" + notes, facts, con, ctx, attempts=2, branches=branches)
         if redo is not None:               # 重寫沒過事實檢查：保留第一版，附上編輯意見
             final = edit(editor, redo, con, ctx, text=script_text(redo) + "\n\n逐句引用：\n" + cite.annotated(all_sentences(redo), facts),
                          context=context)
@@ -365,7 +407,8 @@ def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=No
             out = redo
     v = verify_round(verifier, out, voice_text(out))
     if v is not None and verify.wrong(v):
-        redo, _ = write(llm, user + "\n\n獨立查證員查出錯誤（照證據改，事實清單規則照舊）：" + verify.feedback(v), facts, con, ctx, attempts=2)
+        redo, _ = write(llm, user + "\n\n獨立查證員查出錯誤（照證據改，事實清單規則照舊）：" + verify.feedback(v), facts, con, ctx,
+                        attempts=2, branches=branches)
         v2 = verify_round(verifier, redo, voice_text(redo)) if redo is not None else v
         if redo is None or (v2 is not None and verify.wrong(v2)):
             out["verify"] = v2 or v
@@ -415,6 +458,8 @@ def to_markdown(title: str, c: dict, out: dict) -> str:
         uv = [c for c in out["verify"]["claims"] if c["verdict"] == "unverifiable"]
         if uv:
             lines += ["查證員無法查證（請 Raymond 確認）："] + [f"- {c['claim']}（{c['note']}）" for c in uv]
+    if out.get("_hook"):
+        lines += ["", hook_note(out["_hook"])]
     ed = out.get("editor")
     if ed is not None:
         status = "通過" if not ed["final"] else "仍有意見"
@@ -432,4 +477,11 @@ def to_discord(title: str, out: dict) -> str:
         lines += ["待查：" + "；".join(x.get("claim", "") for x in out["todo"])]
     if out.get("verify"):
         lines += [out["verify"]["summary"]]
+    if out.get("_hook"):
+        lines += [hook_note(out["_hook"])]
     return "\n".join(lines)
+
+
+def hook_note(h: dict) -> str:
+    """給 Raymond 看的伏筆說明（答案不會出現在正文）。"""
+    return f"伏筆 #{h['id']}「{h['teaser']}」→ 答案（只給你看，之後填坑）：{'；'.join(h['answer'])}"

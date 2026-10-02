@@ -17,6 +17,7 @@ LLM 只拿事實清單寫稿，不拿原始資料；事實檢查以事實清單�
 from __future__ import annotations
 
 import datetime as dt
+from pathlib import Path
 import re
 from collections import defaultdict
 
@@ -355,6 +356,140 @@ def count_sides(text: str, facts: list[str]) -> list[str]:
     return [n for n in side_names(facts) if any(x in text for x in members(n))]
 
 
+POPULAR_CSV = Path(__file__).resolve().parent.parent / "config" / "popular_players.csv"
+TOP_OPPONENT = 3              # 對手賽前世界前 3 → 帶脈絡（notes 10-02 13:35）
+NEMESIS_MIN = 3               # 對手近 2 年輸給同一人／同一國 ≥ 3 次才列
+
+
+def popular_players(con) -> set[int]:
+    """config/popular_players.csv（Raymond 維護）：有 BWF ID 用 ID，沒有就用英文名對 player.name_display。"""
+    import csv
+    if not POPULAR_CSV.exists():
+        return set()
+    out = set()
+    for r in csv.DictReader(POPULAR_CSV.open(encoding="utf-8-sig")):
+        pid = (r.get("bwf_player_id") or "").strip()
+        if pid.isdigit():
+            out.add(int(pid))
+        elif (r.get("英文名") or "").strip():
+            out |= {x for (x,) in con.execute("SELECT player_id FROM player WHERE name_display=?", (r["英文名"].strip(),))}
+    return out
+
+
+def _members_of(con, pairing_id: int) -> list[int]:
+    row = con.execute("SELECT player_a_id, player_b_id FROM pairing WHERE pairing_id=?", (pairing_id,)).fetchone()
+    return [x for x in (row or ()) if x]
+
+
+def _pair_name(con, pairing_id: int) -> str:
+    return digest._side(con, pairing_id)["name"]      # 跟賽果事實同一種寫法
+
+
+def _losses(con, pairing_id: int, event: str, since: str, until: str) -> list[tuple]:
+    """這組在 since～until（不含）之間輸掉的場次：(日期, 賽事, 輪次, 勝方 pairing_id, match_id)。"""
+    return con.execute("""SELECT m.match_date, t.name, m.round, CASE WHEN m.winner_side=1 THEN m.side1_id ELSE m.side2_id END, m.match_id
+                          FROM match m JOIN tournament t USING (tournament_id)
+                          WHERE ? IN (m.side1_id, m.side2_id) AND m.event=? AND m.winner_side IN (1, 2)
+                            AND CASE WHEN m.winner_side=1 THEN m.side1_id ELSE m.side2_id END <> ?
+                            AND m.match_date >= ? AND m.match_date <= ? ORDER BY m.match_date""",
+                       (pairing_id, event, pairing_id, since, until)).fetchall()
+
+
+def _margin(con, match_id: int, loser: int) -> tuple[int, str]:
+    """敗方角度的局分差總和（越小越慘）與比分字串。"""
+    s1 = con.execute("SELECT side1_id FROM match WHERE match_id=?", (match_id,)).fetchone()[0]
+    g = con.execute("SELECT side1_points, side2_points FROM game WHERE match_id=? ORDER BY game_no", (match_id,)).fetchall()
+    g = [(a, b) if s1 == loser else (b, a) for a, b in g if a is not None]
+    return sum(a - b for a, b in g), " ".join(f"{a}-{b}" for a, b in g)
+
+
+def opponent_context(con, protagonist: int, opponent: int, event: str, match_id: int, day: str, start: str,
+                     nemesis: bool = True) -> list[str]:
+    """notes 10-02 13:35（品質紀錄 C7）：故事主角碰上的關鍵對手（賽前世界前 3 或人氣選手）帶脈絡，每條都附日期。
+    nemesis=False：不列「輸給某人 N 次」（那是伏筆支線的答案，留給填坑那篇，notes 13:45）。"""
+    pre = rank_before(con, opponent, event, start)
+    popular = popular_players(con) & set(_members_of(con, opponent))
+    if not ((pre["rank"] and pre["rank"] <= TOP_OPPONENT) or popular):
+        return []
+    on, pn = _pair_name(con, opponent), _pair_name(con, protagonist)
+    out = [f"【關鍵對手：{on}】賽前排名：{rank_text(pre)}" + ("（人氣選手）" if popular else "")]
+    year_ago = (dt.date.fromisoformat(day) - dt.timedelta(days=365)).isoformat()
+    meets = [m for m in h2h_detail(con, protagonist, opponent, day) if m["date"] >= year_ago]
+    if meets:
+        out.append(f"{pn}與{on}近 12 個月交手 {len(meets)} 次：" + "；".join(
+            f"{m['date']} {m['tournament']}{zh.round_name(m['round'])} {pn if m['a_won'] else on}勝（{pn}角度 {_score_a(m['games'])}）"
+            for m in meets))
+    title = con.execute("""SELECT t.name, r.result_date FROM tournament_result r JOIN tournament t USING (tournament_id)
+                           WHERE r.pairing_id=? AND r.event=? AND r.round_reached='W' AND r.result_date < ?
+                           ORDER BY r.result_date DESC LIMIT 1""", (opponent, event, start)).fetchone()
+    if title:
+        after = con.execute("""SELECT t.name, r.round_reached FROM tournament_result r JOIN tournament t USING (tournament_id)
+                               WHERE r.pairing_id=? AND r.event=? AND r.result_date > ? AND r.result_date < ?
+                                 AND r.round_reached <> 'TEAM' ORDER BY r.result_date""",
+                            (opponent, event, title[1], start)).fetchall()
+        out.append(f"{on}最近一次冠軍：{zh.tournament(title[0])}（{title[1]}）" + (
+            "；之後各站：" + "、".join(f"{zh.tournament(n)} {place_name(None, pos)}" for n, pos in after) if after else "；之後沒有再出賽"))
+    since25 = "2025-01-01"
+    losses = _losses(con, opponent, event, since25, day)
+    this = next((l for l in losses if l[4] == match_id), None)
+    if this:
+        margins = [(_margin(con, l[4], opponent), l) for l in losses]
+        (worst, worst_score), worst_l = min(margins, key=lambda x: x[0][0])
+        mine, my_score = _margin(con, match_id, opponent)
+        if worst_l[4] == match_id:
+            out.append(f"這場（{on}角度 {my_score}）是{on} 2025 年以來 {len(losses)} 場敗場裡局分差最懸殊的一場")
+        else:
+            out.append(f"{on} 2025 年以來最懸殊的敗場是 {worst_l[0]} {zh.tournament(worst_l[1])}{zh.round_name(worst_l[2])}（{worst_score}）；"
+                       f"這場是 {my_score}")
+    two_years = (dt.date.fromisoformat(day) - dt.timedelta(days=730)).isoformat()
+    beaten_by = _losses(con, opponent, event, two_years, day)
+    if beaten_by:
+        by_player: dict[int, list] = {}
+        by_country: dict[str, int] = {}
+        for d, tname, rnd, w, _ in beaten_by:
+            for p in _members_of(con, w):
+                by_player.setdefault(p, []).append((d, tname, rnd, w))
+            c = con.execute("SELECT country_code FROM player WHERE player_id=?", (_members_of(con, w)[0],)).fetchone()
+            if c and c[0]:
+                by_country[c[0]] = by_country.get(c[0], 0) + 1
+        out.append(f"{on}近 2 年（{two_years} 起）輸了 {len(beaten_by)} 場")
+        for p, games_ in sorted(by_player.items(), key=lambda kv: -len(kv[1])):
+            if len(games_) < NEMESIS_MIN or not nemesis:
+                break
+            partners = {q for _, _, _, w in games_ for q in _members_of(con, w) if q != p}
+            out.append(f"{on}近 2 年輸給 {_player_name(con, p)} {len(games_)} 次（{_player_name(con, p)}換了 {len(partners)} 個搭檔）："
+                       + "；".join(f"{d} {zh.tournament(t)}{zh.round_name(r)}（搭檔 {'／'.join(_player_name(con, q) for q in _members_of(con, w) if q != p)}）"
+                                   for d, t, r, w in games_))
+        top = [(c, n) for c, n in sorted(by_country.items(), key=lambda kv: -kv[1]) if n >= NEMESIS_MIN]
+        if top:
+            out.append(f"{on}近 2 年的敗場依國家：" + "、".join(f"{zh.country(c)} {n} 場" for c, n in top))
+    return out
+
+
+def nemesis_branch(con, protagonist: int, opponent: int, event: str, day: str) -> dict | None:
+    """伏筆支線（notes 13:45）：關鍵對手近 2 年最常輸給誰。懸念寫「有個剋星」，答案是那個人與場次。"""
+    two_years = (dt.date.fromisoformat(day) - dt.timedelta(days=730)).isoformat()
+    by_player: dict[int, list] = {}
+    for d, tname, rnd, w, _ in _losses(con, opponent, event, two_years, day):
+        for p in _members_of(con, w):
+            if p not in _members_of(con, protagonist):
+                by_player.setdefault(p, []).append((d, tname, rnd, w))
+    if not by_player:
+        return None
+    p, games_ = max(by_player.items(), key=lambda kv: len(kv[1]))
+    if len(games_) < NEMESIS_MIN:
+        return None
+    on, nm = _pair_name(con, opponent), _player_name(con, p)
+    partners = {q for _, _, _, w in games_ for q in _members_of(con, w) if q != p}
+    answer = [f"{on}近 2 年輸給 {nm} {len(games_)} 次，{nm}換了 {len(partners)} 個搭檔"] + [
+        f"{d} {zh.tournament(t)}{zh.round_name(r)}：{_pair_name(con, w)} 勝" for d, t, r, w in games_]
+    mine = set(_members_of(con, protagonist))         # 主角自己的名字不能當答案關鍵字（不然正文提不到主角）
+    surname = lambda n: [w for w in n.split() if w.isupper() and len(w) >= 3]       # 「Muhammad」這種常見名不當關鍵字
+    keys = [nm, *surname(nm)] + [k for q in partners if q not in mine for k in (_player_name(con, q), *surname(_player_name(con, q)))]
+    return {"title": f"{on}近 2 年的剋星", "hint": f"{on}近兩年有一個最常擊敗他們的對手（只寫有剋星、不寫是誰、不寫次數）",
+            "answer": answer, "keys": sorted(set(keys)), "subject": [opponent]}
+
+
 CAREER_LEVELS = ("G1_IND", "G1_EVENT", "WTF", "S1000", "S750", "S500", "MULTI", "CONT_IND", "SSP", "SS", "GPG")
 
 
@@ -364,8 +499,12 @@ OTHER_MIN = 3                 # 「主要搭檔」：一年至少一起打 3 場
 
 
 def _player_name(con, pid: int) -> str:
-    row = con.execute("SELECT COALESCE(name_zh, name_display) FROM player WHERE player_id=?", (pid,)).fetchone()
-    return row[0] if row else str(pid)
+    """中文名（台灣名單）→ Raymond／來源確認過的外國譯名 → 英文名。"""
+    from brief.foreign_names import confirmed_names
+    row = con.execute("SELECT name_zh, name_display FROM player WHERE player_id=?", (pid,)).fetchone()
+    if not row:
+        return str(pid)
+    return row[0] or confirmed_names(con).get(pid) or row[1]
 
 
 def _pairing_dates(con, pairing_id: int, event: str, upto: str) -> list[str]:

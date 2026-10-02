@@ -320,6 +320,8 @@ def morning(con, today: dt.date, llm=None, errors: list | None = None) -> tuple[
         if spent:
             weekly.append(f"上週腳本費用 US${spent:.2f}")
         weekly.append(backup_line())
+        from brief import hooks                       # notes 13:45：open 伏筆與這週作廢的
+        weekly += hooks.weekly_lines(con, today.isoformat())
     notes = reminders(con, today)
     if not (news or g3_lines or weekly or notes):
         return None, g3, news

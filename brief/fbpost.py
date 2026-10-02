@@ -18,7 +18,7 @@ import json
 import re
 from pathlib import Path
 
-from brief import cite, grade3, story, storylines as sl, verify, zh
+from brief import cite, grade3, hooks, story, storylines as sl, verify, zh
 from brief.llm import _env
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,7 +28,7 @@ EFFORTS = ("low", "medium")         # 寫手 Opus 的推理強度：low 不過�
 # 字數（notes 21:10）：故事貼文、台灣戰報 500–1,800；冷知識 300–1,200。上限是「可以寫到」，素材不夠就短
 BODY_RANGE = (500, 1800)
 BODY_RANGE_TRIVIA = (300, 1200)
-TRIVIA_KINDS = {"history", "rivalry", "rules", "ranking"}
+TRIVIA_KINDS = {"history", "rivalry", "rules", "ranking", "hook"}
 POST_MAX_TOKENS = 12000             # 長文＋推理，輸出上限依字數調高（21:10）
 MAX_EMOJI = 5
 EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿⭐⬆⬇↔-⇿]")
@@ -161,7 +161,8 @@ def choose(con, today: str) -> tuple[str, list[str], dict]:
         if best:
             t, c, cands, daym, allm = best
             return "story", story.materials(con, t, y, c, cands, daym, allm), {"kind": c["kind"], "score": c["final"],
-                                                                                 "gap": _gap(today, y)}
+                                                                                 "gap": _gap(today, y),
+                                                                                 "branches": story.branches(con, c, allm)}
     return trivia(con, today)
 
 
@@ -172,6 +173,9 @@ def trivia(con, today: str) -> tuple[str, list[str], dict]:
         w = script.weekly_facts(con)
         if w and w["week"] >= (d - dt.timedelta(days=2)).isoformat():
             return "ranking", w["facts"], {"week": w["week"], "gap": None}
+    h = hook_facts(con, today)                             # 伏筆填坑優先（notes 13:45：沒有新賽果的日子挑最舊的 open 伏筆）
+    if h:
+        return "hook", h[0], {"gap": None, "hook_id": h[1]}
     kinds = ["history", "rivalry"] + (["rules"] if checked_rules() else [])
     start = d.toordinal() % len(kinds)
     for kind in kinds[start:] + kinds[:start]:          # 輪流，當天的那一類沒素材就換下一類
@@ -180,6 +184,21 @@ def trivia(con, today: str) -> tuple[str, list[str], dict]:
             latest = re.search(r"最近一次交手 (\d{4}-\d{2}-\d{2})", facts[0])
             return kind, facts, {"gap": _gap(today, latest.group(1)) if latest else None}
     return "none", [], {}
+
+
+def hook_facts(con, today: str) -> tuple[list[str], int] | None:
+    """最舊的 open 伏筆 → 填坑專題的事實清單（開頭接回原文）。過期的先作廢。"""
+    from brief import hooks
+    hooks.expire(con, today)
+    hs = hooks.open_hooks(con)
+    if not hs:
+        return None
+    h = hs[0]
+    src = "粉專貼文" if h["source_kind"] == "fb" else "影片"
+    ref = (h["source_ref"] or h["created_at"])[:10]
+    return ([f"填坑專題：{ref} 的{src}埋了伏筆「{h['teaser']}」（題目：{h['title']}）；今天是 {today}。"
+             "開頭要接回原文（例「上次講…的時候說過…」），可以附原貼文日期", "【歷史】"] + h["answer_facts"]
+            + ["【新聞】", story.NO_NEWS, "【冷知識】", story.NO_TRIVIA]), h["hook_id"]
 
 
 def _gap(today: str, day: str) -> int:
@@ -422,7 +441,8 @@ def sentences_of(out: dict) -> list[dict]:
 
 
 def generate(llm, kind: str, facts: list[str], con=None, today: str | None = None, gap: int | None = None,
-             editor=None, theme: list[dict] | None = None, verifier=None) -> tuple[dict | None, list[str]]:
+             editor=None, theme: list[dict] | None = None, verifier=None,
+             branches: list[dict] | None = None) -> tuple[dict | None, list[str]]:
     """theme：明確指定的多個並列故事 [{"title": "…", "keys": ["名字", …]}]——每一個都要講到（不適用 R10 的組數上限）；
     自動選題（theme=None）照 R10 只講 1–2 組主角（notes 10-02 05:55 第 6 項）。"""
     """寫 → 固定檢查＋事實檢查 → 編輯檢查（準則 R1–R6）；編輯不過帶意見重寫（最多 2 次），仍不過就附編輯意見照樣產出。"""
@@ -436,6 +456,8 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
             + (("\n\n**這篇是指定的多故事主題，下面每一個都要講到（每個至少一段）**：\n"
                  + "\n".join(f"{i + 1}. {x['title']}" for i, x in enumerate(theme))) if theme else "")
             + f"\n\n事實清單：\n" + cite.facts_block(facts))
+    if branches:                                           # 伏筆（R16，notes 13:45）
+        user += "\n\n" + hooks.PROMPT + "\n" + "\n".join(hooks.branches_block(branches))
     if hasattr(llm, "task"):
         llm.task = "fbpost"
 
@@ -456,6 +478,8 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
             problems = check(out, facts, kind, gap, theme)
             if not problems and out.get("paragraphs"):     # 逐句引用（11:25 A）
                 problems = cite.check(sentences_of(out), facts)
+            if not problems:
+                problems = hooks.check(out.get("hook"), out.get("body") or "", branches or [])
             script.log_check(con, {"day": today}, f"fbpost_{kind}", llm, attempt + 1, problems)
             if not problems:
                 return out, []
@@ -466,7 +490,8 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
         return None, problems
     context = (f"貼文日 {today}；距離故事最新一場比賽 {gap if gap is not None else '很多'} 天（R6：+1 天內新聞語氣，超過故事語氣）；"
                + story.news_context(facts) + "；" + story.rules_context()
-               + (("；指定多故事（每一個都要講到，這篇不適用 R10 的組數上限）：" + "、".join(x["title"] for x in theme)) if theme else ""))
+               + (("；指定多故事（每一個都要講到，這篇不適用 R10 的組數上限）：" + "、".join(x["title"] for x in theme)) if theme else "")
+               + ("；" + hooks.editor_context(branches) if branches else ""))
     ann = lambda o: post_text(o) + ("\n\n逐句引用：\n" + cite.annotated(sentences_of(o), facts) if o.get("paragraphs") else "")
     bad = story.edit(editor, out, con, {"day": today}, text=ann(out), context=context)
     out["editor"] = {"first": bad, "rewritten": False, "final": bad}
@@ -493,7 +518,8 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
 
 
 KIND_LABEL = {"taiwan": "台灣戰報", "story": "故事貼文", "ranking": "排名變化", "history": "冷知識：歷史上的今天",
-              "rivalry": "冷知識：宿敵／宰制", "rules": "冷知識：規則與賽制", "none": "（沒有素材）"}
+              "rivalry": "冷知識：宿敵／宰制", "rules": "冷知識：規則與賽制", "hook": "填坑專題",
+              "none": "（沒有素材）"}
 
 
 def render(today: str, kind: str, out: dict) -> str:
@@ -510,6 +536,8 @@ def render(today: str, kind: str, out: dict) -> str:
     if out.get("verify"):
         notes.append(out["verify"]["summary"])
         notes += [f"查證員無法查證：{c['claim']}（{c['note']}）" for c in out["verify"]["claims"] if c["verdict"] == "unverifiable"]
+    if out.get("_hook"):
+        notes.append(story.hook_note(out["_hook"]))
     for name in out.get("_missing_zh") or []:
         notes.append(f"這位台灣選手沒有中文名，請提供：{name}")
     if out.get("coach_slot"):
@@ -541,7 +569,7 @@ def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bo
     for effort in EFFORTS:
         llm = make_llm() if make_llm else script.make_script_llm("heavy", con, effort=effort, max_tokens=POST_MAX_TOKENS)
         checker = None if make_llm else (lambda text: verify.verify(text, con=con))     # 獨立查證員（notes 11:25 B）
-        out, problems = generate(llm, kind, facts, con, today, gap, editor, verifier=checker)
+        out, problems = generate(llm, kind, facts, con, today, gap, editor, verifier=checker, branches=info.get("branches"))
         used = effort
         if out is not None:
             break
@@ -554,6 +582,9 @@ def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bo
     if out.get("verify"):
         verify.save(out["verify"], OUT_DIR / f"{today}_verify.json")
     out["_missing_zh"] = missing_tpe_zh(facts)
+    record_hook(con, out, info.get("branches"), "fb", today)
+    if kind == "hook":
+        hooks.fill(con, info["hook_id"], f"fb {today}")
     text = render(today, kind, out)
     path.write_text(text + "\n\n<details><summary>事實清單</summary>\n\n" + "\n".join(f"- {f}" for f in facts)
                     + "\n\n</details>\n", encoding="utf-8")
@@ -563,6 +594,14 @@ def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bo
         con.execute("INSERT OR REPLACE INTO fbpost_sent (day, kind) VALUES (?, ?)", (today, kind))
         con.commit()
     return {"status": "ok", "kind": kind, "info": info, "out": out, "facts": facts, "path": str(path)}
+
+
+def record_hook(con, out: dict, branches: list[dict] | None, source_kind: str, source_ref: str) -> None:
+    """寫手用了哪條支線 → story_hook（open）；out["_hook"] 給備註顯示（答案只給 Raymond）。"""
+    hid = hooks.save_from_output(con, out, branches or [], source_kind, source_ref)
+    if hid:
+        b = branches[int(out["hook"]["branch"][1:]) - 1]
+        out["_hook"] = {"id": hid, "teaser": out["hook"]["teaser"], "answer": b["answer"]}
 
 
 SENT_TABLE = "CREATE TABLE IF NOT EXISTS fbpost_sent (day TEXT PRIMARY KEY, kind TEXT, sent_at TEXT NOT NULL DEFAULT (datetime('now')))"

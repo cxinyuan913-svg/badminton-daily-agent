@@ -392,8 +392,9 @@ def _story_main(con, t: dict, day: str, title: str, make_llm, send, alert) -> tu
         editor = make_llm("editor") if make_llm else make_script_llm("heavy", con, effort="low")     # 編輯：Opus low（10-02 05:55）
         from brief import verify
         checker = None if make_llm else (lambda text: verify.verify(text, con=con))     # 獨立查證員（notes 11:25 B）
+        branches = story.branches(con, c, allm)          # 伏筆支線（notes 13:45）
         out, problems = story.generate(model, facts, con, {"tournament_id": t["tournament_id"], "day": day}, editor=editor,
-                                       verifier=checker)
+                                       verifier=checker, branches=branches)
         head = f"故事 {i}｜{c['kind']}"
         vpath = OUT_DIR / f"{day}_{t['tournament_id']}_story{i}_verify.json"
         if out is not None and out.get("verify"):
@@ -404,6 +405,8 @@ def _story_main(con, t: dict, day: str, title: str, make_llm, send, alert) -> tu
             if alert:
                 alert(f"**腳本產生失敗**｜{title}｜{head}：{'；'.join(problems)[:1500]}")
             continue
+        from brief import fbpost
+        fbpost.record_hook(con, out, branches, "script", f"{day}_{t['tournament_id']}_story{i}")
         scripts.append({"status": "ok", "kind": c["kind"], "score": c["final"], "out": out, "facts": facts})
         md += [story.to_markdown(head, c, out), ""]
         if send and _env(flag) == "1":

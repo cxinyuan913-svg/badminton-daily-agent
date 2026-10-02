@@ -52,6 +52,8 @@ Raymond 回報：電腦一直跳出空的 CMD 視窗。原因：`register_task.p
 
 ## 2026-10-02 13:45 — 譯名手動確認＋伏筆（挖坑／填坑）機制（Raymond 選 A）
 
+> **已併入**（2026-10-02，Claude Code）；結果見 `docs/status.md`
+
 **1. 譯名**
 - Raymond 手動確認（`foreign_name` 寫成 Raymond 確認，程式不會蓋掉）：KIM Won Ho＝金元昊、SEO Seung Jae＝徐承宰、Leo Rolly CARNANDO＝卡爾南多、Daniel MARTHIN＝馬丁。
 - Raymond 認為 NOWnews 的譯名可信，其餘 candidate 會由 claude.ai 列給他批次勾選，勾完再寫一段 notes 交代。在那之前規則不變（≥ 2 來源或 Raymond 確認才用中文）。
@@ -69,6 +71,8 @@ Raymond 要求：每篇故事型的 FB 貼文和影片腳本都要埋一個伏�
 ---
 
 ## 2026-10-02 13:35 — 故事的關鍵對手要帶脈絡（品質紀錄 C7）
+
+> **已併入**（2026-10-02，Claude Code）；重跑貼文併在 16:50 試寫，結果見 `docs/status.md`
 
 Raymond 看了 FB 試寫「拆夥再重組」，整體滿意，但四強打掉世界第一 KIM Won Ho／SEO Seung Jae 只寫一句帶過。資料庫其實有很好的素材，只是沒進事實清單。
 
