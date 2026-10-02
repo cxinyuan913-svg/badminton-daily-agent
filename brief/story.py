@@ -49,6 +49,8 @@ SYSTEM_BASE = """你是羽球短影音的腳本作者，觀眾是台灣的羽球
 - 日期用事實清單的寫法或相對「今天」換算，不要自己編日期
 - 範例只示範結構與語氣，範例裡的名字與數字不能用
 - 事實清單的「官方排名走勢」「平均每局分差」「退賽次數」只是數據，不是原因：用它說明轉折時要寫成「數據顯示…」，推論原因就標推測
+- **規則與賽制（準則 R13）**：講到規則、積分、賽制時，只能用事實清單裡「冷知識（trivia_rules 第 N 條）」的內容，照原文意思寫；
+  其他規則說法一律句尾標「⚠️推測」並列進 todo（反例：「積分一年後就歸零」——正確是保留到下一屆同一站開打或滿 52 週，以先到者為準）
 **逐句引用（準則 R15）**：口播拆成句子，每句標它根據哪幾條事實（事實清單的 F 編號）。含數字、名字、名次、「第一站／首冠／連勝」的句子一定要引用，
 而且句子裡的每個數字都要出現在它引用的事實裡；句子的意思要和引用的事實一致，特別是**時間點**（賽前／賽後／重組時）和比較對象。
 沒有事實的句子（轉場、金句、留言問題）fact_ids 給 []，kind 給 "rhetoric"。
@@ -87,6 +89,8 @@ EDITOR_SYSTEM = """你是羽球短影音的編輯，替前職業選手 Raymond �
 - R10：數稿子裡出現的選手／組合（雙打一組算一個），超過 4 組 → 不通過；1–2 組主角以外只能一句帶過
 - R11：補充說明會列出「新聞素材」。稿子裡沒有任何「這場以外」的歷史事實 → 不通過；新聞素材不是「無」、稿子卻完全沒用到 → 不通過
 - 補充說明列了「指定多故事」時：每一個都要講到，缺一個就在 R10 寫不通過；這時不適用 R10 的「超過 4 組」
+- R13：稿子出現規則、積分、賽制的說法（例「積分會歸零」「打越多站排越前」），卻不在補充說明列的「審過的規則條目」裡、也沒標 ⚠️推測 → 不通過；
+  和審過的條目意思不一樣（例「一年後歸零」vs 第 6 條「下一屆同一站或滿 52 週，先到者為準」）也不通過
 - R15：看「逐句引用」：每句的意思要和它引用的事實一致，特別是時間點（賽前／賽後／重組時／奪冠後）與比較對象；
   例如事實寫「奪冠後那週第 157」，句子寫成「重組時第 157」→ 不通過
 只輸出 JSON：{"items": [{"rule": "R1", "pass": true, "quote": "", "comment": ""}]}"""
@@ -347,7 +351,7 @@ def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=No
     out, problems = write(llm, user, facts, con, ctx)
     if out is None:
         return None, problems
-    context = news_context(facts)
+    context = news_context(facts) + "\n" + rules_context()
     bad = edit(editor, out, con, ctx, text=script_text(out) + "\n\n逐句引用：\n" + cite.annotated(all_sentences(out), facts),
                context=context)
     out["editor"] = {"first": bad, "rewritten": False, "final": bad}
@@ -375,6 +379,15 @@ def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=No
 
 def voice_text(out: dict) -> str:
     return "\n".join([" / ".join(out.get("titles") or [])] + [s.get("voice", "") for s in out.get("segments") or []])
+
+
+def rules_context() -> str:
+    """給編輯的補充說明：Raymond 審過（勾 [x]）的規則條目（R13：規則說法要對得上這些）。"""
+    from brief import fbpost
+    rules = fbpost.checked_rules()
+    if not rules:
+        return "審過的規則條目：無"
+    return "審過的規則條目：" + "；".join(f"第 {r['no']} 條 {r['title']}：" + " ".join(r["lines"])[:240] for r in rules)
 
 
 def news_context(facts: list[str]) -> str:

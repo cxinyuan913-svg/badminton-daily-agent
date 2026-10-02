@@ -57,6 +57,8 @@ SYSTEM = """你是台灣羽球粉專的小編，審稿人是前職業選手 Raym
 - 「爆冷／冷門」只能用在事實清單標了「規則判定爆冷」的場次；「逆轉」只能用在寫到逆轉的場次
 - 名次可以寫金牌／銀牌／銅牌（冠軍＝金、亞軍＝銀、四強＝銅）；不要用「季軍」「第三名」
 - 不要自己算出事實清單沒有的新數字
+- **規則與賽制（準則 R13）**：只能用事實清單裡「冷知識（trivia_rules 第 N 條）」或「規則與賽制冷知識」的內容，照原文意思寫；
+  其他規則說法一律句尾標「⚠️推測」並列進 todo（反例：「積分一年後就歸零」）
 - 事實清單以外的背景可以寫，但每句句尾加「⚠️推測」、語氣用「可能、大約」，並列進 todo；正文盡量少用推測
 - 事實清單有「新聞」的，把標題與網址放進 first_comment（建議放在第一則留言），不要塞在正文
 - **逐句引用（準則 R15）**：正文拆成段落、段落拆成句子，每句標它根據哪幾條事實（F 編號）。含數字、名字、名次、「第一站／首冠／連勝」
@@ -463,7 +465,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
     if out is None:
         return None, problems
     context = (f"貼文日 {today}；距離故事最新一場比賽 {gap if gap is not None else '很多'} 天（R6：+1 天內新聞語氣，超過故事語氣）；"
-               + story.news_context(facts)
+               + story.news_context(facts) + "；" + story.rules_context()
                + (("；指定多故事（每一個都要講到，這篇不適用 R10 的組數上限）：" + "、".join(x["title"] for x in theme)) if theme else ""))
     ann = lambda o: post_text(o) + ("\n\n逐句引用：\n" + cite.annotated(sentences_of(o), facts) if o.get("paragraphs") else "")
     bad = story.edit(editor, out, con, {"day": today}, text=ann(out), context=context)

@@ -296,3 +296,16 @@ def test_fbpost_paragraphs_assembled_with_signature():
     out = fbpost.assemble({"paragraphs": [{"sentences": [{"text": "【羽球故事】第一句。"}, {"text": "第二句。"}]},
                                           {"sentences": [{"text": "你覺得呢？", "kind": "rhetoric"}]}]})
     assert out["body"] == "【羽球故事】第一句。第二句。\n\n你覺得呢？\n\n" + fbpost.SIGNATURE
+
+
+def test_r13_rules_sentence_goes_to_editor_with_checked_rules():
+    """07:25 第 3 點（R13）：反例「積分一年後就歸零」；編輯拿到審過的規則條目（第 6 條）來比對。"""
+    r13_bad = "拆開之後這組不再出賽，積分一年後就歸零。"
+    writer = Fake([script(GOOD, r13_bad), script(GOOD)])
+    editor = Fake([json.dumps({"items": [{"rule": "R13", "pass": False, "quote": r13_bad,
+                                          "comment": "和第 6 條不同：下一屆同一站開打或滿 52 週，以先到者為準"}]}, ensure_ascii=False), verdict()])
+    out, _ = story.generate(writer, FACTS, editor=editor)
+    assert out["editor"]["first"][0]["rule"] == "R13" and "R13 不通過" in writer.prompts[1][1]
+    sent = editor.prompts[0][1]
+    assert "審過的規則條目：" in sent and "第 6 條" in sent               # 編輯有拿到條目
+    assert "R13" in story.EDITOR_SYSTEM and "⚠️推測" in story.system_prompt().split("規則與賽制（準則 R13）")[1][:200]
