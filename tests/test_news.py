@@ -105,7 +105,7 @@ def test_news_run_log_and_zero_alert():
 def test_full_text_filter_rule():
     """notes 06:25 D：「羽球／羽毛球」≥ 1 次，或選手名合計 ≥ 2 次；綜合報導順帶一句不算。"""
     names = ["周天成", "戴資穎"]
-    assert news.is_badminton("亞運戰況", "周天成今天出賽羽毛球男單。", names)
+    assert news.is_badminton("亞運戰況", "周天成今天出賽羽毛球男單，羽球館爆滿。", names)   # 07:25：全文 ≥ 2 次
     assert news.is_badminton("周天成返台", "周天成說還要拚奧運。", names)            # 選手名 2 次
     assert not news.is_badminton("中職戰報", "賽後球員提到偶像周天成。", names)       # 只順帶 1 次
 
@@ -122,7 +122,7 @@ def test_check_articles_fetches_once(tmp_path):
 
         def get(self, url, **k):
             self.calls.append(url)
-            return Resp("<p>周天成在羽球男單晉級。</p>" if url.endswith("/1") else "<p>中職今天開打。</p>")
+            return Resp("<p>周天成在羽球男單晉級，羽球館爆滿。</p>" if url.endswith("/1") else "<p>中職今天開打。</p>")
 
     con = sqlite3.connect(":memory:")
     con.executescript(news.RUN_TABLE)
@@ -134,3 +134,13 @@ def test_check_articles_fetches_once(tmp_path):
     again, fetched2 = news.check_articles(con, c, "cna", rows, ["周天成"])
     assert again == [] and fetched2 == 0 and len(c.calls) == 2                       # 同一網址只抓一次
     assert con.execute("SELECT text FROM foreign_article").fetchone()[0].startswith("周天成")
+
+
+def test_filter_rule_0725_tennis_counterexample():
+    """07:25 第 2 點：標題有羽球、或全文羽球 ≥ 2 次、或選手名 ≥ 2 次。反例：10-02 誤收的網球新聞（全文只順帶一次「羽球」）。"""
+    tennis_title = "亞運網球女雙闖4強保底銅牌 謝淑薇直言賽程不合理"
+    tennis_body = "謝淑薇與梁恩碩在女雙八強獲勝。同一天，中華隊在羽球項目也有收穫。網球隊明天再戰。"
+    assert not news.is_badminton(tennis_title, tennis_body, ["周天成"])
+    assert news.is_badminton("羽球亞運 周天成晉級", "", [])                          # 標題有羽球
+    assert news.is_badminton("亞運戰況", "羽球男單開打。羽毛球館爆滿。", [])           # 全文 2 次
+    assert news.is_badminton("周天成返台", "周天成說還要拚奧運。", ["周天成"])         # 選手名 2 次

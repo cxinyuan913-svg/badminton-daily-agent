@@ -211,11 +211,14 @@ SPORT_WORDS = ("羽球", "羽毛球")
 
 
 def is_badminton(title: str, text: str, names: list[str]) -> bool:
-    """notes 06:25 D：標題＋全文出現「羽球／羽毛球」至少 1 次，或選手名（追蹤中的台灣選手、外國選手譯名、暱稱）合計至少 2 次。
-    全文只順帶提到一次選手名的綜合報導不算。"""
-    blob = (title or "") + "\n" + (text or "")
-    if any(w in blob for w in SPORT_WORDS):
+    """notes 07:25 第 2 點（Raymond 選 A）：**標題有羽球**，或**全文「羽球／羽毛球」合計 ≥ 2 次**，或**選手名合計 ≥ 2 次**
+    （追蹤中的台灣選手、外國選手譯名、暱稱）。原本「全文 ≥ 1 次」第一次實跑就誤收一篇網球新聞（綜合報導順帶一句）。"""
+    if any(w in (title or "") for w in SPORT_WORDS):
         return True
+    body = text or ""
+    if sum(body.count(w) for w in ("羽毛球",)) + body.replace("羽毛球", "").count("羽球") >= 2:
+        return True
+    blob = (title or "") + "\n" + body
     return sum(blob.count(n) for n in names) >= 2
 
 
