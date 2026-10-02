@@ -29,10 +29,12 @@ def test_no_control_characters():
 
 def test_register_script_paths_exist():
     text = (ROOT / "scripts" / "register_task.ps1").read_text(encoding="utf-8-sig")
-    names = re.findall(r'\\scripts\\([\w.]+)"', text)
+    names = re.findall(r'New-Action "([\w.]+)"', text)
     assert "run_fbpost.cmd" in names and "run_watch.cmd" in names and "run_daily.cmd" in names
     for name in names:
         assert (ROOT / "scripts" / name).exists(), name
+    assert "run_backfill_news.cmd" in names
+    assert "LogonType S4U" in text and "--headless" in text  # notes 10-02 17:05：背景執行不跳視窗
 
 
 def test_cmd_files_use_crlf():

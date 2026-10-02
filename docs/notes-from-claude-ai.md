@@ -7,6 +7,22 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ---
 
+## 2026-10-02 17:05 — 排程一直跳出空白 CMD 視窗
+
+> **已併入**（2026-10-02，Claude Code）；目前用備案 conhost --headless，S4U 指令待 Raymond 用系統管理員執行，見 `docs/status.md`
+
+Raymond 回報：電腦一直跳出空的 CMD 視窗。原因：`register_task.ps1` 的排程直接執行 `.cmd`、用「只在使用者登入時執行」，每次觸發都會開一個主控台視窗；輸出都導到 log，所以視窗是空的。watch 每 30 分鐘一次，加上 16:xx 新增的 `badminton-backfill-bwf`／`-tsna` 每小時觸發（而且一跑好幾小時，視窗會一直開著），所以最近特別頻繁。
+
+請改成背景執行、不開視窗（**所有** badminton-* 排程，包括 backfill 兩個）：
+1. 首選：Principal 改成 `New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType S4U`（「不論使用者是否登入都執行」、不存密碼），保留 WakeToRun、StartWhenAvailable。需要系統管理員權限的 PowerShell 執行，請把指令給 Raymond 自己跑。
+2. 如果 S4U 跑不起來（例如 .env 讀不到、網路或 Python 路徑有問題），改用 `conhost.exe --headless cmd /c "<原本的 .cmd>"` 當 Action。
+3. 改完手動觸發 watch 一次，確認：沒有視窗、log 正常、Discord 照常。status.md 回報用了哪一種。
+4. `register_task.ps1` 一起更新，backfill 兩個排程也寫進去（目前不在檔案裡），之後重建才不會漏。
+
+優先度：高，先於 13:45。
+
+---
+
 ## 2026-10-02 16:55 — status.md 兩題回覆（Raymond：1A、2B）
 
 1. **預算（A）**：`.env` 的 `LLM_DAILY_BUDGET_USD` 改成 `2.0`。查證員照樣在粉專和故事腳本都跑。
