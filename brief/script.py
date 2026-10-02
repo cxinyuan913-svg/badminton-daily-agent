@@ -492,3 +492,37 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+MONTHLY_ALERTS = (25.0, 40.0)   # US$；Console 月上限 US$45（notes 10-02 16:55，Raymond）
+
+
+def month_spend(con, month: str) -> tuple[float, list[tuple[str, float]]]:
+    """台北時間某月（YYYY-MM）的 LLM 費用：(總額, [(task, 金額)…])；llm_call.called_at 是 UTC。"""
+    from brief.llm import CALL_TABLE
+    con.executescript(CALL_TABLE)                          # 新資料庫還沒有 llm_call
+    start = dt.datetime.fromisoformat(month + "-01") - dt.timedelta(hours=8)
+    y, m = int(month[:4]), int(month[5:7])
+    nxt = dt.datetime(y + (m == 12), m % 12 + 1, 1) - dt.timedelta(hours=8)
+    rows = con.execute("""SELECT COALESCE(task, purpose), SUM(cost_usd) FROM llm_call WHERE called_at >= ? AND called_at < ?
+                          GROUP BY 1 ORDER BY 2 DESC""", (start.strftime("%Y-%m-%d %H:%M:%S"), nxt.strftime("%Y-%m-%d %H:%M:%S"))).fetchall()
+    rows = [(t, c or 0.0) for t, c in rows]
+    return sum(c for _, c in rows), rows
+
+
+def monthly_alert(con, alert, today: str | None = None) -> list[float]:
+    """當月累計超過 US$25、US$40 各告警一次（每月一次），附各 stage 費用。回傳這次發了哪些門檻。"""
+    today = today or taipei_today()
+    month = today[:7]
+    total, rows = month_spend(con, month)
+    con.execute("CREATE TABLE IF NOT EXISTS budget_alerts (day TEXT NOT NULL, who TEXT NOT NULL, PRIMARY KEY (day, who))")
+    sent = []
+    for limit in MONTHLY_ALERTS:
+        if total > limit and con.execute("INSERT OR IGNORE INTO budget_alerts (day, who) VALUES (?, ?)",
+                                         (month, f"月費用 {limit:.0f}")).rowcount:
+            con.commit()
+            detail = "、".join(f"{t} US${c:.2f}" for t, c in rows[:8])
+            if alert:
+                alert(f"**LLM 月費用**：{month} 累計 US${total:.2f}，超過 US${limit:.0f}（Console 月上限 US$45）。各 stage：{detail}")
+            sent.append(limit)
+    return sent

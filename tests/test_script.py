@@ -244,3 +244,21 @@ def test_daily_budget_skips_scripts_and_alerts_once(monkeypatch):
     t = {"tournament_id": 1, "name": "x", "level": "S300", "start_date": "2026-10-01", "end_date": "2026-10-01"}
     res = script.run_for_day(con, t, "2026-10-01", "Final", make_llm=lambda p: None, send=lambda x: None, styles=["story"])
     assert res["styles"]["story"]["status"] == "skipped_budget"
+
+
+def test_monthly_alert_once_per_threshold():
+    """notes 16:55：當月累計 > US$25、> US$40 各推一次告警（每月一次），附各 stage 費用。"""
+    import sqlite3
+    from brief.llm import CALL_TABLE
+    con = sqlite3.connect(":memory:")
+    con.executescript(CALL_TABLE)
+    con.executemany("INSERT INTO llm_call (called_at, purpose, task, model, input_tokens, output_tokens, cost_usd) VALUES (?,?,?,?,?,?,?)",
+                    [("2026-10-01 00:00:00", "heavy", "fbpost", "m", 1, 1, 20.0),
+                     ("2026-10-02 00:00:00", "heavy", "verify", "m", 1, 1, 6.0),
+                     ("2026-09-30 15:00:00", "heavy", "fbpost", "m", 1, 1, 99.0)])     # 台北 9/30 23:00 → 上個月
+    alerts = []
+    assert script.monthly_alert(con, alerts.append, "2026-10-02") == [25.0]
+    assert script.monthly_alert(con, alerts.append, "2026-10-03") == []                  # 同一個月不重發
+    assert "fbpost US$20.00" in alerts[0] and "verify US$6.00" in alerts[0]
+    con.execute("INSERT INTO llm_call (called_at, purpose, task, model, input_tokens, output_tokens, cost_usd) VALUES ('2026-10-05 00:00:00','heavy','fbpost','m',1,1,15.0)")
+    assert script.monthly_alert(con, alerts.append, "2026-10-05") == [40.0] and len(alerts) == 2

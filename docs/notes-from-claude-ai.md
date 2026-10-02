@@ -7,6 +7,71 @@ Raymond 每次把 CLI 的問題帶到 claude.ai 討論後，claude.ai 會在這�
 
 ---
 
+## 2026-10-02 16:55 — status.md 兩題回覆（Raymond：1A、2B）
+
+1. **預算（A）**：`.env` 的 `LLM_DAILY_BUDGET_USD` 改成 `2.0`。查證員照樣在粉專和故事腳本都跑。
+   - Console 月上限：Raymond 自己調到 **US$45**（16:53 決定）。程式這邊在**當月累計費用超過 US$25** 推一次告警、**超過 US$40** 再推一次（各每月一次），告警內容附當月各 stage 費用。
+2. **TSNA（B）**：只補 2024-10 到 2024-12（約 12 小時）就停，2025 年先不補。補完在 status.md 回報「看了幾篇、羽球幾篇、其中幾篇有用」，Raymond 依效果再決定 2025 年要不要補。BWF 照原計畫補到 2024-10。
+
+---
+
+## 2026-10-02 16:50 — 全部完成後：試寫一支腳本＋一篇粉專給 Raymond
+
+**時機**：11:20、11:25、13:35、13:45 都完成並 push 之後（07:25 的新聞回補還在背景跑沒關係，但 R13 規則句檢查要先完成）。
+
+**題目**：同一個故事「印尼男雙卡爾南多／馬丁拆夥再重組、亞運奪金」，方便和 13:28 那篇試寫比較改善了多少。
+
+**要求**
+1. **粉專貼文**：走完整 pipeline——事實清單（含排名時間點、`opponent_context`）→ 寫手逐句引用 → 程式檢查 → 編輯 → 獨立查證員 → 伏筆寫入 `story_hook`。譯名用 13:45 確認過的中文。
+2. **影片腳本**：同樣流程，但提示詞改用 `docs/video/script-prompt-v2.md`（只這次試用，不要接進正式排程）。收尾用 R16 的伏筆，接留言問題。
+3. 兩篇都用「🧪 試寫」標頭推到 Discord：粉專推 FBPAGE 頻道、腳本推 SCRIPTS 頻道。正文後附：
+   - 查證摘要（幾條 ok／wrong／unverifiable，wrong 的話列出重寫前後）；
+   - 編輯意見；
+   - 埋的伏筆與答案（答案只給 Raymond 看）；
+   - 這篇的 LLM 費用。
+4. 不要寫進 `fbpost_sent`，不影響明天 07:00 的正式推送。
+5. status.md 記一段「試寫結果」：兩篇全文、查證表、和 13:28 版本相比改了哪些（積分歸零那句、157 的時間點、四強段落、台北公開賽）。
+
+---
+
+## 2026-10-02 13:45 — 譯名手動確認＋伏筆（挖坑／填坑）機制（Raymond 選 A）
+
+**1. 譯名**
+- Raymond 手動確認（`foreign_name` 寫成 Raymond 確認，程式不會蓋掉）：KIM Won Ho＝金元昊、SEO Seung Jae＝徐承宰、Leo Rolly CARNANDO＝卡爾南多、Daniel MARTHIN＝馬丁。
+- Raymond 認為 NOWnews 的譯名可信，其餘 candidate 會由 claude.ai 列給他批次勾選，勾完再寫一段 notes 交代。在那之前規則不變（≥ 2 來源或 Raymond 確認才用中文）。
+
+**2. 伏筆機制（審稿準則 R16，`docs/video/review-guidelines.md`）**
+Raymond 要求：每篇故事型的 FB 貼文和影片腳本都要埋一個伏筆，之後拉出來寫成獨立一篇，讓觀眾有期待。
+1. 新資料表 `story_hook`：`hook_id, created_at, source_kind(fb/script), source_ref, subject（人或組合的 pairing／player id）, teaser（實際寫出去的那句）, answer_facts（JSON，填坑要用的事實 id 與內容）, status(open/filled/dropped), filled_by, filled_at`。
+2. 產生時：事實清單除了主線，另外給 2–3 條「支線素材」（例如 13:35 的 `opponent_context`），每條標好「懸念句」與「答案事實」。寫手挑一條，只寫懸念、不寫答案，輸出時標明用了哪一條 → 寫入 `story_hook`（status=open）。編輯檢查加一條：答案事實不能出現在正文。
+3. 填坑時機：沒有新賽果的日子（R6 故事語氣）優先挑最舊的 open 伏筆寫專題；開頭要接回原文（「上次講…時說過…」），FB 可附原貼文日期。填完 status=filled。
+4. 超過 21 天沒填，或答案事實已經過時（例如有新交手），status=dropped，並在週一晨報列出。
+5. 週一晨報加一行：目前 open 伏筆幾個、各是哪個題目。
+6. 這篇「拆夥再重組」的伏筆先手動補一筆：主題 SEO Seung Jae／KIM Won Ho 近 2 年的敗場，答案是 Shohibul FIKRI 換了 3 個搭檔共贏他們 5 次。
+7. 測試：伏筆句不可含答案事實的關鍵名字或數字；同一篇只能有一個伏筆。
+
+---
+
+## 2026-10-02 13:35 — 故事的關鍵對手要帶脈絡（品質紀錄 C7）
+
+Raymond 看了 FB 試寫「拆夥再重組」，整體滿意，但四強打掉世界第一 KIM Won Ho／SEO Seung Jae 只寫一句帶過。資料庫其實有很好的素材，只是沒進事實清單。
+
+請在事實清單（`brief/storylines.py` 與 career facts）加 `opponent_context`：
+1. 觸發：故事主角的某場比賽，對手是世界前 3，或 `config/popular_players.csv` 裡的人氣選手（新檔，Raymond 會補；先放 SEO Seung Jae、KIM Won Ho）。
+2. 內容（每條都要附日期，照 11:20 的規則）：
+   - 兩組近 12 個月交手（日期、賽事、輪次、比分）；
+   - 對手近況：最近一次冠軍是哪站、之後各站名次；
+   - 這場是不是對手某段期間輸最懸殊的一場（依局分差總和）；
+   - 對手近 2 年輸給誰：依國家、依選手統計，次數 ≥ 3 的列出（例如 Shohibul FIKRI 換 3 個搭檔共贏他們 5 次）。
+3. 這些事實也要能被 11:25 的查證員查到（純資料庫查詢即可）。
+4. 回歸測試：CARNANDO／MARTHIN 亞運四強的 `opponent_context` 必須包含 2026-09-01 中國大師賽 R32 的交手與 11-21 14-21 為 2025 年以來最懸殊敗場。
+
+另外：這篇試寫又出現「積分一年後就歸零」，請確認 07:25 第 3 點（R13 規則句檢查）完成後，用同一份素材重跑一次這篇貼給 Raymond。
+
+譯名：外國譯名表目前 KIM Won Ho＝金元昊、SEO Seung Jae＝徐承宰、CARNANDO＝卡爾南多、MARTHIN＝馬丁 都只有 NOWnews 一個來源（candidate）。等 Raymond 決定是否手動確認。
+
+---
+
 ## 2026-10-02 11:25 — 生成內容加兩道查證：逐句引用＋獨立查證員（Raymond 選 C）
 
 > **已併入**（2026-10-02，Claude Code）；結果見 `docs/status.md`

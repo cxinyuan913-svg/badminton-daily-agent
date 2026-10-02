@@ -98,10 +98,10 @@ def run_bwf(con, session, since: str, log=print) -> None:
 
 
 # ---------------------------------------------------------------- TSNA
-def tsna_urls(session, year: int, since: str) -> list[str]:
+def tsna_urls(session, year: int, since: str, until: str = "9999-12-31") -> list[str]:
     t = session.get(TSNA_SITEMAP.format(year=year), headers=HEADERS, timeout=120).text
     pairs = re.findall(r"<loc>(https://tsna\.com/article/\d+)</loc>\s*<lastmod>([^<]+)</lastmod>", t)
-    return [u.replace("https://tsna.com/", "https://www.tsna.com/") for u, mod in pairs if mod[:10] >= since]
+    return [u.replace("https://tsna.com/", "https://www.tsna.com/") for u, mod in pairs if since <= mod[:10] <= until]
 
 
 def tsna_parse(page: str) -> tuple[str, str, str]:
@@ -111,16 +111,18 @@ def tsna_parse(page: str) -> tuple[str, str, str]:
     return (html.unescape(title.group(1)) if title else "", date.group(1) if date else "", _text(body.group(1) if body else ""))
 
 
-def run_tsna(con, session, since: str, log=print) -> None:
+def run_tsna(con, session, since: str, log=print, until: str | None = None) -> None:
+    """until：notes 16:55（Raymond 選 B）只補到 2024-12-31，2025 年先不補。"""
     st = _state(con, "tsna")
     if st["done"]:
         log("tsna：已完成")
         return
     names = news.player_names(con)
     fetched, stored = st["fetched"], st["stored"]
-    years = range(int(since[:4]), dt.date.today().year + 1)
+    until = until or dt.date.today().isoformat()
+    years = range(int(since[:4]), int(until[:4]) + 1)
     for year in years:
-        urls = tsna_urls(session, year, since)
+        urls = tsna_urls(session, year, since, until)
         fetched += 1
         con.executescript(news.RUN_TABLE)
         seen = {u for (u,) in con.execute("SELECT url FROM news_seen WHERE source='tsna'")}
@@ -159,13 +161,17 @@ def main():
     ap.add_argument("--db", default="data/brief.db")
     ap.add_argument("--source", choices=["bwf", "tsna"], required=True)
     ap.add_argument("--since", default=(dt.date.today() - dt.timedelta(days=730)).isoformat())
+    ap.add_argument("--until", help="TSNA 補到哪天（含）；預設今天")
     a = ap.parse_args()
     con = connect(a.db)
     session = requests.Session()
     log = lambda m: print(f"{dt.datetime.now():%m-%d %H:%M:%S} {m}", flush=True)
     log(f"開始 {a.source}，since {a.since}")
     try:
-        (run_bwf if a.source == "bwf" else run_tsna)(con, session, a.since, log)
+        if a.source == "bwf":
+            run_bwf(con, session, a.since, log)
+        else:
+            run_tsna(con, session, a.since, log, a.until)
     except KeyboardInterrupt:
         log("中斷（進度已存，重跑會接著做）")
         sys.exit(1)

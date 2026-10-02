@@ -164,6 +164,7 @@ def publish(con, today: dt.date, res: dict) -> list[str]:
         spent = script.cost_since(con, y, (dt.date.fromisoformat(y) + dt.timedelta(days=1)).isoformat())
         if spent > script.DAILY_COST_ALERT:
             alert(f"**腳本費用** {y}（UTC）US${spent:.2f}，超過每日 US${script.DAILY_COST_ALERT}")
+        script.monthly_alert(con, alert)                 # 當月累計 > US$25、> US$40 各告警一次（notes 16:55）
     except Exception as e:  # noqa: BLE001
         errors.append(f"script: {e!r}")
     problems = res["errors"] + errors

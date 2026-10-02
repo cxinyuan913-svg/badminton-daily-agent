@@ -4,4 +4,4 @@ rem Usage: run_backfill_news.cmd SOURCE   (SOURCE = bwf or tsna). Log: data\logs
 cd /d "%~dp0.."
 if not exist data\logs mkdir data\logs
 set PYTHONIOENCODING=utf-8
-.venv\Scripts\python.exe -m brief.news_backfill --db data\brief.db --source %1 --since 2024-10-02 >> data\logs\backfill_news_%1.log 2>&1
+.venv\Scripts\python.exe -m brief.news_backfill --db data\brief.db --source %1 --since 2024-10-02 --until 2024-12-31 >> data\logs\backfill_news_%1.log 2>&1
