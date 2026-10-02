@@ -143,6 +143,7 @@ def run_tsna(con, session, since: str, log=print) -> None:
                         (url, "tsna", title, int(ok)))
             if ok:
                 stored += _store(con, "tsna", url, title, date, text)
+            con.commit()                                  # 每篇都 commit：長交易會鎖住資料庫，watch／晨報就寫不進去（2026-10-02）
             if i % 50 == 0:
                 _save(con, "tsna", fetched=fetched, stored=stored)
                 log(f"  {year} {i}/{len(todo)}，累計存 {stored} 則")

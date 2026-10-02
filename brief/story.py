@@ -173,7 +173,7 @@ def materials(con, t: dict, day: str, c: dict, cands: list[dict], daym: list[dic
     if m is not None:
         d = sl.defending(con, t, m["winner"]["pairing_id"], m["event"])
         history += ([d] if d else []) + [f for side in ("winner", "loser")      # R8：生涯
-                                         for f in sl.career(con, m[side]["pairing_id"], m["event"], m[side]["name"], m["date"])]
+                                         for f in sl.career(con, m[side]["pairing_id"], m["event"], m[side]["name"], m["date"], sl.tournament_start(con, m.get("tournament_id"), m["date"]))]
     facts = head + ["【歷史】"] + history
     facts += ["【新聞】"] + (recent_news(con, names, day) or [NO_NEWS])
     facts += ["【冷知識】"] + (related_trivia(history) or [NO_TRIVIA])

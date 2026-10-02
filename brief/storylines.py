@@ -404,13 +404,44 @@ def partner_history(con, pairing_id: int, event: str, upto: str) -> dict | None:
     return {"a": a, "b": b, "first": dates[0] if dates else None, "splits": splits}
 
 
+def rank_before(con, pairing_id: int, event: str, before: str) -> dict:
+    """notes 10-02 11:20：「某站賽前／重組時」的排名一律取 before（開賽日）之前**最後一次發布**的排名表。
+    那一週表上沒有這組 → rank=None（unranked），不要往後抓第一筆。回傳 {rank, week, tournaments, depth}；
+    depth 是那週存下來的最深名次（歷史週只存前 100 名，表上沒有不代表沒有排名）。"""
+    week = con.execute("SELECT MAX(week_date) FROM ranking_snapshot WHERE event=? AND week_date < ?", (event, before)).fetchone()[0]
+    if not week:
+        return {"rank": None, "week": None, "tournaments": None, "depth": None}
+    row = con.execute("SELECT rank, tournaments FROM ranking_snapshot WHERE week_date=? AND event=? AND pairing_id=?",
+                      (week, event, pairing_id)).fetchone()
+    depth = con.execute("SELECT MAX(rank) FROM ranking_snapshot WHERE week_date=? AND event=?", (week, event)).fetchone()[0]
+    return {"rank": row[0] if row else None, "week": week, "tournaments": row[1] if row else None, "depth": depth}
+
+
+def rank_text(r: dict) -> str:
+    """「世界第 43（2026-09-22 發布｜累計 8 站）」；表上沒有 → 「不在排名表上（2026-05-05 發布）」。"""
+    if not r["week"]:
+        return "沒有官方排名資料"
+    if r["rank"] is None:
+        miss = "前 100 名以外或沒有排名" if (r["depth"] or 0) <= 100 else "沒有排名（unranked）"
+        return f"不在排名表上：{miss}（{r['week']} 發布）"
+    n = f"｜累計 {r['tournaments']} 站" if r["tournaments"] else ""
+    return f"世界第 {r['rank']}（{r['week']} 發布{n}）"
+
+
+def tournament_start(con, tournament_id: int | None, fallback: str) -> str:
+    if tournament_id is None:
+        return fallback
+    row = con.execute("SELECT start_date FROM tournament WHERE tournament_id=?", (tournament_id,)).fetchone()
+    return row[0] if row and row[0] else fallback
+
+
 def _rank_on(con, pairing_id: int, event: str, day: str, after: bool) -> tuple[int, str] | None:
     op, order = (">=", "ASC") if after else ("<=", "DESC")
     return con.execute(f"""SELECT rank, week_date FROM ranking_snapshot WHERE pairing_id=? AND event=? AND week_date {op} ?
                            ORDER BY week_date {order} LIMIT 1""", (pairing_id, event, day)).fetchone()
 
 
-def partner_facts(con, pairing_id: int, event: str, name: str, upto: str) -> list[str]:
+def partner_facts(con, pairing_id: int, event: str, name: str, upto: str, before: str | None = None) -> list[str]:
     """搭檔史寫成可查的事實句（R12：雙打排名起落先查搭檔史，原因查不到就不要編）。"""
     h = partner_history(con, pairing_id, event, upto)
     if not h or not h["splits"]:
@@ -434,14 +465,28 @@ def partner_facts(con, pairing_id: int, event: str, name: str, upto: str) -> lis
         pos = con.execute("SELECT round_reached FROM tournament_result WHERE pairing_id=? AND tournament_id=? AND event=?",
                           (pairing_id, first[0], event)).fetchone()
         out.append(f"重組後第一站：{zh.tournament(first[1])}" + (f"，成績：{place_name(None, pos[0])}" if pos else ""))
-    r0 = _rank_on(con, pairing_id, event, s["reunion"], after=True)
-    r1 = _rank_on(con, pairing_id, event, upto, after=False)
-    if r0 and r1:
-        out.append(f"組合官方排名：重組後第一次上榜 {r0[1]} 第 {r0[0]} 名，{r1[1]} 第 {r1[0]} 名")
+    last = con.execute("""SELECT t.name, m.match_date FROM match m JOIN tournament t USING (tournament_id)
+                          WHERE ? IN (m.side1_id, m.side2_id) AND m.event=? AND m.match_date<=? ORDER BY m.match_date DESC LIMIT 1""",
+                       (pairing_id, event, s["split"])).fetchone()
+    if last:
+        out.append(f"拆夥前最後一次一起出賽：{zh.tournament(last[0])}（{last[1]}）")
+    drop = con.execute("""SELECT week_date, rank FROM ranking_snapshot WHERE pairing_id=? AND event=? AND week_date < ?
+                          ORDER BY week_date DESC LIMIT 1""", (pairing_id, event, s["reunion"])).fetchone()
+    if drop:
+        out.append(f"跌出排名表前最後一次上榜：{drop[0]} 第 {drop[1]} 名（之後到重組前排名表上都沒有這組）")
+    if first:
+        start = tournament_start(con, first[0], s["reunion"])
+        out.append(f"重組時（{zh.tournament(first[1])}賽前）組合排名：{rank_text(rank_before(con, pairing_id, event, start))}")
+    titles = con.execute("""SELECT t.name FROM tournament_result r JOIN tournament t USING (tournament_id)
+                            WHERE r.pairing_id=? AND r.event=? AND r.round_reached='W' AND r.result_date>=? AND r.result_date<?
+                            ORDER BY r.result_date""", (pairing_id, event, s["reunion"], before or upto)).fetchall()
+    if titles:
+        out.append("重組後、這站之前拿到的冠軍：" + "、".join(zh.tournament(n) for (n,) in titles))
+    out.append(f"這站賽前的組合排名（{before or upto} 開賽前最後一次發布）：{rank_text(rank_before(con, pairing_id, event, before or upto))}")
     return out
 
 
-def career(con, pairing_id: int, event: str, name: str, upto: str) -> list[str]:
+def career(con, pairing_id: int, event: str, name: str, upto: str, before: str | None = None) -> list[str]:
     """生涯素材（notes 21:15／準則 R8：沒查生涯不准下名氣判斷）：官方排名的生涯最高（與那一週）、比賽當週排名與落差、
     資料庫內的冠軍與決賽（級別＋年份）。官方排名從 2017 年起（2019-01-15 前不完整），所以寫明「官方排名資料範圍內」。"""
     out = []
@@ -450,11 +495,14 @@ def career(con, pairing_id: int, event: str, name: str, upto: str) -> list[str]:
     if best:
         first = con.execute("SELECT MIN(week_date) FROM ranking_snapshot WHERE pairing_id=? AND event=? AND rank=? AND week_date<=?",
                             (pairing_id, event, best, upto)).fetchone()[0]
-        line = f"{name}生涯最高官方排名：世界第 {best}（{first[:7]} 首次達到，官方排名資料範圍內）"
-        now = con.execute("""SELECT rank, week_date FROM ranking_snapshot WHERE pairing_id=? AND event=? AND week_date<=?
-                             ORDER BY week_date DESC LIMIT 1""", (pairing_id, event, upto)).fetchone()
-        if now and now[0] != best:
-            line += f"；{now[1]} 這週是第 {now[0]}，比生涯最高低 {now[0] - best} 名"
+        tn = con.execute("SELECT tournaments FROM ranking_snapshot WHERE pairing_id=? AND event=? AND week_date=?",
+                         (pairing_id, event, first)).fetchone()
+        n = f"｜當時累計 {tn[0]} 站" if tn and tn[0] else ""
+        line = f"{name}生涯最高官方排名：世界第 {best}（{first} 發布{n}，首次達到；官方排名資料範圍內）"
+        now = rank_before(con, pairing_id, event, before or upto)            # 賽前最後一次發布（notes 11:20）
+        line += f"；賽前排名：{rank_text(now)}"
+        if now["rank"] and now["rank"] != best:
+            line += f"，比生涯最高低 {now['rank'] - best} 名"
         out.append(line)
     rows = con.execute(
         f"""SELECT r.round_reached, t.name, t.level, substr(r.result_date, 1, 4) FROM tournament_result r JOIN tournament t USING (tournament_id)
@@ -470,7 +518,7 @@ def career(con, pairing_id: int, event: str, name: str, upto: str) -> list[str]:
                    + (f"（{'、'.join(finals[-3:])}）" if finals else ""))
     else:
         out.append(f"{name}在 Super 500 以上與綜合賽沒有打進過決賽（資料庫 2017 年以來，這站以前）")
-    return out + partner_facts(con, pairing_id, event, name, upto)                       # R12：雙打附搭檔史
+    return out + partner_facts(con, pairing_id, event, name, upto, before)               # R12：雙打附搭檔史
 
 
 def candidates_for_match(con, m: dict) -> list[dict]:

@@ -110,6 +110,25 @@ def test_partner_history_carnando_marthin():
     text = "\n".join(sl.partner_facts(con, 1957, "MD", "CARNANDO／MARTHIN", "2026-09-29"))
     for needle in ("2018-09 起一起打", "2024-06-06 之後拆夥", "2026-05-12 重組", "Bagas MAULANA（2024-08～2026-03，73 場）",
                    "Muhammad Shohibul FIKRI（2024-08～2025-05，46 場）", "重組後第一站：2026 泰國公開賽，成績：冠軍",
-                   "第 157 名", "第 43 名", "原因不明"):
+                   "跌出排名表前最後一次上榜：2025-04-08 第 80 名", "重組時（2026 泰國公開賽賽前）組合排名：不在排名表上", "原因不明"):
         assert needle in text, needle
     assert "2020" not in text.split("拆夥")[0]               # 2020 疫情停賽的空檔不算拆夥（中間沒有別的搭檔）
+
+
+@needs_db
+def test_rank_time_points_1120():
+    """notes 11:20（品質紀錄 D4）：「重組時」排名取開賽日之前最後一次發布；2026 泰國公開賽賽前這組不在排名表上，不是 157。"""
+    from brief.crawler import connect
+    con = connect(str(DB))
+    start = con.execute("SELECT start_date FROM tournament WHERE name LIKE '%Thailand Open 2026%'").fetchone()[0]
+    r = sl.rank_before(con, 1957, "MD", start)
+    assert r["rank"] is None and r["week"] < start and "157" not in sl.rank_text(r)
+    ag = sl.rank_before(con, 1957, "MD", "2026-09-25")
+    assert ag["rank"] == 46 and ag["week"] == "2026-09-22" and ag["tournaments"] == 7
+    text = "\n".join(sl.career(con, 1957, "MD", "CARNANDO／MARTHIN", "2026-09-29", "2026-09-25"))
+    for needle in ("拆夥前最後一次一起出賽：2024 印尼公開賽", "跌出排名表前最後一次上榜：2025-04-08 第 80 名",
+                   "重組時（2026 泰國公開賽賽前）組合排名：不在排名表上", "2026 泰國公開賽、2026 台北公開賽",
+                   "世界第 46（2026-09-22 發布｜累計 7 站）", "世界第 9（2023-05-23 發布｜當時累計 16 站"):
+        assert needle in text, needle
+    assert "2026 亞運" not in text.split("重組後、這站之前拿到的冠軍：")[1].splitlines()[0]   # 進行中的這站不算
+    assert "第 157" not in text

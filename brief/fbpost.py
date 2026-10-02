@@ -133,7 +133,7 @@ def choose(con, today: str) -> tuple[str, list[str], dict]:
             m0 = next((m for m in ms if sl.match_fact(m) == main[0]), None)
             if m0 is not None:
                 facts += ["【歷史】"] + [f for side in ("winner", "loser")
-                                         for f in sl.career(con, m0[side]["pairing_id"], m0["event"], m0[side]["name"], m0["date"])]
+                                         for f in sl.career(con, m0[side]["pairing_id"], m0["event"], m0[side]["name"], m0["date"], sl.tournament_start(con, m0.get("tournament_id"), m0["date"]))]
             others = [m for m in tw if not any(n in (m["winner"]["name"], m["loser"]["name"]) for n in main_names)]
             adv = [m["winner"]["name"] for m in others if m["winner"]["home"]]
             out_ = [m["loser"]["name"] for m in others if m["loser"]["home"]]
@@ -265,7 +265,7 @@ def recent_rivalry(con, d: dt.date) -> list[str]:
     if not best:
         return []
     careers = [f for side in ("winner", "loser")                      # 準則 R8：生涯素材
-               for f in sl.career(con, best_m[side]["pairing_id"], best_m["event"], best_m[side]["name"], best_m["date"])]
+               for f in sl.career(con, best_m[side]["pairing_id"], best_m["event"], best_m[side]["name"], best_m["date"], sl.tournament_start(con, best_m.get("tournament_id"), best_m["date"]))]
     names = sl.side_names(best["facts"][:1])
     history = best["facts"] + careers
     return ([f"今天是 {d.isoformat()}，沒有比賽；最近 3 個月交手過的宿敵／宰制故事（最近一次交手 {best_date}）：", "【歷史】"]
