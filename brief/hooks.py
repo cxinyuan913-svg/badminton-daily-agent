@@ -102,6 +102,13 @@ PROMPT = ("伏筆（準則 R16）：從下面的「支線素材」挑一條，�
           '"hook": {"branch": "B1", "teaser": "那一句，要跟正文一字不差"}。一篇只能一個伏筆')
 
 
+def prepare(branches: list[dict] | None, facts: list[str]) -> list[dict]:
+    """主線事實裡本來就有的名字不當答案關鍵字（例：FIKRI 是馬丁的前搭檔，正文本來就要寫）；
+    這種答案只能靠編輯（R16）判斷有沒有把「誰贏了幾次」講出來。"""
+    text = "\n".join(facts)
+    return [{**b, "keys": [k for k in b["keys"] if k and k not in text]} for b in branches or []]
+
+
 def editor_context(branches: list[dict]) -> str:
     """給編輯的補充說明（R16）：支線答案不能出現在正文。"""
     if not branches:

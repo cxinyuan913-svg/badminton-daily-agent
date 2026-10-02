@@ -388,6 +388,7 @@ def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=No
     """寫（逐句引用）→ 事實檢查＋引用檢查 → 編輯檢查（不過就帶意見重寫一次，仍不過附「編輯意見」）
     → 獨立查證員（notes 11:25 B）：有 wrong 就帶查證結果重寫一次再查；仍有 wrong → 不產出（回傳 None，problems 附查證表）。"""
     user = (f"範例（只看結構與語氣）：\n{_examples()}\n\n事實清單：\n" + cite.facts_block(facts))
+    branches = hooks.prepare(branches, facts)
     if branches:
         user += "\n\n" + hooks.PROMPT + "\n" + "\n".join(hooks.branches_block(branches))
     out, problems = write(llm, user, facts, con, ctx, branches=branches)
@@ -414,6 +415,7 @@ def generate(llm, facts: list[str], con=None, ctx: dict | None = None, editor=No
             out["verify"] = v2 or v
             return None, ["查證員仍判錯：" + verify.feedback(v2 or v)]
         redo["editor"] = out.get("editor")
+        redo["verify_first"] = v                     # 重寫前的查證表（給 Raymond 看改了什麼）
         out, v = redo, v2
     if v is not None:
         out["verify"] = v
@@ -455,6 +457,8 @@ def to_markdown(title: str, c: dict, out: dict) -> str:
         lines += ["", "待查清單："] + [f"- {x.get('claim', '')}（依據：{x.get('basis', '')}；怎麼查：{x.get('how', '')}）" for x in out["todo"]]
     if out.get("verify"):
         lines += ["", out["verify"]["summary"]]
+        if out.get("verify_first"):
+            lines += ["查證員第一版判錯（已帶證據重寫）：" + verify.feedback(out["verify_first"])]
         uv = [c for c in out["verify"]["claims"] if c["verdict"] == "unverifiable"]
         if uv:
             lines += ["查證員無法查證（請 Raymond 確認）："] + [f"- {c['claim']}（{c['note']}）" for c in uv]

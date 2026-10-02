@@ -37,7 +37,7 @@ def test_opponent_context_carnando_sf(con):
     ctx = sl.opponent_context(con, sf["winner"], KIM_SEO, "MD", sf["match_id"], sf["date"], "2026-09-23")
     text = "\n".join(ctx)
     assert ctx[0].startswith("【關鍵對手：金元昊／徐承宰】賽前排名：世界第 1")
-    assert "2026-09-01 2026 中國大師賽32 強 卡爾南多／馬丁勝（卡爾南多／馬丁角度 21-19 21-19）" in text
+    assert "2026-09-01 2026 中國大師賽 32 強 卡爾南多／馬丁勝（卡爾南多／馬丁角度 21-19 21-19）" in text
     assert "這場（金元昊／徐承宰角度 11-21 14-21）是金元昊／徐承宰 2025 年以來" in text and "最懸殊的一場" in text
     assert "輸給 Muhammad Shohibul FIKRI 5 次（Muhammad Shohibul FIKRI換了 3 個搭檔）" in text
     assert "團體" not in text.split("之後各站：")[1].split("\n")[0]         # TEAM 名次不列
@@ -52,7 +52,14 @@ def test_nemesis_branch_keys_exclude_protagonist(con):
     assert b["subject"] == [KIM_SEO] and "FIKRI" in b["keys"]
     assert "馬丁" not in b["keys"] and "卡爾南多" not in b["keys"]          # 主角的名字一定要能寫
     assert "Muhammad" not in b["keys"]                                     # 常見名不當關鍵字
-    assert len(b["answer"]) == 6
+    assert len(b["answer"]) == 6 and "5 次" in b["keys"]
+
+
+def test_prepare_drops_keys_already_in_main_facts():
+    """FIKRI 是馬丁的前搭檔，主線本來就會寫到 → 不當洩漏關鍵字；次數仍然擋。"""
+    br = [{"title": "t", "hint": "h", "answer": ["a"], "keys": ["FIKRI", "Fajar ALFIAN", "5 次"], "subject": []}]
+    out = hooks.prepare(br, ["拆夥期間 馬丁 的搭檔：Muhammad Shohibul FIKRI"])
+    assert out[0]["keys"] == ["Fajar ALFIAN", "5 次"] and br[0]["keys"][0] == "FIKRI"
 
 
 BR = [{"title": "金元昊／徐承宰近 2 年的剋星", "hint": "有個剋星", "answer": ["輸給 FIKRI 5 次"], "keys": ["FIKRI", "5 次"],

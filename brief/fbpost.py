@@ -456,6 +456,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
             + (("\n\n**這篇是指定的多故事主題，下面每一個都要講到（每個至少一段）**：\n"
                  + "\n".join(f"{i + 1}. {x['title']}" for i, x in enumerate(theme))) if theme else "")
             + f"\n\n事實清單：\n" + cite.facts_block(facts))
+    branches = hooks.prepare(branches, facts)
     if branches:                                           # 伏筆（R16，notes 13:45）
         user += "\n\n" + hooks.PROMPT + "\n" + "\n".join(hooks.branches_block(branches))
     if hasattr(llm, "task"):
@@ -511,6 +512,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
             out["verify"] = v2 or v
             return None, ["查證員仍判錯：" + verify.feedback(v2 or v)]
         redo["editor"] = out.get("editor")
+        redo["verify_first"] = v                     # 重寫前的查證表（給 Raymond 看改了什麼）
         out, v = redo, v2
     if v is not None:
         out["verify"] = v
@@ -535,6 +537,8 @@ def render(today: str, kind: str, out: dict) -> str:
         notes += [f"編輯意見 {x['rule']}：「{x.get('quote', '')}」→ {x.get('comment', '')}" for x in ed["final"]]
     if out.get("verify"):
         notes.append(out["verify"]["summary"])
+        if out.get("verify_first"):
+            notes.append("查證員第一版判錯（已帶證據重寫）：" + verify.feedback(out["verify_first"]))
         notes += [f"查證員無法查證：{c['claim']}（{c['note']}）" for c in out["verify"]["claims"] if c["verdict"] == "unverifiable"]
     if out.get("_hook"):
         notes.append(story.hook_note(out["_hook"]))

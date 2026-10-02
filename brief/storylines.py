@@ -417,7 +417,7 @@ def opponent_context(con, protagonist: int, opponent: int, event: str, match_id:
     meets = [m for m in h2h_detail(con, protagonist, opponent, day) if m["date"] >= year_ago]
     if meets:
         out.append(f"{pn}與{on}近 12 個月交手 {len(meets)} 次：" + "；".join(
-            f"{m['date']} {m['tournament']}{zh.round_name(m['round'])} {pn if m['a_won'] else on}勝（{pn}角度 {_score_a(m['games'])}）"
+            f"{m['date']} {m['tournament']} {zh.round_name(m['round'])} {pn if m['a_won'] else on}勝（{pn}角度 {_score_a(m['games'])}）"
             for m in meets))
     title = con.execute("""SELECT t.name, r.result_date FROM tournament_result r JOIN tournament t USING (tournament_id)
                            WHERE r.pairing_id=? AND r.event=? AND r.round_reached='W' AND r.result_date < ?
@@ -439,8 +439,8 @@ def opponent_context(con, protagonist: int, opponent: int, event: str, match_id:
         if worst_l[4] == match_id:
             out.append(f"這場（{on}角度 {my_score}）是{on} 2025 年以來 {len(losses)} 場敗場裡局分差最懸殊的一場")
         else:
-            out.append(f"{on} 2025 年以來最懸殊的敗場是 {worst_l[0]} {zh.tournament(worst_l[1])}{zh.round_name(worst_l[2])}（{worst_score}）；"
-                       f"這場是 {my_score}")
+            out.append(f"{on} 2025 年以來最懸殊的敗場是 {worst_l[0]} {zh.tournament(worst_l[1])} {zh.round_name(worst_l[2])}（{worst_score}）；"
+                       f"這場（{this[0]} {zh.tournament(this[1])} {zh.round_name(this[2])}）是 {my_score}")
     two_years = (dt.date.fromisoformat(day) - dt.timedelta(days=730)).isoformat()
     beaten_by = _losses(con, opponent, event, two_years, day)
     if beaten_by:
@@ -458,7 +458,7 @@ def opponent_context(con, protagonist: int, opponent: int, event: str, match_id:
                 break
             partners = {q for _, _, _, w in games_ for q in _members_of(con, w) if q != p}
             out.append(f"{on}近 2 年輸給 {_player_name(con, p)} {len(games_)} 次（{_player_name(con, p)}換了 {len(partners)} 個搭檔）："
-                       + "；".join(f"{d} {zh.tournament(t)}{zh.round_name(r)}（搭檔 {'／'.join(_player_name(con, q) for q in _members_of(con, w) if q != p)}）"
+                       + "；".join(f"{d} {zh.tournament(t)} {zh.round_name(r)}（搭檔 {'／'.join(_player_name(con, q) for q in _members_of(con, w) if q != p)}）"
                                    for d, t, r, w in games_))
         top = [(c, n) for c, n in sorted(by_country.items(), key=lambda kv: -kv[1]) if n >= NEMESIS_MIN]
         if top:
@@ -482,10 +482,11 @@ def nemesis_branch(con, protagonist: int, opponent: int, event: str, day: str) -
     on, nm = _pair_name(con, opponent), _player_name(con, p)
     partners = {q for _, _, _, w in games_ for q in _members_of(con, w) if q != p}
     answer = [f"{on}近 2 年輸給 {nm} {len(games_)} 次，{nm}換了 {len(partners)} 個搭檔"] + [
-        f"{d} {zh.tournament(t)}{zh.round_name(r)}：{_pair_name(con, w)} 勝" for d, t, r, w in games_]
+        f"{d} {zh.tournament(t)} {zh.round_name(r)}：{_pair_name(con, w)} 勝" for d, t, r, w in games_]
     mine = set(_members_of(con, protagonist))         # 主角自己的名字不能當答案關鍵字（不然正文提不到主角）
     surname = lambda n: [w for w in n.split() if w.isupper() and len(w) >= 3]       # 「Muhammad」這種常見名不當關鍵字
-    keys = [nm, *surname(nm)] + [k for q in partners if q not in mine for k in (_player_name(con, q), *surname(_player_name(con, q)))]
+    keys = [nm, *surname(nm), f"{len(games_)} 次"] + [k for q in partners if q not in mine
+                                                     for k in (_player_name(con, q), *surname(_player_name(con, q)))]
     return {"title": f"{on}近 2 年的剋星", "hint": f"{on}近兩年有一個最常擊敗他們的對手（只寫有剋星、不寫是誰、不寫次數）",
             "answer": answer, "keys": sorted(set(keys)), "subject": [opponent]}
 
