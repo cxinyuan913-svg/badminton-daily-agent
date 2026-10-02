@@ -65,5 +65,6 @@ def test_sql_tool_is_read_only_and_limited(empty_db):
     assert "只允許單一 SELECT" in t.run("SELECT 1; DROP TABLE match")
     assert "SQL 錯誤" in t.run("UPDATE match SET round='x'") or "只允許" in t.run("UPDATE match SET round='x'")
     out = t.run("WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x < 500) SELECT x FROM n")
-    assert "只顯示前 200 列" in out
-    assert "用完 2 次查詢" in t.run("SELECT 1")
+    assert "只顯示前 200 列" in out                      # 第 1 次（被拒絕的不算次數）
+    assert "第 2/2 次查詢" in t.run("SELECT 1")
+    assert "用完 2 次查詢" in t.run("SELECT 1")          # 第 3 次 → 擋下
