@@ -33,3 +33,9 @@ def test_register_script_paths_exist():
     assert "run_fbpost.cmd" in names and "run_watch.cmd" in names and "run_daily.cmd" in names
     for name in names:
         assert (ROOT / "scripts" / name).exists(), name
+
+
+def test_cmd_files_use_crlf():
+    """2026-10-02：LF 換行＋中文註解讓 cmd 把註解後半段當指令執行（回補排程 exit 255）。.cmd 一律 CRLF。"""
+    bad = [p.name for p in (ROOT / "scripts").glob("*.cmd") if b"\n" in p.read_bytes().replace(b"\r\n", b"")]
+    assert bad == []
