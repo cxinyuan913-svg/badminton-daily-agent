@@ -21,3 +21,11 @@ def test_pinyin_matching():
     assert ctba.score("LIANG Ting Yu", "林庭瑜") is None          # 姓對不上
     hits = ctba.match("LIANG Ting Yu", ["梁庭瑜", "梁婷宇", "王庭瑜"])
     assert [h for h in hits if h[0] == 0] == [(0, "梁婷宇"), (0, "梁庭瑜")]   # 同音字兩個都 0 → run() 會列待確認、不自動採用
+
+
+def test_roster_year_labels():
+    pages = ["王一明 李二華\n", "105年第一、二次排名賽晉升名單\n陳三郎\n108年第一、二次排名賽晉升名單\n林四德 張五福\n"
+             "114年第一、二次排名賽晉升名單\n113年第一、二次排名賽晉升名單\n"]
+    y = ctba.roster_years(pages)
+    assert y["王一明"] == "原始名單（105 年以前）" and y["陳三郎"] == "105 年晉升"
+    assert y["林四德"].startswith("108–115 年")                           # 108 起的標題擠在頁尾，無法細分

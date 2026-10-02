@@ -176,3 +176,46 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+HEADER = re.compile(r"(\d{3})年第一、二次排名賽晉升名單")
+
+
+def roster_years(text_pages: list[str]) -> dict[str, str]:
+    """{中文名: 晉升年份標籤}（notes 07:25 第 5 點）。PDF 的 105–108 年段落標題在名字前面（可靠）；
+    109–115 年的標題擠在頁尾、順序也亂了，所以 108 年標題之後的名字只能標「108–115 年」；第一個標題前是原始名單。"""
+    out: dict[str, str] = {}
+    label = "原始名單（105 年以前）"
+    for page in text_pages:
+        pos = 0
+        for m in HEADER.finditer(page):
+            chunk = page[pos:m.start()]
+            for n in roster_names(chunk):
+                out.setdefault(n, label)
+            year = int(m.group(1))
+            # 108 年標題之後到頁尾那團標題之間，其實還有 109–115 年的名字（那幾年的標題被擠到後面）→ 108 起無法細分
+            label = f"{year} 年晉升" if year < 108 else "108–115 年晉升（PDF 無法細分哪一年）"
+            pos = m.end()
+        for n in roster_names(page[pos:]):
+            out.setdefault(n, label)
+    return out
+
+
+def write_distance1(review: list[tuple], path: Path | None = None) -> int:
+    """config/ctba/review_distance1.csv：拼音距離 1 的「建議採用」，給 Raymond 分批確認。"""
+    import pypdf
+    path = path or CTBA_DIR / "review_distance1.csv"
+    years: dict[str, str] = {}
+    for p in sorted(CTBA_DIR.glob("*甲組*.pdf")):
+        years.update(roster_years([pg.extract_text() or "" for pg in pypdf.PdfReader(str(p)).pages]))
+    rows = []
+    for pid, name, cands, hint in review:
+        if hint != "建議採用":
+            continue
+        zh_name = cands.split("(")[0]
+        rows.append([pid, name, zh_name, years.get(zh_name, "（名單裡找不到年份）"), ""])
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f, lineterminator="\n")
+        w.writerow(["bwf_player_id", "英文名（BWF）", "候選中文名", "晉升年份", "Raymond 確認（Y／N／正確中文名）"])
+        w.writerows(rows)
+    return len(rows)

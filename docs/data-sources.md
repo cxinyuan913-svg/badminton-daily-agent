@@ -118,10 +118,17 @@ Grade 1、2、3 用的是同一套元件與 API。
 - **站內搜尋／標籤頁都不能用**：
   | 來源 | 搜尋或標籤 | 結果 |
   |---|---|---|
-  | 中央社 | `/search/hysearchws.aspx?q=*` | robots.txt `Disallow`；另外 robots 有 `User-agent: ClaudeBot … Disallow: /`（註解寫「封鎖 AI 訓練／模型語料」），但 `*` 群組宣告 `Content-signal: ai-input=yes, ai-train=no`。我們的 User-Agent 不是 ClaudeBot、用途是 AI 輸入不是訓練 → **暫時照用列表頁**，待 Raymond 確認 |
+  | 中央社 | `/search/hysearchws.aspx?q=*` | robots.txt `Disallow`；另外 robots 有 `User-agent: ClaudeBot … Disallow: /`（註解寫「封鎖 AI 訓練／模型語料」），但 `*` 群組宣告 `Content-signal: ai-input=yes, ai-train=no`。我們的 User-Agent 不是 ClaudeBot、用途是 AI 輸入不是訓練 → **照用列表頁**（2026-10-02 Raymond 選 A，見下方「中央社照用的理由」） |
   | ETtoday | `www.ettoday.net/news_search/` | robots.txt `Disallow: /news_search/` |
   | NOWnews | `/search?keyword=` | 回 200 但結果是 JavaScript 載入，頁面沒有內容 |
   | 公視 | `/search*` | robots.txt `Disallow`；標籤頁是數字 ID（`/tag/9978/`），羽球的 ID 還沒找到 |
   | TSNA | `/search` | robots.txt `Disallow`；`/tag/`、`/keyword/` 404 |
 - **BWF World Tour 新聞停在 9/07 不是壞掉**：網站自己的列表最新就是 9/07（中國大師賽），之後亞運期間沒有 World Tour 賽事。保留來源
 - **兩年回補的可行性**：只有 TSNA（`/sitemap/year/YYYY`，一年約 2 萬篇、沒有標題）有完整歷史；NOWnews 的 sitemap 只列分類頁；中央社、ETtoday sitemap 只有最近幾週；公視沒有文章 sitemap；BWF `sitemap.xml` 404
+
+### 中央社照用的理由（2026-10-02，notes 07:25 第 4 點，Raymond 選 A）
+- 中央社 robots.txt 的 `User-agent: *` 群組宣告 `Content-signal: search=yes, ai-input=yes, ai-train=no`：**允許 AI 輸入、不允許拿去訓練**。
+- 同一份 robots.txt 有 `User-agent: ClaudeBot … Disallow: /`，但那一段的註解是「封鎖 AI 訓練／模型語料」。
+- 我們的用途是 AI 輸入（摘要、事實素材），**不訓練模型**；爬蟲的 User-Agent 是 `badminton-daily-agent/0.1`，**不是 ClaudeBot**。
+- 只用列表頁（站內搜尋 `/search/hysearchws.aspx?q=*` 是 Disallow，不用）。
+- **停用條件**：中央社日後若改成明確禁止 AI 輸入（例如 `ai-input=no`，或 `*` 群組 Disallow 列表頁／文章頁），就停用並記在「不使用的來源」。
