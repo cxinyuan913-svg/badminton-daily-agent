@@ -2,7 +2,8 @@
 產 1 篇粉專＋1 支影片：首日賽程（籤表）、種子、宿敵對戰、台灣選手的對手分析。粉專字數不限。
 
 素材全部來自 BWF 賽程 API（開賽日的 day-matches）與資料庫（排名、交手紀錄、對手近況），不用 LLM 產生事實。
-開賽日賽程還沒公布（18:00 時）→ 不產，推告警一次。每站只產一次（pretournament_sent）。費用約 US$1.5／站，不受每日預算擋下。
+開賽日賽程還沒公布（18:00 時）→ 不產，推告警一次。每站只產一次（pretournament_sent）。費用約 US$1.5／站，不受每日預算擋下，
+也不算進每日預算（呼叫記進 budget_exempt；10-03 Raymond）。
 
   python -m brief.pretournament --db data/brief.db [--today 2026-10-12] [--tournament 5210]
 """
@@ -12,6 +13,7 @@ import argparse
 import datetime as dt
 
 from brief import fbpost, grade3, preview, script, story, storylines as sl, verify, zh
+from brief import llm as llm_mod
 from brief.llm import _env
 
 LEVELS = ("G1_IND", "G1_EVENT", "WTF", "S1000", "S750")
@@ -112,6 +114,7 @@ def run(con, client, today: str | None = None, tournament_id: int | None = None,
             out.append({"tournament_id": tid, "status": "no_schedule"})
             continue
         facts = facts_for(con, t, schedule)
+        before = llm_mod.last_call_id(con)               # 這站的呼叫都不算每日預算（10-03 Raymond）
         title = f"{zh.tournament(t['name'])}｜賽前看點"
         llm = (lambda: make_llm()) if make_llm else (lambda: script.make_script_llm(
             "heavy", con, effort="medium", max_tokens=fbpost.POST_MAX_TOKENS_LONG))
@@ -152,6 +155,7 @@ def run(con, client, today: str | None = None, tournament_id: int | None = None,
             if sender:
                 sender(story.to_discord(title, sc))
         res["script"] = "ok" if sc else "failed"
+        llm_mod.exempt_since(con, before, f"pretournament {tid}")
         _mark(con, tid, "ok" if (post or sc) else "failed")
         out.append(res)
     return out

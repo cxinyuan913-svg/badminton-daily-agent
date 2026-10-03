@@ -292,3 +292,38 @@ def test_run_daily_picks_best_story_once_and_tuesday_ranking(monkeypatch):
     assert script.run_daily(con, "2026-10-06")["kind"] == "ranking"              # 週二、昨天沒比賽、有新排名
     ts["2026-10-12"] = [{"tournament_id": 3}]
     assert script.run_daily(con, "2026-10-13")["kind"] == "story"                # 週二有比賽 → 故事優先
+
+
+def test_pretournament_calls_not_counted_in_daily_budget():
+    """10-03 Raymond：賽前看點不算進每日預算（budget_exempt）。"""
+    import sqlite3
+    from brief.llm import CALL_TABLE, exempt_since, last_call_id, spent_taipei_day
+    con = sqlite3.connect(":memory:")
+    con.executescript(CALL_TABLE)
+    ins = "INSERT INTO llm_call (called_at, purpose, task, model, input_tokens, output_tokens, cost_usd) VALUES (?,?,?,?,?,?,?)"
+    con.execute(ins, ("2026-10-12 02:00:00", "heavy", "fbpost", "m", 1, 1, 0.8))
+    before = last_call_id(con)
+    con.executemany(ins, [("2026-10-12 10:00:00", "heavy", "fbpost", "m", 1, 1, 0.9),
+                          ("2026-10-12 10:01:00", "heavy", "verify", "m", 1, 1, 0.6)])
+    assert spent_taipei_day(con, "2026-10-12") == pytest.approx(2.3)
+    assert exempt_since(con, before, "pretournament 5210") == 2
+    assert spent_taipei_day(con, "2026-10-12") == pytest.approx(0.8)
+
+
+def test_ranking_report_only_taiwan_top100():
+    """10-03 Raymond：週二排名報告只列台灣所有前 100 名；上週 100 名外的不能寫成「跌出前 100」。"""
+    import sqlite3
+    from brief import digest
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE ranking_snapshot (week_date TEXT, event TEXT, pairing_id INTEGER, rank INTEGER, points INTEGER)")
+    rows = [("2026-09-29", "MS", 1, 5), ("2026-09-22", "MS", 1, 5), ("2026-09-29", "MS", 2, 1), ("2026-09-22", "MS", 2, 1),
+            ("2026-09-22", "MS", 3, 96), ("2026-09-29", "MS", 3, 120), ("2026-09-22", "MS", 4, 430)]
+    con.executemany("INSERT INTO ranking_snapshot VALUES (?,?,?,?,0)", rows)
+    sides = {1: ("周天成", "TPE"), 2: ("昆拉武特", "THA"), 3: ("王子維", "TPE"), 4: ("某某", "TPE")}
+    orig = digest._side
+    digest._side = lambda con, pid: {"name": sides[pid][0], "country": sides[pid][1]}
+    try:
+        facts = script.weekly_facts(con, full=True)["facts"]
+    finally:
+        digest._side = orig
+    assert facts[1:] == ["台灣 男單 周天成：第 5 名（上週 5，持平）", "台灣 男單 王子維：跌出前 100（上週第 96 名）"]

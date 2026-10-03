@@ -88,13 +88,37 @@ def log_call(con, purpose: str, task: str | None, model: str, input_tokens: int,
     con.commit()
 
 
+EXEMPT_TABLE = "CREATE TABLE IF NOT EXISTS budget_exempt (call_id INTEGER PRIMARY KEY, reason TEXT)"
+
+
+def exempt_since(con, after_call_id: int, reason: str) -> int:
+    """call_id > after_call_id 的呼叫標成不算每日預算（10-03 Raymond：大賽賽前看點不算進每日預算）。回傳筆數。"""
+    con.execute(EXEMPT_TABLE)
+    try:
+        n = con.execute("INSERT OR IGNORE INTO budget_exempt (call_id, reason) SELECT call_id, ? FROM llm_call WHERE call_id > ?",
+                        (reason, after_call_id)).rowcount
+    except Exception:  # noqa: BLE001 — 還沒有 llm_call 表
+        return 0
+    con.commit()
+    return n
+
+
+def last_call_id(con) -> int:
+    try:
+        return con.execute("SELECT COALESCE(MAX(call_id), 0) FROM llm_call").fetchone()[0]
+    except Exception:  # noqa: BLE001
+        return 0
+
+
 def spent_taipei_day(con, day: str) -> float:
-    """台北時間某一天（YYYY-MM-DD）的 LLM 費用；llm_call.called_at 是 UTC。"""
+    """台北時間某一天（YYYY-MM-DD）的 LLM 費用；llm_call.called_at 是 UTC。不含 budget_exempt 的呼叫（賽前看點）。"""
     import datetime as dt
     start = dt.datetime.fromisoformat(day) - dt.timedelta(hours=8)
     end = start + dt.timedelta(days=1)
     try:
-        return con.execute("SELECT COALESCE(SUM(cost_usd), 0) FROM llm_call WHERE called_at >= ? AND called_at < ?",
+        con.execute(EXEMPT_TABLE)
+        return con.execute("""SELECT COALESCE(SUM(cost_usd), 0) FROM llm_call WHERE called_at >= ? AND called_at < ?
+                              AND call_id NOT IN (SELECT call_id FROM budget_exempt)""",
                            (start.strftime("%Y-%m-%d %H:%M:%S"), end.strftime("%Y-%m-%d %H:%M:%S"))).fetchone()[0]
     except Exception:  # noqa: BLE001 — 還沒有 llm_call 表
         return 0.0
