@@ -47,10 +47,7 @@ Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
 ### 待 Raymond 決定
 1. **重新註冊排程**（必做）：用系統管理員 PowerShell 執行 `powershell -ExecutionPolicy Bypass -File scripts\register_task.ps1`，粉專才會改到 18:00
-2. **週一週報的賽事層級順序**（`fbpost.LEVEL_ORDER`）
-   - 目前：Grade 1 → 綜合運動會（亞運）→ 年終總決賽 → S1000 → S750 → 洲際錦標賽 → S500 → S300 → 世大運 → S100 → IC → IS
-   - A：照這個順序
-   - B：Raymond 給正確順序
+2. ~~週一週報的賽事層級順序~~ → **Raymond：照目前順序**（Grade 1 → 綜合運動會 → 年終總決賽 → S1000 → S750 → 洲際錦標賽 → S500 → S300 → 世大運 → S100 → IC → IS）
 3. ~~每日預算~~ → **Raymond 選 A：賽前看點不算進每日預算**（已做：`budget_exempt`，`spent_taipei_day` 排除）
 
 ## 2026-10-03 17:30（Claude Code）— Raymond 對 10-03 reunion 腳本（LU Chia Pin／LU Chia Hung）的回饋
