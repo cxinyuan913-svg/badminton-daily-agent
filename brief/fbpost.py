@@ -29,7 +29,7 @@ EFFORTS = ("medium",)               # 寫手 Opus 的推理強度：10-03 Raymon
 BODY_RANGE = (500, 1800)
 BODY_RANGE_TRIVIA = (300, 1200)
 TRIVIA_KINDS = {"history", "rivalry", "rules", "ranking", "hook"}
-LONG_KINDS = {"tw_weekly", "ranking"}      # 10-03 Raymond：週一台灣週報、週二排名報告——字數不限，不套 R7 數字上限與 R10 組數上限
+LONG_KINDS = {"tw_weekly", "ranking", "preview"}   # 10-03 Raymond：週一台灣週報、週二排名報告、大賽賽前看點——字數不限，不套 R7／R10
 BODY_RANGE_LONG = (300, 100000)
 POST_MAX_TOKENS_LONG = 32000
 POST_MAX_TOKENS = 12000             # 長文＋推理，輸出上限依字數調高（21:10）
@@ -517,7 +517,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
             + (("\n\n**這篇是指定的多故事主題，下面每一個都要講到（每個至少一段）**：\n"
                  + "\n".join(f"{i + 1}. {x['title']}" for i, x in enumerate(theme))) if theme else "")
             + (("\n\n**這篇是" + KIND_LABEL[kind] + "：字數不限，事實清單列到的每一組台灣選手都要寫到，照事實清單的順序寫"
-                "（賽事依層級由高到低、每站一段或數段）；不適用 R7 的數字上限與 R10 的組數上限，比分與名次照實寫。**")
+                "（事實清單分好的每一區一段或數段）；不適用 R7 的數字上限與 R10 的組數上限，比分與名次照實寫。**")
                if kind in LONG_KINDS else "")
             + f"\n\n事實清單：\n" + cite.facts_block(facts))
     branches = hooks.prepare(branches, facts)
@@ -584,7 +584,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
     return out, []
 
 
-KIND_LABEL = {"taiwan": "台灣戰報", "story": "故事貼文", "ranking": "排名變動報告", "tw_weekly": "台灣週報（上週全部戰報）", "history": "冷知識：歷史上的今天",
+KIND_LABEL = {"taiwan": "台灣戰報", "story": "故事貼文", "ranking": "排名變動報告", "tw_weekly": "台灣週報（上週全部戰報）", "preview": "大賽賽前看點", "history": "冷知識：歷史上的今天",
               "rivalry": "冷知識：宿敵／宰制", "rules": "冷知識：規則與賽制", "hook": "填坑專題",
               "none": "（沒有素材）"}
 

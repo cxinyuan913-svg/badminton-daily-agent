@@ -2,7 +2,7 @@
 #   badminton-backup        每天 04:00：data\brief.db 一致備份到 data\backups\，保留 7 份
 #   badminton-daily-agent   每天 06:00：收集＋晨報（新聞、IC／IS 精選、週一週報、漏發提醒）
 #   badminton-watch         每 30 分鐘：每站當地當天打完就發（brief.watch）＋新聞收集
-#   badminton-fbpost        每天 18:00：補抓排名 → 粉專貼文 → 影片腳本 1 支（10-03 Raymond：固定產出統一晚上 6 點）
+#   badminton-fbpost        每天 18:00：補抓排名 → 大賽賽前看點 → 粉專貼文 → 影片腳本 1 支（10-03 Raymond：固定產出統一晚上 6 點）
 #   badminton-offsite       每週一 12:00：最新備份 gzip 推到主機 bda-vultr（異地備份）
 #   badminton-backfill-bwf  每小時：BWF 新聞回補（可續跑，做完就直接結束）
 #   badminton-backfill-tsna 每小時：TSNA 新聞回補（可續跑，做完就直接結束）
