@@ -262,3 +262,12 @@ def test_monthly_alert_once_per_threshold():
     assert "fbpost US$20.00" in alerts[0] and "verify US$6.00" in alerts[0]
     con.execute("INSERT INTO llm_call (called_at, purpose, task, model, input_tokens, output_tokens, cost_usd) VALUES ('2026-10-05 00:00:00','heavy','fbpost','m',1,1,15.0)")
     assert script.monthly_alert(con, alerts.append, "2026-10-05") == [40.0] and len(alerts) == 2
+
+
+def test_first_preview_only_once():
+    """notes 10-03（Raymond 2B）：開關 dry 時，v2 第一支仍推一次，之後不再推。"""
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    assert script.first_preview(con, "story_v2") is True
+    assert script.first_preview(con, "story_v2") is False
+    assert script.first_preview(con, "other") is True

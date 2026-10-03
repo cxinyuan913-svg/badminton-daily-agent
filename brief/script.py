@@ -411,6 +411,8 @@ def _story_main(con, t: dict, day: str, title: str, make_llm, send, alert) -> tu
         md += [story.to_markdown(head, c, out), ""]
         if send and _env(flag) == "1":
             send(story.to_discord(f"{title}｜{head}", out))
+        elif send and first_preview(con, "story_v2"):
+            send("🧪 **提示詞 v2 第一支（開關仍是 dry，只推這一次給你看）**\n" + story.to_discord(f"{title}｜{head}", out))
     ok = any(x["status"] == "ok" for x in scripts)
     return {"status": "ok" if ok else "failed", "scripts": scripts}, md
 
@@ -439,6 +441,15 @@ def run_weekly(con, make_llm=None, send=None, alert=None, week: str | None = Non
     if send and _env("SCRIPT_WEEKLY") == "1":
         send(to_discord("排名更新", title, out))
     return {"status": "ok", "out": out, "facts": f["facts"], "path": str(path)}
+
+
+def first_preview(con, name: str) -> bool:
+    """開關是 dry 時，某個新版本的第一支仍推一次給 Raymond 看（notes 10-03：v2 等比賽日自然產生後推一份）。
+    第一次呼叫回傳 True 並記錄，之後都是 False。"""
+    con.execute("CREATE TABLE IF NOT EXISTS script_preview (name TEXT PRIMARY KEY, sent_at TEXT NOT NULL DEFAULT (datetime('now')))")
+    fresh = con.execute("INSERT OR IGNORE INTO script_preview (name) VALUES (?)", (name,)).rowcount == 1
+    con.commit()
+    return fresh
 
 
 def enabled(flag: str) -> bool:
