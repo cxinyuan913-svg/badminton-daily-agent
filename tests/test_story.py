@@ -100,9 +100,9 @@ def test_leading_zero_numbers():
 
 
 def test_v2_length_and_structure():
-    """notes 10-02 18:55 a：口播上限 260（短於 200 要寫理由）；結尾順序 價值段 → 伏筆 → 留言問題；value_kind 必填。"""
+    """notes 10-02 18:55 a：口播上限 300（10-03 由 260 放寬）（短於 200 要寫理由）；結尾順序 價值段 → 伏筆 → 留言問題；value_kind 必填。"""
     flags = story._flags(FACTS)
-    assert any("超過上限 260" in p for p in story.check(out(VOICE * 2), FACTS, flags))
+    assert any("超過上限 300" in p for p in story.check(out(VOICE * 2), FACTS, flags))
     short = VOICE[:60]
     assert any("short_reason" in p for p in story.check(out(short), FACTS, flags))
     assert not any(p.startswith("口播") for p in story.check(out(short, short_reason="這站只有一場可講"), FACTS, flags))
@@ -118,5 +118,5 @@ def test_v2_length_and_structure():
 
 def test_system_prompt_uses_v2():
     sp = story.system_prompt()
-    assert "說書人" in sp and "200–260" in sp and "價值段" in sp and "提到名字的句子（含留言問題、伏筆句）都要引用" in sp
+    assert "說書人" in sp and "200–300" in sp and "價值段" in sp and "提到名字的句子（含留言問題、伏筆句）都要引用" in sp
     assert "純口播文字" not in sp                     # v2 的「輸出格式」由程式的 JSON 取代

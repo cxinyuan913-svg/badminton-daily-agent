@@ -1,7 +1,7 @@
 """故事引擎（交接單 005）：每支腳本一個故事當主軸，每天 1–2 支依故事分數挑。
 
 結構（notes 10-02 18:55，提示詞 v2 `docs/video/script-prompt-v2.md`）：鉤子 → 反差鋪陳 → 高潮還原 → 價值段
-（冷知識／歷史紀錄優先，沒有才寫金句）→ 伏筆（R16）→ 留言問題；口播 200–260 字（超過 260 退回，短於 200 要寫理由）。
+（冷知識／歷史紀錄優先，沒有才寫金句）→ 伏筆（R16）→ 留言問題；口播 200–300 字（超過 300 退回，短於 200 要寫理由）。
 原本的四種風格不再各產一份：台灣視角變成選題加分、數據型併入價值段。
 
 素材：故事候選（`storylines.story_candidates`，全部可回資料庫查）＋冷知識（同一組選手的其他候選、整站紀錄、
@@ -35,12 +35,12 @@ CONTROVERSY = re.compile(r"裁判|挑戰|爭議|換球|抗議|判決|黃牌|紅�
 GUIDELINES = ROOT / "docs" / "video" / "review-guidelines.md"   # Raymond 的審稿準則（R1、R2…），每次執行讀最新版
 
 PROMPT_V2 = ROOT / "docs" / "video" / "script-prompt-v2.md"   # 故事腳本提示詞 v2（notes 10-02 18:55 A，取代舊的五段結構）
-VOICE_MIN, VOICE_MAX = 200, 260   # v2 下限 200（素材不夠可以短，要寫 short_reason）；上限 260 程式擋（18:55 a）
+VOICE_MIN, VOICE_MAX = 200, 300   # v2 下限 200（素材不夠可以短，要寫 short_reason）；上限 300 程式擋（18:55 a 定 260，10-03 Raymond 改 300）
 PARTS = ["鉤子", "反差鋪陳", "高潮還原", "價值段", "伏筆", "留言問題"]
 VALUE_KINDS = ("冷知識", "歷史紀錄", "金句")
 
 SYSTEM_CODE = """以下是程式附加的規則（和上面衝突時以這裡為準）。
-長度：**口播總字數（不含空白，標點算字）200–260 字，超過 260 會被退回**；素材不夠可以短於 200，但要在 short_reason 說明為什麼短。
+長度：**口播總字數（不含空白，標點算字）200–300 字，超過 300 會被退回**；素材不夠可以短於 200，但要在 short_reason 說明為什麼短。
 結尾順序固定：價值段 → 伏筆（R16，有支線素材才有）→ 留言問題。
 - 價值段（取代「金句昇華」）：有查證過的冷知識（事實清單【冷知識】區）或資料庫紀錄（事實清單的歷史事實）就優先用，寫成「冷知識」或「歷史紀錄」；
   都沒有才寫「金句」。value_kind 填你選了哪一種
@@ -201,7 +201,7 @@ def materials(con, t: dict, day: str, c: dict, cands: list[dict], daym: list[dic
                                          for f in sl.career(con, m[side]["pairing_id"], m["event"], m[side]["name"], m["date"], sl.tournament_start(con, m.get("tournament_id"), m["date"]))]
         history += key_opponents(con, c, allm or daym)[0]
     facts = head + ["【歷史】"] + history
-    facts += ["【新聞】"] + (recent_news(con, names, day) or [NO_NEWS])
+    facts += ["【新聞】"] + (recent_news(con, names, day, kind=c.get("kind")) or [NO_NEWS])
     facts += ["【冷知識】"] + (related_trivia(history) or [NO_TRIVIA])
     facts += (["【冷知識素材】"] + trivia) if trivia else []
     facts += (["【賽果背景素材】"] + back) if back else []
@@ -241,9 +241,19 @@ def branches(con, c: dict, allm: list[dict]) -> list[dict]:
     return key_opponents(con, c, allm)[1]
 
 
-def recent_news(con, names: set[str] | list[str], upto: str, days: int = 30, limit: int = 3) -> list[str]:
-    """R11：主角最近 30 天的新聞（中英文名比對已存的內文）：標題（來源，日期）：提到主角的兩三句。"""
+def recent_news(con, names: set[str] | list[str], upto: str, days: int = 30, limit: int = 3, kind: str | None = None) -> list[str]:
+    """R11：主角最近 30 天的新聞。交接單 007：先用向量庫（選手 ID 過濾＋「選手名＋故事類型」語意排序，附出處）；
+    向量庫沒建、套件沒裝、或 .env NEWS_VECTORS=0 → 退回中英文名比對已存的內文：標題（來源，日期）：提到主角的兩三句。"""
     import datetime as dt
+    from brief import vectors
+    from brief.llm import _env
+    if _env("NEWS_VECTORS") != "0":
+        try:
+            hits = vectors.news_for_story(con, list(names), upto, kind=kind, days=days, k=limit)
+        except Exception:  # noqa: BLE001 — 向量庫出錯不擋稿，退回關鍵字
+            hits = None
+        if hits is not None:
+            return hits
     since = (dt.date.fromisoformat(upto[:10]) - dt.timedelta(days=days)).isoformat()
     keys = [k for n in names for k in sl.members(n)]
     if not keys:
