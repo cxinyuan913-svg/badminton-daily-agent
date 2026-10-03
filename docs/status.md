@@ -46,7 +46,7 @@ Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 - 無
 
 ### 待 Raymond 決定
-1. **重新註冊排程**（必做）：用系統管理員 PowerShell 執行 `powershell -ExecutionPolicy Bypass -File scripts\register_task.ps1`，粉專才會改到 18:00
+1. ~~重新註冊排程~~ → **Raymond 10-03 18:20 已用系統管理員跑完**：7 個排程都是 S4U，`badminton-fbpost` 下次 10-04 18:00（今天註冊時已過 18:00，今天沒跑）
 2. ~~週一週報的賽事層級順序~~ → **Raymond：照目前順序**（Grade 1 → 綜合運動會 → 年終總決賽 → S1000 → S750 → 洲際錦標賽 → S500 → S300 → 世大運 → S100 → IC → IS）
 3. ~~每日預算~~ → **Raymond 選 A：賽前看點不算進每日預算**（已做：`budget_exempt`，`spent_taipei_day` 排除）
 
@@ -68,12 +68,9 @@ Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 - 影片腳本目前每天最多 2 支、台灣故事 1 支；R3 規定台灣戰報只在粉專（10-01 notes 20:35）
 
 ### 待 Raymond 決定
-1. **這站 9 位台灣選手的中文名**（`review.csv` 候選，括號是拼音距離）
-   - Yun Jung CHANG 張芸榕(1)、Yi Tsen HSIEH 謝宜岑(1)、YANG Chieh Dan 楊介丹(1)、LU Chia Pin 呂佳彬(1)、Hsuan Ni CHEN 陳宣妮(1)、Chia-Yi KUNG 龔嘉誼(1)、Yu Wei LIN 林羽珮(1)：都是「建議採用」
-   - LU Chia Hung：劉家宏(1)／呂家弘(1) 兩個並列
-   - Jui-Yi HSU：許芮苡(2)
-2. **影片腳本要不要寫台灣選手名次的故事**（目前 R3：台灣戰報只在粉專）
-3. **review.csv 其餘 175 人**：建議帶去 claude.ai 批次勾選
+1. ~~9 位台灣選手中文名~~ → **2A 全部採用**（LU Chia Hung＝呂家弘）〔a1660c1〕
+2. ~~影片腳本寫台灣名次故事~~ → **3C 維持**，台灣戰報只在粉專
+3. **review.csv 其餘 175 人**：仍待 claude.ai 批次勾選（未決）
 
 ## 2026-10-03 17:40（Claude Code）— 收集端兩題（Raymond 1A、2A）
 
