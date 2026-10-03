@@ -3,6 +3,40 @@
 Claude Code 每次工作結束前更新這份：做了什麼、卡在哪、下一步。
 Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
+## 2026-10-03 17:40（Claude Code）— 收集端兩題（Raymond 1A、2A）
+
+### 完成
+- **1A 兩個字的名字不算進「選手名 ≥ 2 次」**（`news.MIN_NAME_LEN`=3）
+  - 測試用 ETtoday 那篇棒球新聞的真實頁面（`tests/test_news.py::test_two_char_names_do_not_count`）
+- **2A 只取文章本文**（`foreign_names.article_html`／`BODY_START`／`BODY_MODE`）
+  - 中央社 `div.paragraph`、ETtoday `div.story`：取容器內的 `<p>`。中央社容器裡還夾著相關新聞清單
+  - nownews `#articleContent`、公視 `div.post-article`：取容器全文，去掉廣告區塊
+    - 原因：nownews 正文不在 `<p>`、公視導言在 `<div>`
+  - 找不到容器（改版）就退回整頁 `<p>`
+  - fixture：`tests/fixtures/article_pages/`（5 頁，10-03 實抓），測試 `tests/test_article_text.py`
+- **資料清理**（先備份到 `data/backups/brief_before_article_cleanup_*.db`）
+  - 18 篇台灣媒體文章重抓：16 篇換成乾淨本文
+  - 2 篇用新規則重判不是羽球，已刪除 `foreign_article`／`news_item`，`news_seen` 改 0：
+    - 中央社〈亞運網球女雙闖4強保底銅牌 謝淑薇直言賽程不合理〉：原本是選單裡的「羽球」讓它過關，本文只有 1 次
+    - ETtoday〈馬丁利仍傳卸任費城人代理總教練〉
+  - 兩篇都沒有產生譯名證據（`foreign_name_seen` 0 筆）
+- **向量庫同步**：刪掉這 18 篇的舊段落，重轉 16 篇，共 40 段，45 秒
+  - 全庫現在 1,354 篇、3,909 段（原 4,029），2,233 段標到選手，44.6 MB
+- 測試 275 個全過
+
+### 發現與決定
+- 原本 18 篇的段落有一大半是網站文字（cookie 聲明、選單、相關新聞），清掉後只剩 40 段
+
+### 卡住
+- 無
+
+### 待 Raymond 決定
+- 無（10 題查詢的初判如有不同意見再說）
+
+### 下一步
+- 觀察下一個比賽日故事腳本的【新聞】區（向量庫來源、附網址）
+- TSNA 即時收集也走 `page_text`，目前沒有容器規則（退回整頁 `<p>`）。之後有 TSNA 文章被收進來時，再看要不要補規則
+
 ## 2026-10-03 17:00（Claude Code）— 交接單 007 驗收完成
 
 ### 完成
