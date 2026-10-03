@@ -143,7 +143,8 @@ def test_reunion_needs_both_doubles_specialists():
     assert not sl.doubles_specialist(con, 91254, "2026-10-03")          # LU Chia Hung
     assert sl.doubles_specialist(con, 0, "2026-10-03") is False         # 沒有比賽紀錄
     allm = sl.tournament_matches(con, 5766, "2026-10-03")
-    lu = [m for m in allm if m["date"][:10] == "2026-10-03" and m["event"] == "MD" and "LU Chia" in m["loser"]["name"]]
+    pair = con.execute("SELECT pairing_id FROM pairing WHERE player_a_id IN (86722, 91254) AND player_b_id IN (86722, 91254)").fetchone()[0]
+    lu = [m for m in allm if m["date"][:10] == "2026-10-03" and pair in (m["winner"]["pairing_id"], m["loser"]["pairing_id"])]
     assert lu and not [c for m in lu for c in sl.candidates_for_match(con, m) if c["kind"] in ("reunion", "split")]
     final = [m for m in sl.tournament_matches(con, 5874, "2026-09-29") if m["event"] == "MD" and m["round"] == "Final"][0]
     assert [c for c in sl.candidates_for_match(con, final) if c["kind"] == "reunion"]
