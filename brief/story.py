@@ -24,7 +24,7 @@ EXAMPLES = ROOT / "tests" / "fixtures" / "story_examples"
 STORY_EFFORT = "low"     # 推理強度實驗（notes 15:20）：opus low 兩個故事都一次通過、每支約 US$0.05；high 在 4000 token 內會被截斷
 STORY_MIN = 9.0          # 分數門檻（status.md 記錄；依 Raymond 回饋調）
 TPE_BONUS = 3.0          # 有台灣選手的故事加分（台灣視角變成選題偏好）
-MAX_PER_DAY = 2
+MAX_PER_DAY = 1          # 10-03 Raymond：影片腳本一天最多一支（原本 2：最高分＋台灣故事各一支）；台灣故事靠 +3 加分競爭
 NO_NEWS = "無（最近 30 天沒有主角的新聞）"
 NO_TRIVIA = "無（沒有相關的審過冷知識）"
 MAX_BRANCHES = 3         # 伏筆支線素材最多 3 條（notes 13:45）
@@ -116,11 +116,16 @@ def _tpe(c: dict) -> bool:
     return "中華台北" in c["facts"][0]
 
 
-def pick(cands: list[dict], threshold: float = STORY_MIN) -> list[dict]:
-    """分數最高的 1 支；最高分的不含台灣選手、而有含台灣選手且分數 ≥ 門檻的故事，再加 1 支。
-    分數 = 候選分數 ＋ 台灣加分；低於門檻就不產（寧缺勿濫）。"""
+def ranked(cands: list[dict], threshold: float = STORY_MIN) -> list[dict]:
+    """所有故事依最終分數（候選分數＋台灣加分）排序，只留 ≥ 門檻的。"""
     scored = sorted(({**c, "final": c["score"] + (TPE_BONUS if _tpe(c) else 0)} for c in cands), key=lambda c: -c["final"])
-    scored = [c for c in scored if c["final"] >= threshold]
+    return [c for c in scored if c["final"] >= threshold]
+
+
+def pick(cands: list[dict], threshold: float = STORY_MIN) -> list[dict]:
+    """分數最高的故事（MAX_PER_DAY＝1，10-03 Raymond）。分數 = 候選分數 ＋ 台灣加分；低於門檻就不產（寧缺勿濫）。
+    MAX_PER_DAY 若改回 2：最高分不含台灣選手時，再加分數 ≥ 門檻的台灣故事一支。"""
+    scored = ranked(cands, threshold)
     if not scored:
         return []
     out = [scored[0]]

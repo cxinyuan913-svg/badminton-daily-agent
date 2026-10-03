@@ -32,11 +32,11 @@ def c(score, tpe, kind="rivalry"):
     return {"kind": kind, "score": score, "event": "WS", "facts": [first + f" {score}", "x"]}
 
 
-def test_pick_one_or_two_with_tpe_preference():
-    assert [x["score"] for x in story.pick([c(20, False), c(7, True), c(15, False)])] == [20, 7]   # 7+3 ≥ 9
-    assert [x["score"] for x in story.pick([c(20, False), c(5, True)])] == [20]                    # 台灣故事未達門檻
-    assert [x["score"] for x in story.pick([c(12, True), c(20, False)])] == [20, 12]
-    assert [x["score"] for x in story.pick([c(14, True), c(10, False)])] == [14]                   # 最高分已含台灣
+def test_pick_only_one_with_tpe_bonus():
+    """10-03 Raymond：一天最多一支；台灣故事 +3 加分，分數最高的那支。"""
+    assert [x["score"] for x in story.pick([c(20, False), c(7, True), c(15, False)])] == [20]
+    assert [x["score"] for x in story.pick([c(12, True), c(14, False)])] == [12]                   # 12+3 > 14
+    assert [x["score"] for x in story.pick([c(14, True), c(10, False)])] == [14]
     assert story.pick([c(5, False)]) == []                                                          # 寧缺勿濫
 
 

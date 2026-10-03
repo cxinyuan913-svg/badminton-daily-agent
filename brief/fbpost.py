@@ -131,7 +131,7 @@ def choose(con, today: str) -> tuple[str, list[str], dict]:
             facts.append(f"昨天台灣選手對外國選手 {won} 勝 {len(tw) - won} 負（共 {len(tw)} 場；台灣內戰另計）")
             # R10：只挑當天最有故事的一場當主角（故事分數最高的台灣故事；沒有就挑重點場次的第一場），其他一句帶過
             cands, daym, allm = story.day_candidates(con, t, y)
-            tpe_story = next((c for c in story.pick(cands, threshold=0) if story._tpe(c)), None)
+            tpe_story = next((c for c in story.ranked(cands, threshold=0) if story._tpe(c)), None)   # 不受影片一天一支限制
             lines = sl.taiwan_facts(con, t, ms, whole=False)
             main = tpe_story["facts"] if tpe_story else key_tpe_lines(lines, limit=1)
             facts += ["【主角（當天最有故事的一場）】"] + main
