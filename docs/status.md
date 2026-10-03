@@ -3,6 +3,31 @@
 Claude Code 每次工作結束前更新這份：做了什麼、卡在哪、下一步。
 Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 
+## 2026-10-03 17:30（Claude Code）— Raymond 對 10-03 reunion 腳本（LU Chia Pin／LU Chia Hung）的回饋
+
+### 完成
+- **拆夥／重組只寫專業雙打組合**〔d77eafe〕：兩人近 2 年雙打場數都要 ≥ 一半（`storylines.doubles_specialist`）
+  - LU Chia Hung 近 2 年單打 50 場、雙打 4 場，所以不算
+  - 回歸測試用真實資料：卡爾南多／馬丁的亞運重組故事照樣產生
+- 測試 276 個全過
+
+### 發現與決定
+- **中文名**：LU 兄弟沒有中文名，因為他們在 `config/ctba/review.csv`（中華羽協名單比對、拼音距離不是 0 或不唯一，等 Raymond 確認）
+  - 這份清單共 184 人都還沒確認
+  - North Harbour 這站缺中文名的台灣選手有 9 位，都在清單裡
+- **North Harbour（IC）台灣名次**（截至 10-03 四強）：
+  - 決賽：男雙台灣內戰（邱紹華／林秉緯 vs 林廷禹／黃琮譯）、女單台灣內戰（董秋彤 vs 陳肅諭）、男單王柏崴、女雙謝宓妍／余芊慧
+  - 四強：男單黃鈺、廖倬甫；男雙張課琦／陳勝發、LU Chia Pin／LU Chia Hung；女雙 Hsuan Ni CHEN／Chia-Yi KUNG；混雙盧震／Yun Jung CHANG
+- 影片腳本目前每天最多 2 支、台灣故事 1 支；R3 規定台灣戰報只在粉專（10-01 notes 20:35）
+
+### 待 Raymond 決定
+1. **這站 9 位台灣選手的中文名**（`review.csv` 候選，括號是拼音距離）
+   - Yun Jung CHANG 張芸榕(1)、Yi Tsen HSIEH 謝宜岑(1)、YANG Chieh Dan 楊介丹(1)、LU Chia Pin 呂佳彬(1)、Hsuan Ni CHEN 陳宣妮(1)、Chia-Yi KUNG 龔嘉誼(1)、Yu Wei LIN 林羽珮(1)：都是「建議採用」
+   - LU Chia Hung：劉家宏(1)／呂家弘(1) 兩個並列
+   - Jui-Yi HSU：許芮苡(2)
+2. **影片腳本要不要寫台灣選手名次的故事**（目前 R3：台灣戰報只在粉專）
+3. **review.csv 其餘 175 人**：建議帶去 claude.ai 批次勾選
+
 ## 2026-10-03 17:40（Claude Code）— 收集端兩題（Raymond 1A、2A）
 
 ### 完成
