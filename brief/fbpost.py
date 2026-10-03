@@ -18,17 +18,20 @@ import json
 import re
 from pathlib import Path
 
-from brief import cite, grade3, hooks, story, storylines as sl, verify, zh
+from brief import cite, digest, grade3, hooks, story, storylines as sl, verify, zh
 from brief.llm import _env
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "data" / "posts"
 TRIVIA_RULES = ROOT / "config" / "trivia_rules.md"
-EFFORTS = ("low", "medium")         # 寫手 Opus 的推理強度：low 不過才試 medium（notes 23:15）
+EFFORTS = ("medium",)               # 寫手 Opus 的推理強度：10-03 Raymond 改成直接用 medium（原本 low 不過才試 medium）
 # 字數（notes 21:10）：故事貼文、台灣戰報 500–1,800；冷知識 300–1,200。上限是「可以寫到」，素材不夠就短
 BODY_RANGE = (500, 1800)
 BODY_RANGE_TRIVIA = (300, 1200)
 TRIVIA_KINDS = {"history", "rivalry", "rules", "ranking", "hook"}
+LONG_KINDS = {"tw_weekly", "ranking"}      # 10-03 Raymond：週一台灣週報、週二排名報告——字數不限，不套 R7 數字上限與 R10 組數上限
+BODY_RANGE_LONG = (300, 100000)
+POST_MAX_TOKENS_LONG = 32000
 POST_MAX_TOKENS = 12000             # 長文＋推理，輸出上限依字數調高（21:10）
 MAX_EMOJI = 5
 EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿⭐⬆⬇↔-⇿]")
@@ -82,6 +85,49 @@ def _tournaments_on(con, day: str) -> list[dict]:
     return [t for t in ts if t["level"] not in grade3.PROMOTE or grade3.late_day(con, t["tournament_id"], day)]
 
 
+# 10-03 Raymond：週一台灣週報從最高級的比賽開始寫（層級排序；同層級依開賽日）
+LEVEL_ORDER = ["G1_IND", "G1_TEAM", "G1_EVENT", "MULTI", "MULTI_TEAM", "WTF", "S1000", "S750", "CONT_IND", "CONT_TEAM",
+               "S500", "S300", "FISU", "S100", "IC", "IS"]
+PLACE_DEPTH = ["W", "F", "SF", "QF", "R16", "R32", "R64", "R128", "R256", "R512", "R1024"]
+
+
+def taiwan_week_facts(con, today: str) -> list[str]:
+    """週一粉專（10-03 Raymond）：上週一到週日，台灣選手在每一站的名次與每一場比賽，賽事依層級由高到低。
+    不收 Future Series（賽事層級決議）；已取消的賽事不算。沒有台灣選手出賽 → []。"""
+    d = dt.date.fromisoformat(today)
+    start, end = (d - dt.timedelta(days=7)).isoformat(), (d - dt.timedelta(days=1)).isoformat()
+    rows = con.execute(
+        f"""SELECT DISTINCT t.tournament_id, t.name, t.level, t.start_date, t.end_date FROM match m JOIN tournament t USING (tournament_id)
+            WHERE m.match_date BETWEEN ? AND ? AND m.winner_side IN (1, 2) AND t.level IS NOT NULL AND t.level <> 'FS'
+              AND {grade3.ACTIVE_SQL.replace(" AND name", " AND t.name").replace("COALESCE(status", "COALESCE(t.status")}""",
+        (start, end)).fetchall()
+    ts = sorted((dict(zip(["tournament_id", "name", "level", "start_date", "end_date"], r)) for r in rows),
+                key=lambda t: (LEVEL_ORDER.index(t["level"]) if t["level"] in LEVEL_ORDER else 99, t["start_date"] or ""))
+    facts = []
+    for t in ts:
+        ms = [m for m in sl.tournament_matches(con, t["tournament_id"], end) if start <= m["date"][:10] <= end]
+        tpe = [m for m in ms if m["winner"]["home"] or m["loser"]["home"]]
+        if not tpe:
+            continue
+        facts.append(f"【{zh.tournament(t['name'])}（{zh.level(t['level'])}，{t['start_date']}～{t['end_date']}）】")
+        place = sl.placings(con, t["tournament_id"])
+        entries = {}
+        for m in tpe:
+            for side in (m["winner"], m["loser"]):
+                if side["home"]:
+                    entries.setdefault((m["event"], side["pairing_id"]), side["name"])
+        ranked = sorted(entries.items(), key=lambda kv: (
+            PLACE_DEPTH.index(place.get(kv[0])) if place.get(kv[0]) in PLACE_DEPTH else 99,
+            digest.EVENT_ORDER.index(kv[0][0]) if kv[0][0] in digest.EVENT_ORDER else 9))
+        for (ev, pid), name in ranked:
+            pos = place.get((ev, pid))
+            facts.append(f"台灣 {sl.EVENT_ZH.get(ev, ev)} {name}：本站名次 {sl.place_name(t['level'], pos) if pos else '（名次未定）'}")
+        facts += sl.taiwan_facts(con, t, tpe, whole=False)
+    if not facts:
+        return []
+    return [f"上週（{start}～{end}）台灣選手全部戰報，賽事依層級由高到低；每站先列名次、再列每一場"] + facts
+
+
 def _today_opponents(con, t: dict, today: str) -> list[str]:
     """今天（台灣時間）台灣選手的對手與開打時間：用資料庫的賽程欄位（對戰、match_time_utc），不放賽果。"""
     out = []
@@ -114,7 +160,19 @@ def key_tpe_lines(lines: list[str], limit: int = 6) -> list[str]:
 
 
 def choose(con, today: str) -> tuple[str, list[str], dict]:
-    """回傳（類型, 事實清單, 補充資訊）。today = 台灣時間的日期。"""
+    """回傳（類型, 事實清單, 補充資訊）。today = 台灣時間的日期。
+    10-03 Raymond：週一＝上週台灣選手全部戰報（從最高級的比賽寫起）；週二排名更新後＝排名變動報告；兩者字數不限。
+    沒有素材（上週沒有台灣選手出賽、週二還沒有新排名）就照平常的順序。"""
+    d = dt.date.fromisoformat(today)
+    if d.weekday() == 0:
+        facts = taiwan_week_facts(con, today)
+        if facts:
+            return "tw_weekly", facts, {"gap": 1}
+    if d.weekday() == 1:
+        from brief import script
+        w = script.weekly_facts(con, full=True)
+        if w and w["week"] >= (d - dt.timedelta(days=2)).isoformat():
+            return "ranking", w["facts"], {"week": w["week"], "gap": 0}
     y = (dt.date.fromisoformat(today) - dt.timedelta(days=1)).isoformat()
     ts = _tournaments_on(con, y)
     tpe_ts = []
@@ -300,6 +358,8 @@ def recent_rivalry(con, d: dt.date) -> list[str]:
 
 # ---------------------------------------------------------------- 產生與檢查
 def body_range(kind: str) -> tuple[int, int]:
+    if kind in LONG_KINDS:
+        return BODY_RANGE_LONG
     return BODY_RANGE_TRIVIA if kind in TRIVIA_KINDS else BODY_RANGE
 
 
@@ -329,11 +389,11 @@ def count_numbers(text: str) -> int:
     return n + len(re.findall(r"\d+(?:\.\d+)?", text))
 
 
-def check_form(body: str, gap: int | None) -> list[str]:
+def check_form(body: str, gap: int | None, numbers: bool = True) -> list[str]:
     """R5、R6、R7 的固定檢查（不靠模型判斷）。R7 只固定檢查全篇 ≤ 5 個數字；「每段最多 1 個」交給編輯參考（notes 10-02 05:55）。"""
     problems = []
     total = count_numbers(body)
-    if total > NUMBER_BUDGET:
+    if numbers and total > NUMBER_BUDGET:
         problems.append(f"數字 {total} 個，超過 {NUMBER_BUDGET} 個（R7：只留沒有它故事就不成立的數字，其他改用文字描述）")
     lines = [l for l in body.strip().splitlines() if l.strip()]
     if not lines or lines[-1].strip() != SIGNATURE:
@@ -361,7 +421,7 @@ def check(out: dict, facts: list[str], kind: str = "story", gap: int | None = No
         problems.append(f"正文 {n} 字，不在 {lo}–{hi}")
     if body.lstrip().startswith("大家好"):
         problems.append("不要用「大家好」開場")
-    problems += check_form(body, gap)
+    problems += check_form(body, gap, numbers=kind not in LONG_KINDS)
     body = body.replace(SIGNATURE, "")
     if len(EMOJI.findall(body)) > MAX_EMOJI:
         problems.append(f"表情符號超過 {MAX_EMOJI} 個")
@@ -388,7 +448,7 @@ def check(out: dict, facts: list[str], kind: str = "story", gap: int | None = No
         if missing:
             problems.append("指定的故事沒講到：" + "、".join(missing))
     sides = sl.count_sides(checked, facts)
-    if len(sides) > story.MAX_SIDES and not theme:
+    if len(sides) > story.MAX_SIDES and not theme and kind not in LONG_KINDS:
         problems.append(f"出現 {len(sides)} 組選手（R10：最多 {story.MAX_SIDES} 組，1–2 組主角、其他一句帶過）：" + "、".join(sides[:6]))
     rep = rehashed_scores(checked)
     if rep:
@@ -456,6 +516,9 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
             f"**範例裡外國選手的中文名是暫用的，不准照用**——名字一律照事實清單：事實清單寫英文就寫英文）：\n{_examples_fb(con)}"
             + (("\n\n**這篇是指定的多故事主題，下面每一個都要講到（每個至少一段）**：\n"
                  + "\n".join(f"{i + 1}. {x['title']}" for i, x in enumerate(theme))) if theme else "")
+            + (("\n\n**這篇是" + KIND_LABEL[kind] + "：字數不限，事實清單列到的每一組台灣選手都要寫到，照事實清單的順序寫"
+                "（賽事依層級由高到低、每站一段或數段）；不適用 R7 的數字上限與 R10 的組數上限，比分與名次照實寫。**")
+               if kind in LONG_KINDS else "")
             + f"\n\n事實清單：\n" + cite.facts_block(facts))
     branches = hooks.prepare(branches, facts)
     if branches:                                           # 伏筆（R16，notes 13:45）
@@ -493,6 +556,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
     context = (f"貼文日 {today}；距離故事最新一場比賽 {gap if gap is not None else '很多'} 天（R6：+1 天內新聞語氣，超過故事語氣）；"
                + story.news_context(facts) + "；" + story.rules_context()
                + (("；指定多故事（每一個都要講到，這篇不適用 R10 的組數上限）：" + "、".join(x["title"] for x in theme)) if theme else "")
+               + (f"；這篇是{KIND_LABEL[kind]}（字數不限，不適用 R7 數字上限與 R10 組數上限，要列到每一組）" if kind in LONG_KINDS else "")
                + ("；" + hooks.editor_context(branches) if branches else ""))
     ann = lambda o: post_text(o) + ("\n\n逐句引用：\n" + cite.annotated(sentences_of(o), facts) if o.get("paragraphs") else "")
     bad = story.edit(editor, out, con, {"day": today}, text=ann(out), context=context)
@@ -520,7 +584,7 @@ def generate(llm, kind: str, facts: list[str], con=None, today: str | None = Non
     return out, []
 
 
-KIND_LABEL = {"taiwan": "台灣戰報", "story": "故事貼文", "ranking": "排名變化", "history": "冷知識：歷史上的今天",
+KIND_LABEL = {"taiwan": "台灣戰報", "story": "故事貼文", "ranking": "排名變動報告", "tw_weekly": "台灣週報（上週全部戰報）", "history": "冷知識：歷史上的今天",
               "rivalry": "冷知識：宿敵／宰制", "rules": "冷知識：規則與賽制", "hook": "填坑專題",
               "none": "（沒有素材）"}
 
@@ -572,7 +636,8 @@ def run(con, today: str, make_llm=None, send=None, alert=None, ignore_budget: bo
     editor = make_llm() if make_llm else script.make_script_llm("heavy", con, effort="low")      # 編輯：Opus low（05:55）
     out, problems, used = None, [], None
     for effort in EFFORTS:
-        llm = make_llm() if make_llm else script.make_script_llm("heavy", con, effort=effort, max_tokens=POST_MAX_TOKENS)
+        llm = make_llm() if make_llm else script.make_script_llm("heavy", con, effort=effort,
+                                                                         max_tokens=POST_MAX_TOKENS_LONG if kind in LONG_KINDS else POST_MAX_TOKENS)
         checker = None if make_llm else (lambda text: verify.verify(text, con=con))     # 獨立查證員（notes 11:25 B）
         out, problems = generate(llm, kind, facts, con, today, gap, editor, verifier=checker, branches=info.get("branches"))
         used = effort

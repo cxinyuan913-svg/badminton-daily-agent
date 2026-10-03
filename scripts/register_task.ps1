@@ -2,7 +2,7 @@
 #   badminton-backup        每天 04:00：data\brief.db 一致備份到 data\backups\，保留 7 份
 #   badminton-daily-agent   每天 06:00：收集＋晨報（新聞、IC／IS 精選、週一週報、漏發提醒）
 #   badminton-watch         每 30 分鐘：每站當地當天打完就發（brief.watch）＋新聞收集
-#   badminton-fbpost        每天 07:00：粉專貼文草稿（FBPOST=1 才推）
+#   badminton-fbpost        每天 18:00：補抓排名 → 粉專貼文 → 影片腳本 1 支（10-03 Raymond：固定產出統一晚上 6 點）
 #   badminton-offsite       每週一 12:00：最新備份 gzip 推到主機 bda-vultr（異地備份）
 #   badminton-backfill-bwf  每小時：BWF 新聞回補（可續跑，做完就直接結束）
 #   badminton-backfill-tsna 每小時：TSNA 新聞回補（可續跑，做完就直接結束）
@@ -43,7 +43,7 @@ Register "badminton-backup" (New-Action "run_backup.cmd") (New-ScheduledTaskTrig
 Register "badminton-daily-agent" (New-Action "run_daily.cmd") (New-ScheduledTaskTrigger -Daily -At 6:00am) $settings "badminton: daily collection and morning report"
 $every30 = New-ScheduledTaskTrigger -Once -At (Get-Date).Date -RepetitionInterval (New-TimeSpan -Minutes 30)
 Register "badminton-watch" (New-Action "run_watch.cmd") $every30 $settings "badminton: send each event when its local day finishes"
-Register "badminton-fbpost" (New-Action "run_fbpost.cmd") (New-ScheduledTaskTrigger -Daily -At 7:00am) $settings "badminton: FB page post draft"
+Register "badminton-fbpost" (New-Action "run_fbpost.cmd") (New-ScheduledTaskTrigger -Daily -At 6:00pm) $settings "badminton: rankings, FB page post and video script at 18:00"
 Register "badminton-offsite" (New-Action "run_offsite.cmd") (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 12:00pm) $settings "badminton: weekly offsite backup to host"
 foreach ($src in "bwf", "tsna") {
     $hourly = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Hours 1)

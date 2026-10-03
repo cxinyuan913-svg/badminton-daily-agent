@@ -162,8 +162,12 @@ def facts_for(con, t: dict, day: str, style: str, next_preview: list[str] | None
     return {"facts": dedup, "flags": flags, "stories": stories}
 
 
-def weekly_facts(con, week: str | None = None) -> dict | None:
-    """每週排名更新：本週 vs 上週（只用 ranking_snapshot）。"""
+def weekly_facts(con, week: str | None = None, full: bool = False) -> dict | None:
+    """每週排名更新：本週 vs 上週（只用 ranking_snapshot）。
+    full=True：週二粉專的排名變動報告（10-03 Raymond，字數不限）——台灣所有前 100 名（不只追蹤名單）、
+    各項目前 10 名完整名單、前 50 名內升降最多各 3 組。"""
+    if full:
+        return _ranking_report_facts(con, week)
     weeks = [w for (w,) in con.execute("SELECT DISTINCT week_date FROM ranking_snapshot ORDER BY 1 DESC LIMIT 2")] \
         if week is None else [week] + [w for (w,) in con.execute(
             "SELECT MAX(week_date) FROM ranking_snapshot WHERE week_date < ?", (week,))]
@@ -446,6 +450,43 @@ def run_weekly(con, make_llm=None, send=None, alert=None, week: str | None = Non
     if send and _env("SCRIPT_WEEKLY") == "1":
         send(to_discord("排名更新", title, out))
     return {"status": "ok", "out": out, "facts": f["facts"], "path": str(path)}
+
+
+def _ranking_report_facts(con, week: str | None = None) -> dict | None:
+    weeks = [w for (w,) in con.execute("SELECT DISTINCT week_date FROM ranking_snapshot ORDER BY 1 DESC LIMIT 2")] \
+        if week is None else [week] + [w for (w,) in con.execute(
+            "SELECT MAX(week_date) FROM ranking_snapshot WHERE week_date < ?", (week,))]
+    if len(weeks) < 2 or not weeks[1]:
+        return None
+    now, prev = weeks
+    facts = [f"世界排名 {now} 更新（與 {prev} 比較；只列前 100 名）"]
+    for ev in ["MS", "WS", "MD", "WD", "XD"]:
+        cur = {pid: r for pid, r in con.execute(
+            "SELECT pairing_id, rank FROM ranking_snapshot WHERE week_date=? AND event=?", (now, ev))}
+        old = {pid: r for pid, r in con.execute(
+            "SELECT pairing_id, rank FROM ranking_snapshot WHERE week_date=? AND event=?", (prev, ev))}
+        side = lambda pid: digest._side(con, pid)
+        evz = zh.EVENT[ev]
+
+        def change(pid):
+            o, r = old.get(pid), cur.get(pid)
+            return "新進前 100" if o is None else ("持平" if o == r else (f"上升 {o - r} 名" if o > r else f"下滑 {r - o} 名"))
+        top = sorted((r, pid) for pid, r in cur.items() if r <= 10)
+        facts.append(f"【{evz} 前 10 名】" + "；".join(f"第 {r} 名 {side(pid)['name']}（{zh.country(side(pid)['country'])}，"
+                                                    f"上週 {old.get(pid, '—')}，{change(pid)}）" for r, pid in top))
+        for r, pid in sorted((r, pid) for pid, r in cur.items()):
+            if side(pid)["country"] == "TPE":
+                facts.append(f"台灣 {evz} {side(pid)['name']}：第 {r} 名（上週 {old.get(pid, '—')}，{change(pid)}）")
+        for pid in [p for p, r in old.items() if p not in cur and side(p)["country"] == "TPE"]:
+            facts.append(f"台灣 {evz} {side(pid)['name']}：跌出前 100（上週第 {old[pid]} 名）")
+        moves = [(old[pid] - r, pid, r) for pid, r in cur.items() if r <= 50 and pid in old and old[pid] != r]
+        for up, pid, r in sorted(moves, reverse=True)[:3]:
+            if up > 0:
+                facts.append(f"{evz} 前 50 名內上升：{side(pid)['name']}（{zh.country(side(pid)['country'])}），上升 {up} 名到第 {r} 名")
+        for up, pid, r in sorted(moves)[:3]:
+            if up < 0:
+                facts.append(f"{evz} 前 50 名內下滑：{side(pid)['name']}（{zh.country(side(pid)['country'])}），下滑 {-up} 名到第 {r} 名")
+    return {"facts": facts, "flags": {"upset": False, "comeback": False, "first_title": False}, "week": now}
 
 
 DAILY_TABLE = "CREATE TABLE IF NOT EXISTS script_daily (day TEXT PRIMARY KEY, kind TEXT, ran_at TEXT NOT NULL DEFAULT (datetime('now')))"
