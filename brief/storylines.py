@@ -497,6 +497,19 @@ CAREER_LEVELS = ("G1_IND", "G1_EVENT", "WTF", "S1000", "S750", "S500", "MULTI", 
 DOUBLES = ("MD", "WD", "XD")
 SPLIT_GAP_DAYS = 120          # 同一組合兩場之間隔這麼久、而且中間有人換搭檔打了 ≥ 3 場 → 算拆夥
 OTHER_MIN = 3                 # 「主要搭檔」：一年至少一起打 3 場
+SPECIALIST_SHARE = 0.5        # 10-03 Raymond：近 2 年雙打場數至少佔一半，才算雙打選手（LU Chia Hung 單打 50 場、雙打 4 場）
+SPECIALIST_DAYS = 730
+
+
+def doubles_specialist(con, player: int, upto: str) -> bool:
+    """近 2 年以雙打為主（雙打場數 ≥ 一半）。單打選手偶爾和兄弟、隊友配雙打，不能寫成「拆夥再重組」的專業組合。"""
+    since = (dt.date.fromisoformat(upto[:10]) - dt.timedelta(days=SPECIALIST_DAYS)).isoformat()
+    rows = dict(con.execute("""SELECT m.event IN ('MD', 'WD', 'XD'), COUNT(*) FROM match m
+                               JOIN pairing pr ON pr.pairing_id IN (m.side1_id, m.side2_id)
+                               WHERE ? IN (pr.player_a_id, pr.player_b_id) AND m.match_date >= ? AND m.match_date <= ?
+                               GROUP BY 1""", (player, since, upto[:10] + "T99")).fetchall())
+    doubles, total = rows.get(1, 0), rows.get(1, 0) + rows.get(0, 0)
+    return total > 0 and doubles / total >= SPECIALIST_SHARE
 
 
 def _player_name(con, pid: int) -> str:
@@ -734,8 +747,8 @@ def candidates_for_match(con, m: dict) -> list[dict]:
                         "facts": [base, f"{ln}輸給{wn}的 {len(beaten)} 場裡，有 {cnt} 場在{zh.round_name(rnd)}（{SINCE}）"]})
     for side in (w, l):                                     # R12：拆夥後重組（一年內）、新組合首站
         h = partner_history(con, side["pairing_id"], m["event"], m["date"])
-        if not h:
-            continue
+        if not h or not all(doubles_specialist(con, p, m["date"]) for p in (h["a"], h["b"])):
+            continue                                        # 有人是單打為主 → 不是專業組合，不寫拆夥／重組（10-03）
         if h["splits"] and (dt.date.fromisoformat(m["date"]) - dt.date.fromisoformat(h["splits"][-1]["reunion"])).days <= 365:
             out.append({"kind": "reunion", "score": 5 + (3 if side is w else 0) + deep, "event": m["event"],
                         "facts": [base] + partner_facts(con, side["pairing_id"], m["event"], side["name"], m["date"])})

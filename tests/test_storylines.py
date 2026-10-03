@@ -132,3 +132,18 @@ def test_rank_time_points_1120():
         assert needle in text, needle
     assert "2026 亞運" not in text.split("重組後、這站之前拿到的冠軍：")[1].splitlines()[0]   # 進行中的這站不算
     assert "第 157" not in text
+
+
+@needs_db
+def test_reunion_needs_both_doubles_specialists():
+    """10-03 Raymond：LU Chia Pin／LU Chia Hung 是兄弟偶爾配雙打（LU Chia Hung 近 2 年單打 50 場、雙打 4 場），
+    不能寫成「拆夥再重組」；卡爾南多／馬丁照樣是重組故事。"""
+    from brief.crawler import connect
+    con = connect(str(DB))
+    assert not sl.doubles_specialist(con, 91254, "2026-10-03")          # LU Chia Hung
+    assert sl.doubles_specialist(con, 0, "2026-10-03") is False         # 沒有比賽紀錄
+    allm = sl.tournament_matches(con, 5766, "2026-10-03")
+    lu = [m for m in allm if m["date"][:10] == "2026-10-03" and m["event"] == "MD" and "LU Chia" in m["loser"]["name"]]
+    assert lu and not [c for m in lu for c in sl.candidates_for_match(con, m) if c["kind"] in ("reunion", "split")]
+    final = [m for m in sl.tournament_matches(con, 5874, "2026-09-29") if m["event"] == "MD" and m["round"] == "Final"][0]
+    assert [c for c in sl.candidates_for_match(con, final) if c["kind"] == "reunion"]
