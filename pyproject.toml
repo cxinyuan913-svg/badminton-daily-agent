@@ -11,7 +11,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "sqlite-vec>=0.1.6"]
+# 交接單 007 新聞向量庫：torch 請先依顯示卡裝 CUDA 版（pip install torch --index-url https://download.pytorch.org/whl/cu126），沒有 GPU 會用 CPU
+vectors = ["torch>=2.4", "sentence-transformers>=3", "sqlite-vec>=0.1.6"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

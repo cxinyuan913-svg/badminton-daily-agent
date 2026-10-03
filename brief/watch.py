@@ -280,6 +280,13 @@ def _news(con, client, alert=None) -> list[str]:
                 alert(f"**新聞來源** {'、'.join(fresh)} 連續 {news.ZERO_ALERT_HOURS} 小時整頁解析 0 則（網站可能改版），請檢查 brief/news.py")
     except Exception as e:  # noqa: BLE001
         errs.append(f"news alert: {e!r}")
+    try:                                  # 交接單 007：新文章切段轉向量（沒有新文章不載入模型）
+        from brief import vectors
+        from brief.llm import _env
+        if _env("NEWS_VECTORS") != "0":
+            vectors.update(con)
+    except Exception as e:  # noqa: BLE001
+        errs.append(f"vectors: {e!r}")
     return errs
 
 

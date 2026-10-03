@@ -294,7 +294,7 @@ def recent_rivalry(con, d: dt.date) -> list[str]:
     names = sl.side_names(best["facts"][:1])
     history = best["facts"] + careers
     return ([f"今天是 {d.isoformat()}，沒有比賽；最近 3 個月交手過的宿敵／宰制故事（最近一次交手 {best_date}）：", "【歷史】"]
-            + history + ["【新聞】"] + (story.recent_news(con, names, d.isoformat()) or [story.NO_NEWS])
+            + history + ["【新聞】"] + (story.recent_news(con, names, d.isoformat(), kind=best.get("kind")) or [story.NO_NEWS])
             + ["【冷知識】"] + (story.related_trivia(history) or [story.NO_TRIVIA]))
 
 
