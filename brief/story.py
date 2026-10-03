@@ -363,9 +363,13 @@ def _json(raw: str) -> dict:
         return {}
 
 
-def write(llm, user: str, facts: list[str], con=None, ctx: dict | None = None, attempts: int = 2,
+LENGTH_TARGET = 280   # 超長重寫時請寫手刪到這個字數（比上限 300 留一點空間）
+
+
+def write(llm, user: str, facts: list[str], con=None, ctx: dict | None = None, attempts: int = 3,
           branches: list[dict] | None = None) -> tuple[dict | None, list[str]]:
-    """寫手：最多 attempts 次，直到事實檢查通過。"""
+    """寫手：最多 attempts 次，直到事實檢查通過。
+    只因為太長被退時，把上一版附上請它刪減（10-03：從頭重寫每次都 400 字上下，414 → 362 仍超過 300）。"""
     from brief import script
     flags = _flags(facts)
     if hasattr(llm, "task"):
@@ -373,6 +377,10 @@ def write(llm, user: str, facts: list[str], con=None, ctx: dict | None = None, a
     problems: list[str] = []
     for attempt in range(attempts):
         prompt = user if not problems else user + "\n\n上一版沒有通過檢查，請修正：" + "；".join(problems)
+        if problems and all(p.startswith("口播 ") and "超過上限" in p for p in problems):
+            prompt += (f"\n\n上一版（JSON）如下。**在這一版上刪減**，不要從頭重寫：整段或整句刪掉次要的內容，"
+                       f"口播總字數刪到 {LENGTH_TARGET} 字以內；留下的句子 fact_ids 照舊，結構與 hook 照舊。\n"
+                       + json.dumps(out, ensure_ascii=False))
         out = assemble(_json(llm.complete(system_prompt(), prompt)))
         problems = check(out, facts, flags)
         if not problems:                                  # 逐句引用（11:25 A）：句子的數字要在它引用的事實裡

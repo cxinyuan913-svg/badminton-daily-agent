@@ -120,3 +120,22 @@ def test_system_prompt_uses_v2():
     sp = story.system_prompt()
     assert "說書人" in sp and "200–300" in sp and "價值段" in sp and "提到名字的句子（含留言問題、伏筆句）都要引用" in sp
     assert "純口播文字" not in sp                     # v2 的「輸出格式」由程式的 JSON 取代
+
+
+def test_too_long_retry_sends_previous_draft_to_trim():
+    """10-03：只因太長被退時，把上一版附給寫手刪減（不是從頭重寫）；最多 3 次。"""
+    import json
+
+    class Fake:
+        def __init__(self, outs):
+            self.outs, self.prompts = list(outs), []
+
+        def complete(self, system, user):
+            self.prompts.append(user)
+            return self.outs.pop(0)
+
+    long_out = {**out(VOICE * 2), "segments": [{**seg, "sentences": []} for seg in out(VOICE * 2)["segments"]]}
+    llm = Fake([json.dumps(long_out, ensure_ascii=False)] * 3)
+    res, problems = story.write(llm, "u", FACTS)
+    assert res is None and len(llm.prompts) == 3 and "超過上限 300" in problems[0]
+    assert "在這一版上刪減" in llm.prompts[1] and VOICE[:20] in llm.prompts[1] and "280" in llm.prompts[1]
