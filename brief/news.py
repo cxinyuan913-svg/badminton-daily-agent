@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS news_seen (
 """
 MAX_FETCH_PER_RUN = 15                            # 每來源每次最多抓幾篇內文（第一次上線列表有 20 則左右）
 SPORT_WORDS = ("羽球", "羽毛球")
+MIN_NAME_LEN = 3                                  # 選手名至少 3 個字才算進「選手名 ≥ 2 次」（10-03 Raymond 1A）
 
 
 def is_badminton(title: str, text: str, names: list[str]) -> bool:
@@ -219,7 +220,8 @@ def is_badminton(title: str, text: str, names: list[str]) -> bool:
     if sum(body.count(w) for w in ("羽毛球",)) + body.replace("羽毛球", "").count("羽球") >= 2:
         return True
     blob = (title or "") + "\n" + body
-    return sum(blob.count(n) for n in names) >= 2
+    # 10-03 Raymond 1A：兩個字的名字不算（中文沒有字界，「馬丁」會命中「馬丁利」，把棒球新聞判成羽球）
+    return sum(blob.count(n) for n in names if len(n) >= MIN_NAME_LEN) >= 2
 
 
 def player_names(con) -> list[str]:
@@ -259,7 +261,7 @@ def check_articles(con, client, source: str, rows: list[dict], names: list[str],
             continue
         if resp is None:
             continue
-        text = foreign_names.page_text(resp.text)
+        text = foreign_names.page_text(resp.text, source)
         ok = is_badminton(r["title"], text, names)
         con.execute("INSERT OR REPLACE INTO news_seen (url, source, title, badminton) VALUES (?,?,?,?)",
                     (r["url"], source, r["title"], int(ok)))

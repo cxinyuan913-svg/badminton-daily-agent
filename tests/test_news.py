@@ -144,3 +144,14 @@ def test_filter_rule_0725_tennis_counterexample():
     assert news.is_badminton("羽球亞運 周天成晉級", "", [])                          # 標題有羽球
     assert news.is_badminton("亞運戰況", "羽球男單開打。羽毛球館爆滿。", [])           # 全文 2 次
     assert news.is_badminton("周天成返台", "周天成說還要拚奧運。", ["周天成"])         # 選手名 2 次
+
+
+def test_two_char_names_do_not_count():
+    """10-03 Raymond 1A：ETtoday 棒球新聞寫兩次「馬丁利」，「馬丁」（MARTHIN 譯名）不能讓它過關。"""
+    from pathlib import Path
+    from brief import foreign_names
+    page = (Path(__file__).parent / "fixtures" / "article_pages" / "ettoday_3248227.html").read_text(encoding="utf-8")
+    text = foreign_names.page_text(page, "ettoday")
+    assert text.count("馬丁") >= 2
+    assert not news.is_badminton("從9勝19敗到殺進季後賽 馬丁利仍傳卸任費城人代理總教練", text, ["馬丁", "周天成"])
+    assert news.is_badminton("返台", "周天成說還要拚奧運，周天成週六飛芬蘭。", ["馬丁", "周天成"])      # 三個字照算
