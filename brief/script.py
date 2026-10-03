@@ -299,26 +299,31 @@ def generate(llm, style: str, facts: list[str], flags: dict, con=None, ctx: dict
             + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(facts)))
     if hasattr(llm, "task"):
         llm.task = f"script_{style}"
+    from brief.story import is_hard
     problems: list[str] = []
     for attempt in range(2):
-        prompt = user if not problems else user + "\n\n上一版沒有通過檢查，請修正：" + "；".join(problems)
+        prompt = user if not problems else user + "\n\n上一版有事實錯誤，請修正：" + "；".join(problems)
         out = _parse(llm.complete(SYSTEM, prompt))
         problems = check(out, facts, flags)
         log_check(con, ctx, style, llm, attempt + 1, problems)
-        if not problems:
+        if not any(is_hard(p) for p in problems):       # 10-03 Raymond：只有事實錯誤照擋，其他照樣產出、列在最前面
+            out["soft_problems"] = problems
             return out, []
+        problems = [p for p in problems if is_hard(p)]
     return None, problems
 
 
 def to_markdown(label: str, out: dict) -> str:
-    lines = [f"### {label}", "", "標題："] + [f"{i + 1}. {t}" for i, t in enumerate(out["titles"])]
+    from brief.story import soft_lines
+    lines = [f"### {label}", ""] + soft_lines(out) + ["標題："] + [f"{i + 1}. {t}" for i, t in enumerate(out["titles"])]
     lines += ["", "| 秒數 | 口播 | 字卡／畫面 |", "|---|---|---|"]
     lines += [f"| {s.get('time', '')} | {s.get('voice', '')} | {s.get('card', '')} |" for s in out["segments"]]
     return "\n".join(lines)
 
 
 def to_discord(label: str, title: str, out: dict) -> str:
-    lines = [f"🎬 **影片腳本草稿｜{title}｜{label}**"] + [f"{i + 1}. {t}" for i, t in enumerate(out["titles"])]
+    from brief.story import soft_lines
+    lines = [f"🎬 **影片腳本草稿｜{title}｜{label}**"] + soft_lines(out) + [f"{i + 1}. {t}" for i, t in enumerate(out["titles"])]
     lines += [f"`{s.get('time', '')}` {s.get('voice', '')} ／ 字卡：{s.get('card', '')}" for s in out["segments"]]
     return "\n".join(lines)
 
@@ -443,6 +448,39 @@ def run_weekly(con, make_llm=None, send=None, alert=None, week: str | None = Non
     return {"status": "ok", "out": out, "facts": f["facts"], "path": str(path)}
 
 
+DAILY_TABLE = "CREATE TABLE IF NOT EXISTS script_daily (day TEXT PRIMARY KEY, kind TEXT, ran_at TEXT NOT NULL DEFAULT (datetime('now')))"
+
+
+def run_daily(con, today: str | None = None, make_llm=None, send=None, alert=None, force: bool = False) -> dict:
+    """10-03 Raymond：影片腳本改成每天 18:00 固定產 1 支（不再每站打完就寫），都推 Discord。
+    昨天（台灣時間）有比賽 → 所有賽事裡分數最高的故事；週二沒有比賽故事、但有新排名 → 排名更新（2B）；
+    都沒有就不產。同一天只跑一次（script_daily）。"""
+    from brief import fbpost, story
+    today = today or taipei_today()
+    con.execute(DAILY_TABLE)
+    if not force and con.execute("SELECT 1 FROM script_daily WHERE day=?", (today,)).fetchone():
+        return {"status": "skipped_done"}
+    d = dt.date.fromisoformat(today)
+    y = (d - dt.timedelta(days=1)).isoformat()
+    best = None
+    for t in fbpost._tournaments_on(con, y):
+        picks = story.pick(story.day_candidates(con, t, y)[0])
+        if picks and (best is None or picks[0]["final"] > best[1]):
+            best = (t, picks[0]["final"])
+    if best:
+        res, kind = run_for_day(con, best[0], y, None, make_llm=make_llm, send=send, alert=alert, styles=["story_main"]), "story"
+    elif d.weekday() == 1:
+        w = weekly_facts(con)
+        if not (w and w["week"] >= (d - dt.timedelta(days=2)).isoformat()):
+            return {"status": "skipped", "reason": "週二還沒有新排名、昨天也沒有比賽"}
+        res, kind = run_weekly(con, make_llm=make_llm, send=send, alert=alert), "ranking"
+    else:
+        return {"status": "skipped", "reason": "昨天沒有比賽"}
+    con.execute("INSERT OR REPLACE INTO script_daily (day, kind) VALUES (?, ?)", (today, kind))
+    con.commit()
+    return {"status": "ok", "kind": kind, "result": res}
+
+
 def first_preview(con, name: str) -> bool:
     """開關是 dry 時，某個新版本的第一支仍推一次給 Raymond 看（notes 10-03：v2 等比賽日自然產生後推一份）。
     第一次呼叫回傳 True 並記錄，之後都是 False。"""
@@ -485,9 +523,16 @@ def main():
     ap.add_argument("--date")
     ap.add_argument("--styles", nargs="*")
     ap.add_argument("--weekly", action="store_true")
+    ap.add_argument("--daily", action="store_true", help="每天 18:00 的固定腳本（10-03 Raymond）")
     a = ap.parse_args()
     con = connect(a.db)
     zh.apply_player_names(con)
+    if a.daily:
+        from brief import discord
+        alert = lambda text: discord.send(discord.webhook("DISCORD_WEBHOOK_ALERTS"), text)
+        res = run_daily(con, today=a.date, alert=alert)
+        print(res["status"], res.get("kind") or res.get("reason", ""))
+        return
     if a.weekly:
         res = run_weekly(con, week=a.date)
         print(res.get("path"), res["status"], res.get("problems", ""))

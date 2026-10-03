@@ -250,8 +250,7 @@ def run(con, client, now_utc: dt.datetime, send, alert=None, llm=None, dry_run: 
                 if has_preview:
                     con.execute("INSERT OR IGNORE INTO stage_preview (tournament_id, local_date) VALUES (?, ?)",
                                 (tid, (dt.date.fromisoformat(day) + dt.timedelta(days=1)).isoformat()))
-                digest.mark_sent(con, tw_today, stage, [])
-                _scripts(con, t, day, stage, nxt, alert, errors)
+                digest.mark_sent(con, tw_today, stage, [])     # 影片腳本改成每天 18:00 固定產（script.run_daily，10-03）
             sent.append({"tournament_id": tid, "local_date": day, "forced": forced, "text": text})
         previews += _pending_previews(con, client, t, now_utc, send, dry_run)
     con.commit()
@@ -288,19 +287,6 @@ def _news(con, client, alert=None) -> list[str]:
     except Exception as e:  # noqa: BLE001
         errs.append(f"vectors: {e!r}")
     return errs
-
-
-def _scripts(con, t: dict, day: str, stage: list[dict], nxt, alert, errors: list) -> None:
-    """口播腳本（notes 10:15／10:20）：.env 開關有開才產生；失敗不影響賽果推送。"""
-    from brief import script
-    try:
-        styles = script.wanted_styles(t, day, _deepest_round(stage))
-        if not styles:
-            return
-        picks = preview.select(con, nxt, day, tracked_tpe_ids()) if nxt and schedule_published(nxt) else None
-        script.run_for_day(con, t, day, _deepest_round(stage), picks, alert=alert, styles=styles)
-    except Exception as e:  # noqa: BLE001
-        errors.append(f"script {t['tournament_id']} {day}: {e!r}")
 
 
 def _pending_previews(con, client, t: dict, now_utc: dt.datetime, send, dry_run: bool) -> list[dict]:

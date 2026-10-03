@@ -122,20 +122,38 @@ def test_system_prompt_uses_v2():
     assert "純口播文字" not in sp                     # v2 的「輸出格式」由程式的 JSON 取代
 
 
-def test_too_long_retry_sends_previous_draft_to_trim():
-    """10-03：只因太長被退時，把上一版附給寫手刪減（不是從頭重寫）；最多 3 次。"""
+class _Fake:
+    def __init__(self, outs):
+        self.outs, self.prompts = list(outs), []
+
+    def complete(self, system, user):
+        self.prompts.append(user)
+        return self.outs.pop(0)
+
+
+def _sent(voice, ids=("F1", "F2", "F3", "F4")):
+    o = out(voice)
+    o["segments"][0]["sentences"] = [{"text": voice, "fact_ids": list(ids), "kind": "fact"}]
+    del o["segments"][0]["voice"]
+    return o
+
+
+def test_soft_problems_pass_without_rewrite():
+    """10-03 Raymond「不要擋，都產出」：太長不是事實錯誤 → 第一版直接採用，問題列在最前面，不花錢重寫。"""
     import json
-
-    class Fake:
-        def __init__(self, outs):
-            self.outs, self.prompts = list(outs), []
-
-        def complete(self, system, user):
-            self.prompts.append(user)
-            return self.outs.pop(0)
-
-    long_out = {**out(VOICE * 2), "segments": [{**seg, "sentences": []} for seg in out(VOICE * 2)["segments"]]}
-    llm = Fake([json.dumps(long_out, ensure_ascii=False)] * 3)
+    llm = _Fake([json.dumps(_sent(VOICE * 2), ensure_ascii=False)])
     res, problems = story.write(llm, "u", FACTS)
-    assert res is None and len(llm.prompts) == 3 and "超過上限 300" in problems[0]
-    assert "在這一版上刪減" in llm.prompts[1] and VOICE[:20] in llm.prompts[1] and "280" in llm.prompts[1]
+    assert problems == [] and len(llm.prompts) == 1
+    assert any("超過上限 300" in p for p in res["soft_problems"])
+    md = story.to_discord("t", res)
+    assert "⚠️ 未通過的檢查" in md and "口播 440 字" in md
+
+
+def test_fact_errors_still_block():
+    """事實錯誤照擋：數字不在事實清單 → 帶問題重寫，3 次都錯就不產。"""
+    import json
+    bad = _sent(VOICE + "兩人年齡差 5 歲。")
+    llm = _Fake([json.dumps(bad, ensure_ascii=False)] * 3)
+    res, problems = story.write(llm, "u", FACTS)
+    assert res is None and len(llm.prompts) == 3 and story.is_hard(problems[0])
+    assert "上一版有事實錯誤" in llm.prompts[1]

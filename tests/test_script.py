@@ -51,7 +51,7 @@ def test_generate_retries_once_then_gives_up():
     good = json.dumps({"titles": ["a", "b", "c"], "segments": seg(VOICE)}, ensure_ascii=False)
     llm = FakeLLM([bad, good])
     out, problems = script.generate(llm, "story", FACTS, FLAGS)
-    assert out and problems == [] and "上一版沒有通過檢查" in llm.calls[1]
+    assert out and problems == [] and "上一版有事實錯誤" in llm.calls[1]
     out, problems = script.generate(FakeLLM([bad, bad]), "story", FACTS, FLAGS)
     assert out is None and problems
 
@@ -271,3 +271,24 @@ def test_first_preview_only_once():
     assert script.first_preview(con, "story_v2") is True
     assert script.first_preview(con, "story_v2") is False
     assert script.first_preview(con, "other") is True
+
+
+def test_run_daily_picks_best_story_once_and_tuesday_ranking(monkeypatch):
+    """10-03 Raymond：每天 18:00 固定 1 支；昨天有比賽寫最高分故事，週二沒比賽才寫排名（2B）；同一天不重跑。"""
+    import sqlite3
+    from brief import fbpost, story
+    con = sqlite3.connect(":memory:")
+    ts = {"2026-10-03": [{"tournament_id": 1}, {"tournament_id": 2}]}
+    monkeypatch.setattr(fbpost, "_tournaments_on", lambda con, day: ts.get(day, []))
+    monkeypatch.setattr(story, "day_candidates", lambda con, t, y: ([t["tournament_id"]], None, None))
+    monkeypatch.setattr(story, "pick", lambda cands: [{"final": 10 + cands[0]}])
+    ran = []
+    monkeypatch.setattr(script, "run_for_day", lambda con, t, day, *a, **k: ran.append(("story", t["tournament_id"], day)))
+    monkeypatch.setattr(script, "run_weekly", lambda con, **k: ran.append(("ranking",)))
+    monkeypatch.setattr(script, "weekly_facts", lambda con: {"week": "2026-10-06"})
+    assert script.run_daily(con, "2026-10-04")["kind"] == "story" and ran == [("story", 2, "2026-10-03")]
+    assert script.run_daily(con, "2026-10-04")["status"] == "skipped_done"
+    assert script.run_daily(con, "2026-10-05")["status"] == "skipped"            # 週一、昨天沒比賽
+    assert script.run_daily(con, "2026-10-06")["kind"] == "ranking"              # 週二、昨天沒比賽、有新排名
+    ts["2026-10-12"] = [{"tournament_id": 3}]
+    assert script.run_daily(con, "2026-10-13")["kind"] == "story"                # 週二有比賽 → 故事優先

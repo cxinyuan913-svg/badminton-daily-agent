@@ -368,33 +368,40 @@ def _json(raw: str) -> dict:
         return {}
 
 
-LENGTH_TARGET = 280   # 超長重寫時請寫手刪到這個字數（比上限 300 留一點空間）
+# 10-03 Raymond：「不要擋，都產出了我要看」——只有事實錯誤照擋（重寫，仍錯就不產）；
+# 字數、結構、組數、伏筆、關鍵對手、用詞這類檢查不過照樣產出，問題列在腳本最前面（不為它們重寫，也省錢）
+HARD_MARKERS = ("事實清單查不到", "「爆冷」", "「逆轉」", "「首冠", "引用了不存在", "有事實性內容卻沒有引用",
+                "不在它引用的", "格式不對")
+
+
+def is_hard(problem: str) -> bool:
+    return any(m in problem for m in HARD_MARKERS)
 
 
 def write(llm, user: str, facts: list[str], con=None, ctx: dict | None = None, attempts: int = 3,
           branches: list[dict] | None = None) -> tuple[dict | None, list[str]]:
-    """寫手：最多 attempts 次，直到事實檢查通過。
-    只因為太長被退時，把上一版附上請它刪減（10-03：從頭重寫每次都 400 字上下，414 → 362 仍超過 300）。"""
+    """寫手：每一版跑完全部檢查。有事實錯誤 → 帶問題重寫（最多 attempts 次），仍錯就回傳 None；
+    只剩非事實的問題 → 直接採用，問題放在 out["soft_problems"]。"""
     from brief import script
     flags = _flags(facts)
     if hasattr(llm, "task"):
         llm.task = "script_story_main"
     problems: list[str] = []
     for attempt in range(attempts):
-        prompt = user if not problems else user + "\n\n上一版沒有通過檢查，請修正：" + "；".join(problems)
-        if problems and all(p.startswith("口播 ") and "超過上限" in p for p in problems):
-            prompt += (f"\n\n上一版（JSON）如下。**在這一版上刪減**，不要從頭重寫：整段或整句刪掉次要的內容，"
-                       f"口播總字數刪到 {LENGTH_TARGET} 字以內；留下的句子 fact_ids 照舊，結構與 hook 照舊。\n"
-                       + json.dumps(out, ensure_ascii=False))
+        prompt = user if not problems else user + "\n\n上一版有事實錯誤，請修正：" + "；".join(problems)
         out = assemble(_json(llm.complete(system_prompt(), prompt)))
         problems = check(out, facts, flags)
-        if not problems:                                  # 逐句引用（11:25 A）：句子的數字要在它引用的事實裡
-            problems = cite.check(all_sentences(out), facts)
-        if not problems:                                  # 伏筆（R16）
-            problems = hooks.check(out.get("hook"), voice_text(out), branches or [])
+        if not any(is_hard(p) for p in problems):          # 格式壞了就不用再查引用與伏筆
+            problems += cite.check(all_sentences(out), facts)          # 逐句引用（11:25 A）
+            hook_problems = hooks.check(out.get("hook"), voice_text(out), branches or [])   # 伏筆（R16）
+            if hook_problems and out.get("hook"):
+                out["hook"] = None                         # 不合格的伏筆不登記（洩漏答案、不在正文…），問題照列
+            problems += hook_problems
         script.log_check(con, ctx, "story_main", llm, attempt + 1, problems)
-        if not problems:
+        if not any(is_hard(p) for p in problems):
+            out["soft_problems"] = problems
             return out, []
+        problems = [p for p in problems if is_hard(p)]
     return None, problems
 
 
@@ -510,7 +517,7 @@ def news_context(facts: list[str]) -> str:
 
 
 def to_markdown(title: str, c: dict, out: dict) -> str:
-    lines = [f"### {title}", "", f"故事：{c['kind']}（分數 {c['final']:.1f}）", "", "標題："]
+    lines = [f"### {title}", ""] + soft_lines(out) + [f"故事：{c['kind']}（分數 {c['final']:.1f}）", "", "標題："]
     lines += [f"{i + 1}. {x}" for i, x in enumerate(out["titles"])]
     lines += ["", "| 秒數 | 段落 | 口播 | 字卡建議 |", "|---|---|---|---|"]
     lines += [f"| {s.get('time', '')} | {s.get('part', '')} | {s.get('voice', '')} | {s.get('card', '')} |" for s in out["segments"]]
@@ -537,7 +544,7 @@ def to_markdown(title: str, c: dict, out: dict) -> str:
 
 
 def to_discord(title: str, out: dict) -> str:
-    lines = [f"🎬 **影片腳本草稿｜{title}**"] + [f"{i + 1}. {x}" for i, x in enumerate(out["titles"])]
+    lines = [f"🎬 **影片腳本草稿｜{title}**"] + soft_lines(out) + [f"{i + 1}. {x}" for i, x in enumerate(out["titles"])]
     lines += [f"`{s.get('time', '')}` {s.get('voice', '')} ／ 字卡：{s.get('card', '')}" for s in out["segments"]]
     lines += [f"價值段：{out.get('value_kind') or '（未標）'}" + (f"；口播較短：{out['short_reason']}" if out.get("short_reason") else "")]
     if out.get("todo"):
@@ -546,7 +553,23 @@ def to_discord(title: str, out: dict) -> str:
         lines += [out["verify"]["summary"]]
     if out.get("_hook"):
         lines += [hook_note(out["_hook"])]
+    ed = (out.get("editor") or {}).get("final")
+    if ed:
+        lines += ["編輯意見：" + "；".join(f"{x['rule']}「{x.get('quote', '')[:30]}」→ {x.get('comment', '')}" for x in ed)]
     return "\n".join(lines)
+
+
+def voice_chars(out: dict) -> int:
+    return len(re.sub(r"\s", "", "".join(s.get("voice", "") for s in out.get("segments") or [])))
+
+
+def soft_lines(out: dict) -> list[str]:
+    """10-03：沒通過、但不是事實錯誤的檢查（照樣產出），列在最前面給 Raymond 看。"""
+    soft = out.get("soft_problems") or []
+    head = [f"口播 {voice_chars(out)} 字"]
+    if soft:
+        head = ["⚠️ 未通過的檢查（不是事實錯誤，照樣產出）："] + [f"- {p}" for p in soft] + head
+    return head + [""]
 
 
 def hook_note(h: dict) -> str:

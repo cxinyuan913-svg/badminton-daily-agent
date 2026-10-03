@@ -83,7 +83,7 @@ def test_check_one_hook_and_present():
 
 
 def test_story_write_retries_until_hook_ok(con, monkeypatch):
-    """寫手第一版洩漏答案 → 退回；第二版只寫懸念 → 通過。一篇只存一個伏筆。"""
+    """寫手洩漏答案 → 照樣產出但伏筆不登記；只寫懸念 → 登記。一篇只存一個伏筆。"""
     monkeypatch.setattr(story, "check", lambda out, facts, flags: [])
     seg = lambda t: {"segments": [{"time": "0–4s", "part": "開場", "sentences": [{"text": t, "fact_ids": [], "kind": "rhetoric"}]}],
                      "titles": ["t"], "hook": {"branch": "B1", "teaser": t}}
@@ -93,7 +93,11 @@ def test_story_write_retries_until_hook_ok(con, monkeypatch):
         def complete(self, system, user):
             return replies.pop(0)
     out, problems = story.write(LLM(), "u", ["F"], con, {"day": "2026-10-02"}, branches=BR)
-    assert problems == [] and out["hook"]["teaser"] == "他們有個剋星，下次說。" and not replies
+    # 10-03 Raymond「不要擋」：洩漏答案不是事實錯誤 → 第一版照樣產出、問題列出，但這個伏筆不登記
+    assert problems == [] and out["hook"] is None and any("洩漏" in p for p in out["soft_problems"])
+    assert hooks.save_from_output(con, out, BR, "script", "2026-10-02_leak") is None
+    out = story.write(LLM(), "u", ["F"], con, {"day": "2026-10-02"}, branches=BR)[0]
+    assert out["hook"]["teaser"] == "他們有個剋星，下次說。" and not replies
     hid = hooks.save_from_output(con, out, BR, "script", "2026-10-02_x")
     assert [h["hook_id"] for h in hooks.open_hooks(con) if h["source_ref"] == "2026-10-02_x"] == [hid]
 
