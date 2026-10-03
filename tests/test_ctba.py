@@ -29,3 +29,20 @@ def test_roster_year_labels():
     y = ctba.roster_years(pages)
     assert y["王一明"] == "原始名單（105 年以前）" and y["陳三郎"] == "105 年晉升"
     assert y["林四德"].startswith("108–115 年")                           # 108 起的標題擠在頁尾，無法細分
+
+
+def test_run_extra_only_exact_unique(monkeypatch, tmp_path):
+    """10-03 Raymond A：國內賽事名單比對只採用拼音距離 0 且唯一；同音多個、同名對到多位都不自動採用。"""
+    import sqlite3
+    csv_path = tmp_path / "players_zh.csv"
+    csv_path.write_text("類型,bwf_player_id,英文名（BWF）,中文名,暱稱,目前排名（前100）,追蹤（Y/N）,備註\n", encoding="utf-8-sig")
+    monkeypatch.setattr(ctba, "PLAYERS_CSV", csv_path)
+    monkeypatch.setattr(ctba, "load_rosters", lambda: {"M": [], "F": []})
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE player (player_id INTEGER, name_display TEXT, country_code TEXT, name_zh TEXT)")
+    con.executemany("INSERT INTO player VALUES (?,?,?,NULL)", [
+        (1, "CHANG Chang Lung", "TPE"), (2, "Jia Xin LI", "TPE"), (3, "Bo Kuan LU", "TPE"), (4, "LIN Dan", "CHN")])
+    res = ctba.run_extra(con, write=True, pool=["張長龍", "李佳欣", "李佳馨", "合庫", "男子單打"])
+    assert res["auto"] == [(1, "CHANG Chang Lung", "張長龍")]
+    assert res["ambiguous"] == [(2, "Jia Xin LI", "李佳欣、李佳馨")] and res["none"] == [(3, "Bo Kuan LU")]
+    assert "張長龍" in csv_path.read_text(encoding="utf-8-sig")

@@ -161,12 +161,120 @@ def run(con, write: bool = False) -> dict:
     return {"roster": {g: len(v) for g, v in rosters.items()}, "players": len(players), "auto": auto, "review": review}
 
 
+# ---------------------------------------------------------------- 國內賽事名單（10-03 Raymond A）
+# 甲組名單以外的選手（乙組、大專、青少年）：中華羽協「國內賽事」頁的排名賽、團體賽、青少年錦標賽 xlsx（種子序、賽程表、
+# 成績、團體名單）裡的中文姓名。拼音距離 0 而且整個名單池只有一個中文名對得上 → 自動採用；其餘維持英文（D）。
+EXTRA_DIR = CTBA_DIR / "extra"
+EXTRA_PAGES = {221: "排名賽", 222: "團體賽", 223: "青少選拔"}
+EXTRA_NOTE = "中華羽協國內賽事名單比對（排名賽／團體賽／青少年 xlsx），拼音距離 0、唯一"
+NAME_TOKEN = re.compile(r"[一-鿿]{2,4}")
+
+
+def fetch_extra(client, pages: dict[int, str] = EXTRA_PAGES, log=print) -> int:
+    """下載國內賽事頁的 xlsx 到 config/ctba/extra/（已下載的跳過；Client 每次請求間隔 2 秒）。回傳新下載的檔數。"""
+    import urllib.parse
+    EXTRA_DIR.mkdir(parents=True, exist_ok=True)
+    n = 0
+    for pid, label in pages.items():
+        r = client.get(f"https://www.ctb.org.tw/information.asp?id={pid}")
+        if r is None:
+            continue
+        page = r.content.decode(r.apparent_encoding or "utf-8", errors="replace")
+        for href in dict.fromkeys(re.findall(r'href="([^"]+\.xlsx)"', page, re.I)):
+            name = urllib.parse.unquote(href.split("/")[-1])
+            dest = EXTRA_DIR / f"{pid}_{name}"
+            if dest.exists():
+                continue
+            f = client.get(urllib.parse.urljoin("https://www.ctb.org.tw/", href))
+            if f is None:
+                continue
+            dest.write_bytes(f.content)
+            n += 1
+        log(f"{label}：{len(list(EXTRA_DIR.glob(f'{pid}_*.xlsx')))} 個 xlsx")
+    return n
+
+
+def xlsx_names(path: Path) -> set[str]:
+    """xlsx 每個儲存格裡 2–4 個漢字的連續字串（選手名；隊名、組別也會混進來，但對不上 BWF 英文名，不影響）。"""
+    import openpyxl
+    out: set[str] = set()
+    try:
+        wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    except Exception:  # noqa: BLE001 — 壞檔或舊格式就跳過
+        return out
+    for ws in wb.worksheets:
+        for row in ws.iter_rows(values_only=True):
+            for v in row:
+                if isinstance(v, str):
+                    out.update(NAME_TOKEN.findall(v))
+    wb.close()
+    return out
+
+
+def extra_pool() -> list[str]:
+    names: set[str] = set()
+    for p in sorted(EXTRA_DIR.glob("*.xlsx")):
+        names |= xlsx_names(p)
+    return sorted(names)
+
+
+def run_extra(con, write: bool = False, pool: list[str] | None = None) -> dict:
+    """還沒有中文名、也不在 players_zh.csv 的台灣選手，用「甲組名單＋國內賽事名單」比對；只採用距離 0 且唯一的。"""
+    rosters = load_rosters()
+    pool = list(dict.fromkeys((pool if pool is not None else extra_pool()) + rosters["M"] + rosters["F"]))
+    known = {int(x) for r in csv.DictReader(PLAYERS_CSV.open(encoding="utf-8-sig"))
+             for x in (r.get("bwf_player_id") or "").split("+") if x.strip().isdigit()}
+    players = con.execute("SELECT player_id, name_display FROM player WHERE country_code='TPE' AND name_zh IS NULL "
+                          "ORDER BY player_id").fetchall()
+    auto, ambiguous, none = [], [], []
+    for pid, name in players:
+        if pid in known or not name:
+            continue
+        exact = sorted({n for n in pool if score(name, n) == 0})
+        if len(exact) == 1:
+            auto.append((pid, name, exact[0]))
+        elif exact:
+            ambiguous.append((pid, name, "、".join(exact)))
+        else:
+            none.append((pid, name))
+    taken: dict[str, int] = {}                     # 同一個中文名對到兩位以上選手 → 都不自動採用
+    for _, _, z in auto:
+        taken[z] = taken.get(z, 0) + 1
+    ambiguous += [(pid, name, f"{z}（同名對到多位選手）") for pid, name, z in auto if taken[z] > 1]
+    auto = [row for row in auto if taken[row[2]] == 1]
+    if write and auto:
+        with PLAYERS_CSV.open("a", encoding="utf-8", newline="") as f:
+            w = csv.writer(f, lineterminator="\n")
+            for pid, name, z in auto:
+                w.writerow(["選手", pid, name, z, "", "", "N", EXTRA_NOTE])
+    return {"pool": len(pool), "players": len(auto) + len(ambiguous) + len(none),
+            "auto": auto, "ambiguous": ambiguous, "none": none}
+
+
 def main():
     from brief.crawler import connect
     ap = argparse.ArgumentParser(description="中華羽協甲組名單 → 台灣歷史選手中文名")
     ap.add_argument("--db", default="data/brief.db")
     ap.add_argument("--write", action="store_true", help="寫進 config/players_zh.csv 與 config/ctba/review.csv")
+    ap.add_argument("--extra", action="store_true", help="改用甲組＋國內賽事名單（排名賽、團體賽、青少年 xlsx），只採用距離 0 且唯一")
+    ap.add_argument("--fetch", action="store_true", help="先下載國內賽事 xlsx（搭配 --extra）")
     a = ap.parse_args()
+    if a.extra:
+        from brief import zh
+        from brief.crawler import Client
+        con = connect(a.db)
+        if a.fetch:
+            print("新下載", fetch_extra(Client()), "個檔案")
+        res = run_extra(con, a.write)
+        print(f"名單池 {res['pool']} 個中文名；還沒有中文名的台灣選手 {res['players']} 位")
+        print(f"自動採用 {len(res['auto'])}、多個完全一致 {len(res['ambiguous'])}、找不到 {len(res['none'])}")
+        for row in res["auto"]:
+            print("  採用", row)
+        for row in res["ambiguous"]:
+            print("  多個", row)
+        if a.write:
+            print("套用到資料庫", zh.apply_player_names(con))
+        return
     res = run(connect(a.db), a.write)
     print(f"名單：男 {res['roster']['M']}、女 {res['roster']['F']} 人；沒有中文名的台灣選手 {res['players']} 位")
     print(f"自動採用 {len(res['auto'])}、待確認 {len(res['review'])}")

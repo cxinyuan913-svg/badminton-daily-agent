@@ -24,3 +24,6 @@ docs/regulations/*.pdf
 
 # 中華羽協甲組名單 PDF（notes 10-02 05:55：不進版控）
 config/ctba/*.pdf
+
+# 中華羽協國內賽事 xlsx（10-03：擴大中文名比對；不進版控）
+config/ctba/extra/

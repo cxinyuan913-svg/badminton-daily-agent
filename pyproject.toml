@@ -8,6 +8,7 @@ dependencies = [
     "anthropic>=1.0",
     "pypinyin>=0.50",
     "pypdf>=5",                 # 中華羽協甲組名單 PDF（台灣歷史選手中文名比對）
+    "openpyxl>=3.1",            # 中華羽協國內賽事 xlsx（排名賽、青少年、團體賽名單；10-03 A）
 ]
 
 [project.optional-dependencies]
