@@ -61,9 +61,51 @@ SENT = re.compile(r"[^。！？\n]*")
 LEADING_WORDS = re.compile(r"^(?:.*?(?:好手|選手|名將|球后|球王|一哥|一姐|小將|老將|搭檔|組合|對手|女將|男將|新星|強敵|世界球后|世界球王))")
 
 
-def page_text(page: str) -> str:
-    """文章 HTML → 純文字段落（只取 <p>，避開選單與相關新聞）。"""
-    paras = re.findall(r"<p[^>]*>(.*?)</p>", page, re.S)
+# 各站文章本文的容器（10-03 Raymond 2A：整頁的 <p> 會混進 cookie 聲明、選單、相關新聞；fixture 在 tests/fixtures/article_pages/）
+BODY_START = {"cna": r'<div class="paragraph">', "nownews": r'<div[^>]*\bid="articleContent"',
+              "ettoday": r'<div class="story[ "]', "pts": r'<div class="post-article[ "]'}
+# 容器裡怎麼取字：p＝只取 <p>（中央社容器裡還夾著相關新聞清單）；text＝容器全文（nownews 正文不在 <p>、公視導言在 <div>）
+BODY_MODE = {"cna": "p", "ettoday": "p", "nownews": "text", "pts": "text"}
+
+
+def article_html(page: str, source: str | None) -> str | None:
+    """切出本文容器（從開頭的 <div 數到配對的 </div>）；沒有這個來源的規則或找不到容器 → None。"""
+    m = re.search(BODY_START.get(source or "", r"(?!)"), page)
+    if m is None:
+        return None
+    depth, pos = 0, m.start()
+    for t in re.finditer(r"<(/?)div\b", page[m.start():]):
+        depth += -1 if t.group(1) else 1
+        if depth == 0:
+            pos = page.find(">", m.start() + t.end()) + 1
+            break
+    else:
+        return None
+    return page[m.start():pos]
+
+
+AD_DIV = re.compile(r'<div[^>]*class="[^"]*\bad[-_\w]*"[^>]*>(?:(?!<div\b).)*?</div>', re.S)
+NOISE_LINE = re.compile(r"^(我是廣告.*|更多「.*」相關新聞。?|延伸閱讀.*)$")
+
+
+def container_text(body: str) -> str:
+    """本文容器 → 純文字：拿掉廣告區塊、script／style／註解，<br>、</p>、</div> 當換行（nownews 的正文不在 <p> 裡，
+    公視第一段在 <div>）。"""
+    body = re.sub(r"<!--.*?-->|<(script|style)\b.*?</\1>", "", body, flags=re.S)
+    for _ in range(3):                                   # 廣告區塊可能巢狀，由內往外拿掉
+        body = AD_DIV.sub("", body)
+    body = re.sub(r"<br\s*/?>|</p>|</div>|</h\d>", "\n", body)
+    lines = [html.unescape(TAG.sub("", x)).strip() for x in body.split("\n")]
+    return "\n".join(x for x in lines if x and not NOISE_LINE.match(x))
+
+
+def page_text(page: str, source: str | None = None) -> str:
+    """文章 HTML → 純文字段落。有這個來源的本文容器規則就只看容器裡面（container_text）；
+    沒有規則或找不到容器（例如改版）退回整頁只取 <p>。"""
+    body = article_html(page, source)
+    if body is not None and BODY_MODE.get(source) == "text":
+        return container_text(body)
+    paras = re.findall(r"<p[^>]*>(.*?)</p>", body if body is not None else page, re.S)
     return "\n".join(html.unescape(TAG.sub("", p)).strip() for p in paras if p.strip())
 
 
@@ -223,7 +265,7 @@ def fetch(con, client: Client, urls: list[str]) -> dict[str, int]:
         if r is None:
             out[url] = 0
             continue
-        text = page_text(r.text)
+        text = page_text(r.text, source)
         con.executescript(TABLE)
         con.execute("INSERT OR REPLACE INTO foreign_article (url, source, text) VALUES (?, ?, ?)", (url, source, text))
         out[url] = scan_text(con, text, url, source)
