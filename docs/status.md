@@ -45,7 +45,7 @@ Raymond 回到 claude.ai 討論時，把最新一段貼過去即可接上。
 - 無
 
 ### 待 Raymond 決定
-1. **重新註冊排程**（必做）：用系統管理員 PowerShell 執行 `powershell -ExecutionPolicy Bypass -File scriptsegister_task.ps1`，粉專才會改到 18:00
+1. **重新註冊排程**（必做）：用系統管理員 PowerShell 執行 `powershell -ExecutionPolicy Bypass -File scripts\register_task.ps1`，粉專才會改到 18:00
 2. **週一週報的賽事層級順序**（`fbpost.LEVEL_ORDER`）
    - 目前：Grade 1 → 綜合運動會（亞運）→ 年終總決賽 → S1000 → S750 → 洲際錦標賽 → S500 → S300 → 世大運 → S100 → IC → IS
    - A：照這個順序
